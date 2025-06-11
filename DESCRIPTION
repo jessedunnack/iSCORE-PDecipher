@@ -1,0 +1,55 @@
+Package: iSCORE.PDecipher
+Title: Integrated Analysis of Parkinson's Disease Mutations and Perturbations
+Version: 0.1.2
+Authors@R: 
+    person("Jesse", "Dunnack", , "jesse.dunnack@example.com", role = c("aut", "cre"),
+           comment = c(ORCID = ""))
+Description: iSCORE-PDecipher provides integrated analysis tools for Parkinson's disease
+    research, combining iSCORE-PD mutation data with PerturbSeq (CRISPRi/CRISPRa) experiments.
+    It includes differential expression analysis using MAST and MixScale, comprehensive
+    functional enrichment analysis, and interactive Shiny visualization tools.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: 
+    R (>= 4.0.0)
+Imports:
+    shiny,
+    shinydashboard,
+    DT,
+    plotly,
+    pheatmap,
+    clusterProfiler,
+    ReactomePA,
+    DOSE,
+    org.Hs.eg.db,
+    pathview,
+    dplyr,
+    ggplot2,
+    stringr,
+    readr,
+    tibble,
+    tidyr,
+    magrittr,
+    rlang,
+    purrr,
+    shinyWidgets,
+    shinycssloaders,
+    shinyjs,
+    viridis,
+    RColorBrewer,
+    scales,
+    stats,
+    utils,
+    methods,
+    grDevices
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://github.com/yourusername/iSCORE-PDecipher
+BugReports: https://github.com/yourusername/iSCORE-PDecipher/issues
+LazyData: true

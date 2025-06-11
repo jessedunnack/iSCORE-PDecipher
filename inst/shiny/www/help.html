@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PD Enrichment Explorer - Help</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 20px; }
+        .section { margin-bottom: 30px; }
+        .method-mast { color: #e41a1c; font-weight: bold; }
+        .method-mixscale { color: #377eb8; font-weight: bold; }
+        code { background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PD Enrichment Explorer - Help Guide</h1>
+        <hr>
+        
+        <div class="section">
+            <h2>Overview</h2>
+            <p>The PD Enrichment Explorer is an interactive web application for exploring functional enrichment 
+            analysis results from Parkinson's disease single-cell RNA sequencing studies. It provides tools 
+            for visualizing and comparing results from two distinct analysis methods:</p>
+            <ul>
+                <li><span class="method-mast">MAST</span>: Analysis of isogenic mutant lines vs. wild-type controls</li>
+                <li><span class="method-mixscale">MixScale</span>: CRISPR-based knockdown perturbations</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Quick Start</h2>
+            <ol>
+                <li><strong>Browse Pre-computed Results</strong>: Navigate to the "Pre-computed Results" tab</li>
+                <li><strong>Select Data</strong>: Choose analysis type, gene, cluster, and enrichment database</li>
+                <li><strong>Load Results</strong>: Click the "Load Results" button</li>
+                <li><strong>Explore Visualizations</strong>: Use the tabs to view plots, tables, and statistics</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>Data Selection Guide</h2>
+            <h3>Analysis Types</h3>
+            <ul>
+                <li><strong>MAST</strong>: Compares mutant lines to controls (Note: negative fold change = up-regulation)</li>
+                <li><strong>MixScale</strong>: CRISPR knockdown analysis (Standard fold change convention)</li>
+            </ul>
+            
+            <h3>Gene Regulation Directions</h3>
+            <ul>
+                <li><strong>UP</strong>: Up-regulated genes</li>
+                <li><strong>DOWN</strong>: Down-regulated genes</li>
+                <li><strong>ALL</strong>: All differentially expressed genes</li>
+            </ul>
+            
+            <h3>Enrichment Databases</h3>
+            <ul>
+                <li><strong>GO_BP</strong>: Gene Ontology Biological Process</li>
+                <li><strong>GO_CC</strong>: Gene Ontology Cellular Component</li>
+                <li><strong>GO_MF</strong>: Gene Ontology Molecular Function</li>
+                <li><strong>KEGG</strong>: Kyoto Encyclopedia of Genes and Genomes</li>
+                <li><strong>Reactome</strong>: Reactome pathway database</li>
+                <li><strong>STRING</strong>: Protein-protein interactions</li>
+                <li><strong>GSEA</strong>: Gene Set Enrichment Analysis</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Understanding the Visualizations</h2>
+            <h3>Enrichment Plot</h3>
+            <p>Shows the most significant enriched terms. The x-axis typically shows -log10(p-value), 
+            and point size represents the number of genes in each term.</p>
+            
+            <h3>Data Table</h3>
+            <p>Interactive table with all enrichment results. You can sort, filter, and search the data.</p>
+            
+            <h3>Statistics</h3>
+            <p>Summary statistics including total terms, significant terms, and p-value distribution.</p>
+        </div>
+
+        <div class="section">
+            <h2>Tips and Tricks</h2>
+            <ul>
+                <li>Use the global p-value threshold slider to filter results across all visualizations</li>
+                <li>Click column headers in data tables to sort</li>
+                <li>Use the search box in data tables to find specific terms</li>
+                <li>Adjust "Max Terms to Display" to show more or fewer results in plots</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Troubleshooting</h2>
+            <dl>
+                <dt>No data appears after clicking "Load Results"</dt>
+                <dd>Check that you've selected valid options for all dropdowns. Some combinations may not have data.</dd>
+                
+                <dt>Plots are too crowded</dt>
+                <dd>Reduce the "Max Terms to Display" value or increase the p-value threshold.</dd>
+                
+                <dt>GSEA results not loading</dt>
+                <dd>GSEA results have a special nested structure and may take longer to load.</dd>
+            </dl>
+        </div>
+
+        <div class="section">
+            <h2>Contact</h2>
+            <p>For questions, bug reports, or feature requests, please contact the iSCORE-PDecipher team.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,109 @@
+/* Custom CSS for Restored PerturbSeq App */
+
+/* Header styling */
+.header-panel {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Dataset selector improvements */
+.dataset-selector {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+/* Enhanced alerts */
+.alert {
+  border-radius: 5px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.alert-info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.alert-success {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Table improvements */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  margin-top: 10px;
+}
+
+/* Button improvements */
+.btn {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+/* Loading states */
+.loading-indicator {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+}
+
+/* Well styling */
+.well {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.well-sm {
+  padding: 10px;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .header-panel {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .sidebar {
+    margin-bottom: 20px;
+  }
+}

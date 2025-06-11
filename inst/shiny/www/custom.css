@@ -1,0 +1,225 @@
+/* Custom CSS for PD Enrichment Explorer */
+
+/* Main theme colors */
+:root {
+  --primary-color: #3c8dbc;
+  --secondary-color: #00a65a;
+  --warning-color: #f39c12;
+  --danger-color: #dd4b39;
+  --up-regulated: #fee8c8;
+  --down-regulated: #deebf7;
+  --all-regulated: #d9f0a3;
+}
+
+/* Dataset indicator styling */
+.dataset-indicator {
+  background-color: #f0f8ff;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.dataset-indicator h5 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+.dataset-indicator pre {
+  margin: 5px 0;
+  font-size: 12px;
+  background-color: white;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.dataset-indicator .btn-link {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+/* Dataset selector modal styling */
+.dataset-description {
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.dataset-description strong {
+  color: #333;
+  font-size: 16px;
+}
+
+.dataset-description .text-info {
+  color: var(--primary-color);
+  display: block;
+  margin-top: 5px;
+}
+
+/* Improve box styling */
+.box {
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.box-header {
+  border-radius: 5px 5px 0 0;
+}
+
+/* Button styling */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #357ca5;
+  border-color: #357ca5;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Value box improvements */
+.small-box {
+  border-radius: 5px;
+  transition: transform 0.2s;
+}
+
+.small-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Data table styling */
+.dataTables_wrapper {
+  padding: 10px;
+}
+
+.dataTable thead {
+  background-color: #f4f4f4;
+}
+
+/* Tab panel styling */
+.nav-tabs-custom > .nav-tabs > li.active {
+  border-top-color: var(--primary-color);
+}
+
+/* Spinner custom color */
+.spinner {
+  color: var(--primary-color) !important;
+}
+
+/* Direction indicator colors */
+.direction-up {
+  background-color: var(--up-regulated);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.direction-down {
+  background-color: var(--down-regulated);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.direction-all {
+  background-color: var(--all-regulated);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+/* Sidebar styling */
+.main-sidebar {
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+/* Help icon in header */
+.navbar-custom-menu > .navbar-nav > li > .dropdown-menu {
+  border-radius: 5px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Plot container styling */
+.plot-container {
+  background-color: white;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Notification styling */
+.shiny-notification {
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+/* Heatmap controls */
+.heatmap-controls {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+/* Method comparison indicators */
+.method-mast {
+  color: #e41a1c;
+  font-weight: bold;
+}
+
+.method-mixscale {
+  color: #377eb8;
+  font-weight: bold;
+}
+
+.method-both {
+  color: #4daf4a;
+  font-weight: bold;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.3);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .main-sidebar {
+    transform: translate(-230px, 0);
+  }
+  
+  .content-wrapper {
+    margin-left: 0 !important;
+  }
+}
