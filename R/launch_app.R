@@ -32,10 +32,13 @@ launch_iscore_app <- function(data_file = NULL, port = getOption("shiny.port"),
   
   # Set environment variable for data file if provided
   if (!is.null(data_file)) {
-    if (!file.exists(data_file)) {
-      stop("Data file not found: ", data_file, call. = FALSE)
-    }
+    # Convert to absolute path to avoid issues with working directory changes
+    data_file <- normalizePath(data_file, mustWork = TRUE)
     Sys.setenv(ISCORE_DATA_FILE = data_file)
+    Sys.setenv(ISCORE_HAS_DATA = "TRUE")
+  } else {
+    # No data file provided, use upload interface
+    Sys.setenv(ISCORE_HAS_DATA = "FALSE")
   }
   
   # Launch the app
