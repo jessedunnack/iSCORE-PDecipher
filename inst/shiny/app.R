@@ -389,17 +389,20 @@ server <- function(input, output, session) {
     input$global_pval
   })
   
-  # Initialize app with data - run once
-  observeEvent(once = TRUE, ignoreNULL = FALSE, ignoreInit = FALSE, {
+  # Initialize app with data - run once on startup
+  observe({
     # Check environment variables first
     has_data <- Sys.getenv("ISCORE_HAS_DATA", unset = "FALSE") == "TRUE"
     data_file <- Sys.getenv("ISCORE_DATA_FILE", unset = "")
     
-    if (has_data && file.exists(data_file)) {
-      cat("Loading provided data file:", data_file, "\n")
-      initialize_app_with_data(app_data, data_file)
-    } else {
-      initialize_app_with_data(app_data)
+    # Only initialize once
+    if (!app_data$data_loaded) {
+      if (has_data && file.exists(data_file)) {
+        cat("Loading provided data file:", data_file, "\n")
+        initialize_app_with_data(app_data, data_file)
+      } else {
+        initialize_app_with_data(app_data)
+      }
     }
   })
   
