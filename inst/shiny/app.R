@@ -16,10 +16,26 @@ source("R/heatmap_functions.R")
 
 # Load the complete dataset
 cat("Loading complete enrichment dataset...\n")
-data_file <- "../all_enrichment_padj005_complete_with_direction.rds"
+
+# Check for environment variable first (set by launch_iscore_app)
+data_file <- Sys.getenv("ISCORE_DATA_FILE", unset = "")
+
+# If no environment variable, try default location
+if (data_file == "" || !file.exists(data_file)) {
+  data_file <- "../all_enrichment_padj005_complete_with_direction.rds"
+}
+
+# If still not found, try the data_files directory
+if (!file.exists(data_file)) {
+  data_file <- "../data_files/all_enrichment_padj005_complete_with_direction.rds"
+}
 
 if (!file.exists(data_file)) {
-  stop("Dataset file not found: ", data_file)
+  stop("Dataset file not found. Tried:\n", 
+       "  - Environment variable ISCORE_DATA_FILE\n",
+       "  - ../all_enrichment_padj005_complete_with_direction.rds\n",
+       "  - ../data_files/all_enrichment_padj005_complete_with_direction.rds\n",
+       "Please provide the correct path to launch_iscore_app()")
 }
 
 # Load data
