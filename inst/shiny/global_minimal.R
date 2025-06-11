@@ -264,43 +264,70 @@ get_significant_terms_from_consolidated <- function(consolidated_data,
   
   if (is.null(consolidated_data)) return(NULL)
   
+  # Debug output
+  cat("=== Filtering Debug ===\n")
+  cat("Data columns:", paste(names(consolidated_data), collapse = ", "), "\n")
+  cat("Filtering for:\n")
+  cat("  analysis_type:", analysis_type, "\n")
+  cat("  gene:", gene, "\n")
+  cat("  cluster:", cluster, "\n")
+  cat("  experiment:", experiment, "\n")
+  cat("  enrichment_type:", enrichment_type, "\n")
+  cat("  direction:", direction, "\n")
+  
   # Filter the consolidated data based on parameters
   filtered_data <- consolidated_data
   
   if (!is.null(analysis_type)) {
-    filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+    # Handle both method and analysis_type column names
+    if ("method" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+      cat("  After analysis_type filter (method column):", nrow(filtered_data), "rows\n")
+    } else if ("analysis_type" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$analysis_type == analysis_type, ]
+      cat("  After analysis_type filter (analysis_type column):", nrow(filtered_data), "rows\n")
+    }
   }
   
   if (!is.null(gene)) {
     filtered_data <- filtered_data[filtered_data$gene == gene, ]
+    cat("  After gene filter:", nrow(filtered_data), "rows\n")
   }
   
   if (!is.null(cluster)) {
     filtered_data <- filtered_data[filtered_data$cluster == cluster, ]
+    cat("  After cluster filter:", nrow(filtered_data), "rows\n")
   }
   
   if (!is.null(experiment)) {
     filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+    cat("  After experiment filter:", nrow(filtered_data), "rows\n")
   }
   
   if (!is.null(enrichment_type)) {
     filtered_data <- filtered_data[filtered_data$enrichment_type == enrichment_type, ]
+    cat("  After enrichment_type filter:", nrow(filtered_data), "rows\n")
   }
   
-  if (!is.null(direction)) {
+  if (!is.null(direction) && direction != "ALL") {
     filtered_data <- filtered_data[filtered_data$direction == direction, ]
+    cat("  After direction filter:", nrow(filtered_data), "rows\n")
   }
   
   # Filter by p-value threshold
   # Handle different p-value column names
   if ("p.adjust" %in% names(filtered_data)) {
     filtered_data <- filtered_data[filtered_data$p.adjust < pval_threshold, ]
+    cat("  After p-value filter:", nrow(filtered_data), "rows\n")
   } else if ("fdr" %in% names(filtered_data)) {
     filtered_data <- filtered_data[filtered_data$fdr < pval_threshold, ]
+    cat("  After p-value filter:", nrow(filtered_data), "rows\n")
   } else if ("padj" %in% names(filtered_data)) {
     filtered_data <- filtered_data[filtered_data$padj < pval_threshold, ]
+    cat("  After p-value filter:", nrow(filtered_data), "rows\n")
   }
   
+  cat("=== Final result:", nrow(filtered_data), "rows ===\n")
   return(filtered_data)
 }
 
