@@ -111,17 +111,29 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         message("Selection - Direction: ", selection$direction)
         
         # Check unique values in data
-        message("Unique analysis types in data: ", paste(unique(data$analysis_type), collapse=", "))
+        if ("method" %in% names(data)) {
+          message("Unique analysis types in data: ", paste(unique(data$method), collapse=", "))
+        } else if ("analysis_type" %in% names(data)) {
+          message("Unique analysis types in data: ", paste(unique(data$analysis_type), collapse=", "))
+        }
         message("Unique genes in data: ", paste(head(unique(data$gene), 5), collapse=", "), "...")
         
         # Filter data based on selection
+        # Handle both method and analysis_type column names
+        if ("method" %in% names(data)) {
+          analysis_filter <- data$method == selection$analysis_type
+        } else {
+          analysis_filter <- data$analysis_type == selection$analysis_type
+        }
+        
+        # Apply all filters
         filtered_data <- data[
-          data$analysis_type == selection$analysis_type &
+          analysis_filter &
           data$gene == selection$gene &
           data$cluster == selection$cluster &
           data$experiment == selection$experiment &
           data$enrichment_type == selection$enrichment_type &
-          data$direction == selection$direction,
+          (selection$direction == "ALL" | data$direction == selection$direction),
         ]
         data <- filtered_data
         
