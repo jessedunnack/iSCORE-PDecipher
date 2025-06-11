@@ -9,24 +9,38 @@
 generate_missing_files <- function(data_dir, missing) {
   success <- TRUE
   
-  # Get the package directory
+  # Get the package directory and find scripts
   pkg_dir <- system.file(package = "iSCORE.PDecipher")
   if (pkg_dir == "") {
-    # If package not installed, use relative path
-    pkg_dir <- dirname(dirname(getwd()))
-  }
-  
-  # Path to scripts
-  script_dir <- file.path(pkg_dir, "inst", "scripts")
-  
-  # Ensure script directory exists
-  if (!dir.exists(script_dir)) {
-    # Try alternative location
-    script_dir <- file.path(dirname(dirname(getwd())), "package_materials")
-    if (!dir.exists(script_dir)) {
-      stop("Cannot find processing scripts. Please ensure package is properly installed.")
+    # Development mode - try multiple paths
+    if (basename(getwd()) == "iSCORE-PDecipher") {
+      pkg_dir <- getwd()
+    } else if (file.exists("iSCORE-PDecipher")) {
+      pkg_dir <- "iSCORE-PDecipher"
+    } else {
+      pkg_dir <- file.path(dirname(getwd()), "iSCORE-PDecipher")
     }
   }
+  
+  # Path to scripts - try multiple locations
+  script_dir <- file.path(pkg_dir, "inst", "scripts")
+  if (!dir.exists(script_dir)) {
+    # Try without inst for development
+    script_dir <- file.path(pkg_dir, "scripts")
+  }
+  if (!dir.exists(script_dir)) {
+    # Try package_materials as fallback
+    script_dir <- file.path(dirname(pkg_dir), "package_materials")
+  }
+  
+  if (!dir.exists(script_dir)) {
+    stop("Cannot find processing scripts in any of the expected locations:\n",
+         "  - ", file.path(pkg_dir, "inst", "scripts"), "\n",
+         "  - ", file.path(pkg_dir, "scripts"), "\n",
+         "  - ", file.path(dirname(pkg_dir), "package_materials"))
+  }
+  
+  message("Using scripts from: ", script_dir)
   
   # Save current working directory
   old_wd <- getwd()

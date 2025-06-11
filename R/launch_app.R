@@ -24,9 +24,25 @@
 launch_iscore_app <- function(data_dir = NULL, port = getOption("shiny.port"), 
                               launch.browser = getOption("shiny.launch.browser", TRUE), ...) {
   
-  # Load required functions
-  source(system.file("R", "dataset_validator.R", package = "iSCORE.PDecipher"))
-  source(system.file("R", "data_generator.R", package = "iSCORE.PDecipher"))
+  # Load required functions - handle both installed and development scenarios
+  validator_path <- system.file("R", "dataset_validator.R", package = "iSCORE.PDecipher")
+  if (validator_path == "") {
+    # Development mode - use relative paths
+    pkg_root <- if (basename(getwd()) == "iSCORE-PDecipher") {
+      getwd()
+    } else if (file.exists("iSCORE-PDecipher/R/dataset_validator.R")) {
+      "iSCORE-PDecipher"
+    } else {
+      dirname(getwd())
+    }
+    validator_path <- file.path(pkg_root, "R", "dataset_validator.R")
+    generator_path <- file.path(pkg_root, "R", "data_generator.R")
+  } else {
+    generator_path <- system.file("R", "data_generator.R", package = "iSCORE.PDecipher")
+  }
+  
+  source(validator_path)
+  source(generator_path)
   
   # If no data_dir provided, show dataset selector
   if (is.null(data_dir)) {
@@ -72,14 +88,34 @@ launch_iscore_app <- function(data_dir = NULL, port = getOption("shiny.port"),
   
   message("\n✓ All required files present. Launching app...")
   
+  # Get pkg_root for development mode (same as earlier in the function)
+  pkg_root <- if (basename(getwd()) == "iSCORE-PDecipher") {
+    getwd()
+  } else if (file.exists("iSCORE-PDecipher/R/dataset_validator.R")) {
+    "iSCORE-PDecipher"
+  } else {
+    dirname(getwd())
+  }
+  
   # Get the path to the Shiny app
   app_dir <- system.file("shiny", package = "iSCORE.PDecipher")
   
   if (app_dir == "") {
-    # Fallback for development
-    app_dir <- file.path(dirname(dirname(getwd())), "shiny_app")
-    if (!dir.exists(app_dir)) {
-      stop("Could not find Shiny app. Try re-installing `iSCORE.PDecipher`.", call. = FALSE)
+    # Development mode - try multiple locations
+    if (file.exists("inst/shiny/app.R")) {
+      app_dir <- "inst/shiny"
+    } else if (file.exists("shiny/app.R")) {
+      app_dir <- "shiny"
+    } else if (file.exists(file.path(pkg_root, "inst/shiny/app.R"))) {
+      app_dir <- file.path(pkg_root, "inst/shiny")
+    } else {
+      # Try the separate shiny_app directory
+      shiny_app_path <- file.path(dirname(pkg_root), "shiny_app")
+      if (dir.exists(shiny_app_path) && file.exists(file.path(shiny_app_path, "app.R"))) {
+        app_dir <- shiny_app_path
+      } else {
+        stop("Could not find Shiny app in any expected location.", call. = FALSE)
+      }
     }
   }
   
