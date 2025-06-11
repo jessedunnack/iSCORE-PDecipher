@@ -46,7 +46,27 @@ if (!app_data$file_picker_shown) {
       # mutation_perturbation, cluster, enrichment_type, direction, p.adjust, Description, etc.
       
       # Store in app_data with the correct column names
+      # The landing page expects 'gene' column, so rename mutation_perturbation
+      data$gene <- data$mutation_perturbation
+      
+      # Add method column if not present (infer from data source)
+      if (!"method" %in% names(data)) {
+        # Try to infer method from other columns
+        if ("log2FC" %in% names(data)) {
+          data$method <- "MixScale"
+        } else {
+          data$method <- "MAST"
+        }
+      }
+      
+      # Add experiment column if not present
+      if (!"experiment" %in% names(data)) {
+        data$experiment <- "Default"
+      }
+      
+      # Store in both locations for compatibility
       app_data$data <- data
+      app_data$consolidated_data <- data
       app_data$available_genes <- unique(data$mutation_perturbation)
       app_data$available_clusters <- unique(data$cluster)
       app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
@@ -180,4 +200,94 @@ create_file_picker_modal <- function() {
     size = "m",
     easyClose = FALSE
   )
+}
+
+#' Initialize app with data
+#' 
+#' @param app_data Reactive values to update
+#' @param data_file Optional path to data file
+initialize_app_with_data <- function(app_data, data_file = NULL) {
+  # Check if data already loaded from startup
+  if (!is.null(app_data$data) && nrow(app_data$data) > 0) {
+    # Data already loaded in startup_manager.R
+    app_data$consolidated_data <- app_data$data
+    app_data$data_loaded <- TRUE
+    return(invisible(TRUE))
+  }
+  
+  # Otherwise try to load data
+  if (!is.null(data_file) && file.exists(data_file)) {
+    tryCatch({
+      data <- readRDS(data_file)
+      
+      # Process column names
+      if ("mutation_perturbation" %in% names(data)) {
+        data$gene <- data$mutation_perturbation
+      }
+      
+      # Add method column if not present
+      if (!"method" %in% names(data)) {
+        if ("log2FC" %in% names(data)) {
+          data$method <- "MixScale"
+        } else {
+          data$method <- "MAST"
+        }
+      }
+      
+      # Add experiment column if not present
+      if (!"experiment" %in% names(data)) {
+        data$experiment <- "Default"
+      }
+      
+      # Store data
+      app_data$data <- data
+      app_data$consolidated_data <- data
+      app_data$available_genes <- unique(data$gene)
+      app_data$available_clusters <- unique(data$cluster)
+      app_data$data_loaded <- TRUE
+      
+      cat("Successfully initialized app with", nrow(data), "enrichment results\n")
+      
+    }, error = function(e) {
+      cat("Error loading data file:", e$message, "\n")
+      app_data$data_loaded <- FALSE
+    })
+  } else {
+    # Try default loading through load_enrichment_data
+    tryCatch({
+      data <- load_enrichment_data("all_modalities")
+      
+      # Process column names
+      if ("mutation_perturbation" %in% names(data)) {
+        data$gene <- data$mutation_perturbation
+      }
+      
+      # Add method column if not present
+      if (!"method" %in% names(data)) {
+        if ("log2FC" %in% names(data)) {
+          data$method <- "MixScale"
+        } else {
+          data$method <- "MAST"
+        }
+      }
+      
+      # Add experiment column if not present
+      if (!"experiment" %in% names(data)) {
+        data$experiment <- "Default"
+      }
+      
+      # Store data
+      app_data$data <- data
+      app_data$consolidated_data <- data
+      app_data$available_genes <- unique(data$gene)
+      app_data$available_clusters <- unique(data$cluster)
+      app_data$data_loaded <- TRUE
+      
+      cat("Successfully initialized app with", nrow(data), "enrichment results\n")
+      
+    }, error = function(e) {
+      cat("Error in initialize_app_with_data:", e$message, "\n")
+      app_data$data_loaded <- FALSE
+    })
+  }
 }
