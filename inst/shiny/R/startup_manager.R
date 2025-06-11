@@ -30,46 +30,34 @@ if (!app_data$file_picker_shown) {
   if (file.exists(default_path)) {
     
     tryCatch({
-      # Load the data
-      data <- readRDS(default_path)
+      # Use the load_enrichment_data function from global_minimal.R
+      cat("Attempting to load enrichment data...\n")
       
-      # Process the data
-      if ("source_file" %in% names(data)) {
-        # Extract metadata from filename
-        # Assuming filename format: gene_cluster_comparison_experiment_...
-        data$gene <- sapply(strsplit(data$source_file, "_"), function(x) x[1])
-        data$cluster <- sapply(strsplit(data$source_file, "_"), function(x) x[2])
-        data$comparison <- sapply(strsplit(data$source_file, "_"), function(x) x[3])
-        data$experiment <- sapply(strsplit(data$source_file, "_"), function(x) x[4])
+      # Check if we should use the env path or default
+      if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
+        # Set the global enrichment_file variable so load_enrichment_data finds it
+        assign("enrichment_file", env_enrichment_file, envir = .GlobalEnv)
       }
       
-      # Verify required columns
-      required_cols <- c("term", "p.adjust", "gene", "cluster", "comparison", "experiment")
-      missing_cols <- setdiff(required_cols, names(data))
+      # Use the existing load_enrichment_data function which handles the data structure properly
+      data <- load_enrichment_data("all_modalities")
       
-      if (length(missing_cols) > 0) {
-        stop("Missing required columns after processing: ", paste(missing_cols, collapse = ", "))
-      }
+      # The data should already have the correct structure with these columns:
+      # mutation_perturbation, cluster, enrichment_type, direction, p.adjust, Description, etc.
       
-      # Filter for significant results
-      if ("p.adjust" %in% names(data)) {
-        data <- data[data$p.adjust <= 0.05, ]
-        cat("Filtered to", nrow(data), "significant results (p.adjust ≤ 0.05)\n")
-      }
-      
-      # Store in app_data
+      # Store in app_data with the correct column names
       app_data$data <- data
-      app_data$available_genes <- unique(data$gene)
+      app_data$available_genes <- unique(data$mutation_perturbation)
       app_data$available_clusters <- unique(data$cluster)
       app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
       
-      # Create gene sets
-      app_data$gene_sets <- split(data$gene_id, data$term)
-      
       # Success message
       cat("Successfully loaded", nrow(data), "enrichment terms\n")
-      cat("Available genes:", length(app_data$available_genes), "\n")
+      cat("Available genes/perturbations:", length(app_data$available_genes), "\n")
       cat("Available clusters:", length(app_data$available_clusters), "\n")
+      
+      # Data initialization complete
+      # initialize_app_with_data(data)  # This function may not exist yet
       
     }, error = function(e) {
       cat("Error loading consolidated data:", e$message, "\n")
