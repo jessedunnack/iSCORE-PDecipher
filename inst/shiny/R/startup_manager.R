@@ -67,30 +67,6 @@ initialize_app_with_data <- function(app_data, data_file = NULL) {
     }
   }
 }
-      app_data$available_genes <- unique(data$gene)
-      app_data$available_clusters <- unique(data$cluster)
-      app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
-      
-      # Create gene sets
-      app_data$gene_sets <- split(data$gene_id, data$term)
-      
-      # Success message
-      cat("Successfully loaded", nrow(data), "enrichment terms\n")
-      cat("Available genes:", length(app_data$available_genes), "\n")
-      cat("Available clusters:", length(app_data$available_clusters), "\n")
-      
-    }, error = function(e) {
-      cat("Error loading consolidated data:", e$message, "\n")
-      app_data$data <- NULL
-      app_data$file_picker_shown <- TRUE
-      app_data$startup_message <- paste("⚠ Error loading data:", e$message)
-    })
-    
-  } else {
-    cat("Consolidated data not found at expected location\n")
-    app_data$file_picker_shown <- TRUE
-  }
-}
 
 #' Process uploaded enrichment file
 #' 
@@ -136,16 +112,6 @@ process_uploaded_file <- function(file_info) {
     # Filter for significant results
     if ("p.adjust" %in% names(data)) {
       data <- data[data$p.adjust <= 0.05, ]
-    }
-    
-    # Update app_data
-    app_data$data <- data
-    app_data$available_genes <- unique(data$gene)
-    app_data$available_clusters <- unique(data$cluster)
-    
-    # Create gene sets
-    if ("gene_id" %in% names(data) && "term" %in% names(data)) {
-      app_data$gene_sets <- split(data$gene_id, data$term)
     }
     
     showNotification(
