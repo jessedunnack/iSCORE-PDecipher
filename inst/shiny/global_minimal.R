@@ -1,366 +1,318 @@
-# Global configuration and functions for PerturbSeq Enrichment Analysis App
-# This file contains core data loading and filtering functions
+# Minimal global configuration for PD Enrichment Explorer
+# This version avoids loading complex dependencies that aren't immediately needed
 
-# Load required libraries
-library(shiny)
-library(shinyWidgets)
-library(shinycssloaders)
-library(shinyjs)
-library(DT)
-library(dplyr)
-library(ggplot2)
-library(plotly)
-library(glue)
+# Core libraries only
+library(tibble)
+library(tidyr)
+
+# Check for optional packages used in gene symbol conversion
+if (requireNamespace("clusterProfiler", quietly = TRUE)) {
+  suppressPackageStartupMessages(library(clusterProfiler))
+}
+if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+  suppressPackageStartupMessages(library(org.Hs.eg.db))
+}
+
+# Check for optional packages used in pathview visualization
+if (requireNamespace("pathview", quietly = TRUE)) {
+  suppressPackageStartupMessages(library(pathview))
+}
+if (requireNamespace("base64enc", quietly = TRUE)) {
+  suppressPackageStartupMessages(library(base64enc))
+}
 
 # Global configuration
-options(shiny.maxRequestSize = 500*1024^2)  # 500MB upload limit
+APP_CONFIG <- list(
+  # Data paths
+  enrichment_results_path = "/Users/hockemeyer/Desktop/Functional Enrichment/enrichment_results",
+  consolidated_data_path = "/Users/hockemeyer/Desktop/Functional Enrichment/all_enrichment_padj005_complete_with_direction.rds",
+  
+  # Analysis types
+  analysis_types = c("MAST" = "MAST", "MixScale" = "MixScale"),
+  
+  # Enrichment types
+  enrichment_types = c(
+    "GO Biological Process" = "GO_BP",
+    "GO Cellular Component" = "GO_CC", 
+    "GO Molecular Function" = "GO_MF",
+    "KEGG Pathways" = "KEGG",
+    "Reactome Pathways" = "Reactome",
+    "WikiPathways" = "WikiPathways",
+    "STRING PPI" = "STRING",
+    "GSEA" = "GSEA"
+  ),
+  
+  # Direction types
+  direction_types = c("All" = "ALL", "Up-regulated" = "UP", "Down-regulated" = "DOWN"),
+  
+  # Analysis parameters
+  default_pval_threshold = 0.05,
+  gsea_pval_threshold = 0.25,
+  max_terms_display = 50,
+  max_heatmap_rows = 500,
+  
+  # Performance settings
+  enable_caching = TRUE,
+  cache_dir = "cache",
+  max_cache_size_mb = 500,
+  
+  # UI settings
+  default_theme = "blue",
+  show_debug = FALSE,
+  
+  # File handling
+  max_file_size_mb = 50,
+  supported_formats = c(".rds", ".csv", ".txt", ".xlsx"),
+  
+  # Heatmap configuration
+  heatmap_metrics = c("P-value" = "p.adjust", "Fold Enrichment" = "fold_enrichment", "Gene Count" = "count"),
+  heatmap_scope = c("Terms across all clusters (this mutation)" = "across_clusters", 
+                    "Terms across all mutations (this cluster)" = "across_mutations")
+)
 
-# ============================================================================
-# CORE DATA FUNCTIONS
-# ============================================================================
-
-#' Load consolidated enrichment data
-#' @param dataset_name Name of dataset to load (or path to custom file)
-#' @return data frame with enrichment results
-load_enrichment_data <- function(dataset_name = "all_modalities") {
+# Utility functions
+get_available_genes <- function() {
+  base_dir <- APP_CONFIG$enrichment_results_path
+  genes <- c()
   
-  cat("Loading dataset:", dataset_name, "\n")
-  
-  # Check if it's a predefined dataset
-  if (dataset_name %in% c("all_modalities", "mast_only", "mast_crispi", "crispi_only", "crispa_only")) {
-    
-    # Try datasets directory first
-    dataset_file <- file.path("datasets", paste0(dataset_name, ".rds"))
-    
-    # Fallback to main directory for all_modalities
-    if (!file.exists(dataset_file) && dataset_name == "all_modalities") {
-      dataset_file <- "../all_enrichment_padj005_complete_with_direction.rds"
-    }
-    
-  } else {
-    # Custom file path
-    dataset_file <- dataset_name
+  # Try to get available genes from directory structure
+  if (dir.exists(file.path(base_dir, "MAST"))) {
+    mast_genes <- list.dirs(file.path(base_dir, "MAST"), full.names = FALSE, recursive = FALSE)
+    genes <- c(genes, mast_genes)
   }
   
-  if (!file.exists(dataset_file)) {
-    stop("Dataset file not found: ", dataset_file)
+  if (dir.exists(file.path(base_dir, "MixScale"))) {
+    mixscale_genes <- list.dirs(file.path(base_dir, "MixScale"), full.names = FALSE, recursive = FALSE)
+    genes <- c(genes, mixscale_genes)
   }
   
-  # Load the data
-  data <- readRDS(dataset_file)
-  cat("Loaded", nrow(data), "enrichment terms\n")
-  
-  # Ensure required columns exist
-  required_cols <- c("mutation_perturbation", "cluster", "enrichment_type", "direction", "p.adjust", "Description")
-  
-  # Handle alternative column names
-  if (!"mutation_perturbation" %in% names(data) && "gene" %in% names(data)) {
-    data$mutation_perturbation <- data$gene
-  }
-  
-  missing_cols <- setdiff(required_cols, names(data))
-  if (length(missing_cols) > 0) {
-    warning("Missing columns: ", paste(missing_cols, collapse = ", "))
-  }
-  
-  # Add modality column if missing (for backward compatibility)
-  if (!"modality" %in% names(data) && "method" %in% names(data)) {
-    data$modality <- case_when(
-      data$method == "MixScale_CRISPRa" ~ "CRISPRa",
-      data$method == "MixScale" ~ "CRISPRi", 
-      data$method == "MAST" ~ "MAST",
-      TRUE ~ NA_character_
-    )
-  }
-  
-  # Add analysis_type column if missing
-  if (!"analysis_type" %in% names(data) && "method" %in% names(data)) {
-    data$analysis_type <- case_when(
-      grepl("MixScale", data$method) ~ "MixScale",
-      TRUE ~ data$method
-    )
-  }
-  
-  # Filter to significant results only
-  data <- data[!is.na(data$p.adjust) & data$p.adjust <= 0.05, ]
-  
-  cat("Filtered to", nrow(data), "significant terms (p.adjust <= 0.05)\n")
-  
-  return(data)
+  unique(genes[genes != ""])
 }
 
-#' Get available datasets
-#' @return list of available dataset options
-get_available_datasets <- function() {
+get_available_clusters <- function(gene = NULL) {
+  if (is.null(gene)) return(character())
   
-  # Check what datasets are available
-  datasets_dir <- "datasets"
-  available_datasets <- list()
+  base_dir <- APP_CONFIG$enrichment_results_path
+  clusters <- c()
   
-  # Predefined datasets
-  dataset_files <- c(
-    "all_modalities" = "datasets/all_modalities.rds",
-    "mast_only" = "datasets/mast_only.rds", 
-    "mast_crispi" = "datasets/mast_crispi.rds",
-    "crispi_only" = "datasets/crispi_only.rds",
-    "crispa_only" = "datasets/crispa_only.rds"
-  )
+  # Check both MAST and MixScale
+  for (analysis_type in c("MAST", "MixScale")) {
+    gene_dir <- file.path(base_dir, analysis_type, gene)
+    if (dir.exists(gene_dir)) {
+      gene_clusters <- list.dirs(gene_dir, full.names = FALSE, recursive = FALSE)
+      clusters <- c(clusters, gene_clusters)
+    }
+  }
   
-  # Check which files exist
-  for (name in names(dataset_files)) {
-    file_path <- dataset_files[[name]]
-    
-    # Special case for all_modalities - check main directory too
-    if (name == "all_modalities" && !file.exists(file_path)) {
-      fallback_path <- "../all_enrichment_padj005_complete_with_direction.rds"
-      if (file.exists(fallback_path)) {
-        available_datasets[[name]] <- list(
-          name = "All Modalities",
-          description = "Complete dataset (MAST + CRISPRi + CRISPRa)",
-          file = fallback_path,
-          size = round(file.info(fallback_path)$size / (1024^2), 1)
-        )
+  unique(clusters[clusters != ""])
+}
+
+get_available_experiments <- function(gene = NULL, cluster = NULL, analysis_type = NULL) {
+  if (is.null(gene) || is.null(cluster)) return(character())
+  
+  base_dir <- APP_CONFIG$enrichment_results_path
+  experiments <- c()
+  
+  # If analysis_type is provided, only check that type
+  types_to_check <- if (!is.null(analysis_type)) analysis_type else c("MAST", "MixScale")
+  
+  for (type in types_to_check) {
+    cluster_dir <- file.path(base_dir, type, gene, cluster)
+    if (dir.exists(cluster_dir)) {
+      exp_dirs <- list.dirs(cluster_dir, full.names = FALSE, recursive = FALSE)
+      # Filter out empty strings and diagnostic directories
+      exp_dirs <- exp_dirs[!exp_dirs %in% c("", ".", "..", "diagnostics")]
+      
+      # For MixScale, sort to put "combined" first if it exists
+      if (type == "MixScale" && "combined" %in% exp_dirs) {
+        exp_dirs <- c("combined", setdiff(exp_dirs, "combined"))
       }
-    } else if (file.exists(file_path)) {
-      available_datasets[[name]] <- list(
-        name = switch(name,
-                     "all_modalities" = "All Modalities",
-                     "mast_only" = "MAST Only", 
-                     "mast_crispi" = "MAST + CRISPRi",
-                     "crispi_only" = "CRISPRi Only",
-                     "crispa_only" = "CRISPRa Only"),
-        description = switch(name,
-                           "all_modalities" = "Complete dataset (MAST + CRISPRi + CRISPRa)",
-                           "mast_only" = "Genetic mutations only",
-                           "mast_crispi" = "Mutations + knockdowns", 
-                           "crispi_only" = "CRISPR knockdowns only",
-                           "crispa_only" = "CRISPR activation only"),
-        file = file_path,
-        size = round(file.info(file_path)$size / (1024^2), 1)
-      )
+      
+      experiments <- c(experiments, exp_dirs)
     }
   }
   
-  return(available_datasets)
+  unique(experiments[experiments != ""])
 }
 
-#' Filter enrichment data based on selections
-#' @param data Input data frame
-#' @param gene Gene/mutation to filter by
-#' @param cluster Cluster to filter by  
-#' @param enrichment_type Enrichment type to filter by
-#' @param direction Direction to filter by (UP/DOWN/ALL)
-#' @param modality Modality to filter by (optional)
-#' @return Filtered data frame
-get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster = NULL, 
-                                                   enrichment_type = NULL, direction = "ALL",
-                                                   modality = NULL) {
-  
-  if (is.null(data) || nrow(data) == 0) {
-    return(data.frame())
+# Summarize enrichment results
+summarize_enrichment <- function(result, enrichment_type, pval_threshold = 0.05) {
+  if (is.null(result)) {
+    return(list(
+      total_terms = 0,
+      significant_terms = 0,
+      top_term = "N/A",
+      top_pvalue = 1
+    ))
   }
   
-  # Start with all data
-  filtered_data <- data
-  
-  # Filter by gene/mutation
-  if (!is.null(gene) && gene != "All") {
-    filtered_data <- filtered_data[filtered_data$mutation_perturbation == gene, ]
+  # Extract data based on enrichment type
+  if (enrichment_type == "STRING") {
+    df <- result$enrichment
+    total <- nrow(df)
+    sig <- sum(df$fdr < pval_threshold, na.rm = TRUE)
+    top_idx <- which.min(df$fdr)
+    top_term <- if (length(top_idx) > 0) df$description[top_idx] else "N/A"
+    top_pval <- if (length(top_idx) > 0) df$fdr[top_idx] else 1
+  } else if (methods::is(result, "enrichResult")) {
+    df <- result@result
+    total <- nrow(df)
+    sig <- sum(df$p.adjust < pval_threshold, na.rm = TRUE)
+    top_idx <- which.min(df$p.adjust)
+    top_term <- if (length(top_idx) > 0) df$Description[top_idx] else "N/A"
+    top_pval <- if (length(top_idx) > 0) df$p.adjust[top_idx] else 1
+  } else {
+    return(list(
+      total_terms = 0,
+      significant_terms = 0,
+      top_term = "N/A",
+      top_pvalue = 1
+    ))
   }
   
-  # Filter by cluster
-  if (!is.null(cluster) && cluster != "All") {
+  list(
+    total_terms = total,
+    significant_terms = sig,
+    top_term = top_term,
+    top_pvalue = top_pval
+  )
+}
+
+# Format p-value for display
+format_pvalue <- function(pval) {
+  if (is.na(pval) || is.null(pval)) return("N/A")
+  if (pval < 0.001) {
+    return(sprintf("%.2e", pval))
+  } else {
+    return(sprintf("%.4f", pval))
+  }
+}
+
+# Load enrichment result safely
+load_enrichment_safe <- function(file_path) {
+  # Check if file_path is NULL or empty
+  if (is.null(file_path) || length(file_path) == 0 || file_path == "") {
+    message("Error: file_path is NULL or empty")
+    return(NULL)
+  }
+  
+  tryCatch({
+    if (file.exists(file_path)) {
+      result <- readRDS(file_path)
+      return(result)
+    } else {
+      message("File does not exist: ", file_path)
+      return(NULL)
+    }
+  }, error = function(e) {
+    message("Error loading file: ", file_path)
+    message("Error: ", e$message)
+    return(NULL)
+  })
+}
+
+# Simple file existence check
+check_enrichment_file <- function(analysis_type, gene, cluster, experiment = "default", 
+                                  enrichment_type, direction) {
+  base_dir <- APP_CONFIG$enrichment_results_path
+  file_path <- file.path(base_dir, analysis_type, gene, cluster, experiment, enrichment_type,
+                         paste0(enrichment_type, "_", direction, ".rds"))
+  file.exists(file_path)
+}
+
+# Simple data loader
+load_enrichment_result <- function(analysis_type, gene, cluster, experiment = "default", 
+                                   enrichment_type, direction) {
+  base_dir <- APP_CONFIG$enrichment_results_path
+  file_path <- file.path(base_dir, analysis_type, gene, cluster, experiment, enrichment_type,
+                         paste0(enrichment_type, "_", direction, ".rds"))
+  
+  if (file.exists(file_path)) {
+    return(readRDS(file_path))
+  } else {
+    return(NULL)
+  }
+}
+
+# Load consolidated enrichment data
+load_consolidated_data <- function() {
+  path <- APP_CONFIG$consolidated_data_path
+  if (file.exists(path)) {
+    tryCatch({
+      data <- readRDS(path)
+      message("Loaded consolidated data with ", nrow(data), " rows")
+      return(data)
+    }, error = function(e) {
+      message("Error loading consolidated data: ", e$message)
+      return(NULL)
+    })
+  } else {
+    message("Consolidated data file not found: ", path)
+    return(NULL)
+  }
+}
+
+# Get significant terms from consolidated data
+get_significant_terms_from_consolidated <- function(consolidated_data, 
+                                                    analysis_type = NULL,
+                                                    gene = NULL,
+                                                    cluster = NULL,
+                                                    experiment = NULL,
+                                                    enrichment_type = NULL,
+                                                    direction = NULL,
+                                                    pval_threshold = 0.05) {
+  
+  if (is.null(consolidated_data)) return(NULL)
+  
+  # Filter the consolidated data based on parameters
+  filtered_data <- consolidated_data
+  
+  if (!is.null(analysis_type)) {
+    filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+  }
+  
+  if (!is.null(gene)) {
+    filtered_data <- filtered_data[filtered_data$gene == gene, ]
+  }
+  
+  if (!is.null(cluster)) {
     filtered_data <- filtered_data[filtered_data$cluster == cluster, ]
   }
   
-  # Filter by enrichment type
-  if (!is.null(enrichment_type) && enrichment_type != "All") {
+  if (!is.null(experiment)) {
+    filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+  }
+  
+  if (!is.null(enrichment_type)) {
     filtered_data <- filtered_data[filtered_data$enrichment_type == enrichment_type, ]
   }
   
-  # Filter by direction (fixed bug from original)
-  if (!is.null(direction) && direction != "ALL") {
+  if (!is.null(direction)) {
     filtered_data <- filtered_data[filtered_data$direction == direction, ]
   }
   
-  # Filter by modality if specified
-  if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
-    filtered_data <- filtered_data[filtered_data$modality == modality, ]
-  }
-  
-  # Sort by p-value and limit for performance
-  if (nrow(filtered_data) > 0) {
-    filtered_data <- filtered_data[order(filtered_data$p.adjust), ]
-    
-    # Limit to top 1000 for performance
-    if (nrow(filtered_data) > 1000) {
-      filtered_data <- filtered_data[1:1000, ]
-    }
+  # Filter by p-value threshold
+  # Handle different p-value column names
+  if ("p.adjust" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$p.adjust < pval_threshold, ]
+  } else if ("fdr" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$fdr < pval_threshold, ]
+  } else if ("padj" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$padj < pval_threshold, ]
   }
   
   return(filtered_data)
 }
 
-#' Get dataset summary statistics
-#' @param data Input data frame
-#' @return List with summary statistics
-get_dataset_summary <- function(data) {
+# Initialize app data
+initialize_app_data <- function() {
+  # Load consolidated data on app initialization
+  consolidated_data <- load_consolidated_data()
   
-  if (is.null(data) || nrow(data) == 0) {
-    return(list(
-      total_terms = 0,
-      genes = 0,
-      clusters = 0,
-      enrichment_types = 0,
-      modalities = 0
-    ))
-  }
-  
-  summary_stats <- list(
-    total_terms = nrow(data),
-    genes = length(unique(data$mutation_perturbation)),
-    clusters = length(unique(data$cluster)),
-    enrichment_types = length(unique(data$enrichment_type))
+  list(
+    available_genes = get_available_genes(),
+    config = APP_CONFIG,
+    session_id = format(Sys.time(), "%Y%m%d_%H%M%S"),
+    consolidated_data = consolidated_data
   )
-  
-  # Add modality info if available
-  if ("modality" %in% names(data)) {
-    summary_stats$modalities = length(unique(data$modality[!is.na(data$modality)]))
-    summary_stats$modality_breakdown = table(data$modality, useNA = "ifany")
-  }
-  
-  # Add method info if available  
-  if ("method" %in% names(data)) {
-    summary_stats$method_breakdown = table(data$method, useNA = "ifany")
-  }
-  
-  return(summary_stats)
 }
-
-#' Format dataset info for display
-#' @param summary_stats Summary statistics from get_dataset_summary
-#' @return Formatted text string
-format_dataset_info <- function(summary_stats) {
-  
-  info_text <- paste(
-    paste("Terms:", format(summary_stats$total_terms, big.mark = ",")),
-    paste("Genes:", summary_stats$genes),
-    paste("Clusters:", summary_stats$clusters),
-    paste("Databases:", summary_stats$enrichment_types),
-    sep = "\n"
-  )
-  
-  if (!is.null(summary_stats$modalities) && summary_stats$modalities > 0) {
-    info_text <- paste(info_text, paste("Modalities:", summary_stats$modalities), sep = "\n")
-  }
-  
-  return(info_text)
-}
-
-# ============================================================================
-# VISUALIZATION HELPERS  
-# ============================================================================
-
-#' Create a summary table for enrichment types
-#' @param data Input data frame
-#' @return Data frame for display
-create_enrichment_summary_table <- function(data) {
-  
-  if (is.null(data) || nrow(data) == 0) {
-    return(data.frame(Enrichment_Type = character(), Count = integer()))
-  }
-  
-  summary_data <- as.data.frame(table(data$enrichment_type))
-  names(summary_data) <- c("Enrichment_Type", "Count")
-  summary_data <- summary_data[order(summary_data$Count, decreasing = TRUE), ]
-  
-  return(summary_data)
-}
-
-#' Create a summary table for genes
-#' @param data Input data frame  
-#' @return Data frame for display
-create_gene_summary_table <- function(data) {
-  
-  if (is.null(data) || nrow(data) == 0) {
-    return(data.frame(Gene = character(), Total_Terms = integer()))
-  }
-  
-  gene_summary <- as.data.frame(table(data$mutation_perturbation))
-  names(gene_summary) <- c("Gene", "Total_Terms") 
-  gene_summary <- gene_summary[order(gene_summary$Total_Terms, decreasing = TRUE), ]
-  
-  return(gene_summary)
-}
-
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
-
-#' Clean column names for display
-#' @param df Input data frame
-#' @return Data frame with cleaned column names
-clean_display_columns <- function(df) {
-  
-  # Select key columns for display
-  display_cols <- c("Description", "p.adjust", "direction")
-  
-  # Add optional columns if they exist
-  optional_cols <- c("count", "fold_enrichment", "geneID", "BgRatio", "GeneRatio")
-  for (col in optional_cols) {
-    if (col %in% names(df)) {
-      display_cols <- c(display_cols, col)
-    }
-  }
-  
-  # Return subset with available columns
-  available_cols <- intersect(display_cols, names(df))
-  return(df[, available_cols, drop = FALSE])
-}
-
-#' Validate uploaded dataset
-#' @param file_path Path to uploaded file
-#' @return List with validation results
-validate_dataset <- function(file_path) {
-  
-  tryCatch({
-    
-    # Load the data
-    data <- readRDS(file_path)
-    
-    # Check if it's a data frame
-    if (!is.data.frame(data)) {
-      return(list(valid = FALSE, message = "File must contain a data frame"))
-    }
-    
-    # Check minimum size
-    if (nrow(data) < 10) {
-      return(list(valid = FALSE, message = "Dataset too small (minimum 10 rows)"))
-    }
-    
-    # Check required columns
-    required_cols <- c("mutation_perturbation", "cluster", "enrichment_type", "direction", "p.adjust", "Description")
-    
-    # Handle alternative column names
-    if (!"mutation_perturbation" %in% names(data) && "gene" %in% names(data)) {
-      names(data)[names(data) == "gene"] <- "mutation_perturbation"
-    }
-    
-    missing_cols <- setdiff(required_cols, names(data))
-    if (length(missing_cols) > 0) {
-      return(list(valid = FALSE, message = paste("Missing columns:", paste(missing_cols, collapse = ", "))))
-    }
-    
-    # Check p.adjust values
-    if (any(is.na(data$p.adjust)) || any(data$p.adjust < 0) || any(data$p.adjust > 1)) {
-      return(list(valid = FALSE, message = "Invalid p.adjust values (must be 0-1)"))
-    }
-    
-    return(list(valid = TRUE, data = data, message = "Dataset validated successfully"))
-    
-  }, error = function(e) {
-    return(list(valid = FALSE, message = paste("Error loading file:", e$message)))
-  })
-}
-
-cat("Global functions loaded successfully\n")
