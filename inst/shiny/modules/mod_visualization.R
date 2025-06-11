@@ -127,14 +127,30 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         }
         
         # Apply all filters
-        filtered_data <- data[
-          analysis_filter &
-          data$gene == selection$gene &
-          data$cluster == selection$cluster &
-          data$experiment == selection$experiment &
-          data$enrichment_type == selection$enrichment_type &
-          (selection$direction == "ALL" | data$direction == selection$direction),
-        ]
+        # Start with analysis type filter
+        filtered_data <- data[analysis_filter, ]
+        
+        # Apply other filters only if they are not empty
+        if (!is.null(selection$gene) && selection$gene != "") {
+          filtered_data <- filtered_data[filtered_data$gene == selection$gene, ]
+        }
+        
+        if (!is.null(selection$cluster) && selection$cluster != "") {
+          filtered_data <- filtered_data[filtered_data$cluster == selection$cluster, ]
+        }
+        
+        if (!is.null(selection$experiment) && selection$experiment != "") {
+          filtered_data <- filtered_data[filtered_data$experiment == selection$experiment, ]
+        }
+        
+        if (!is.null(selection$enrichment_type) && selection$enrichment_type != "") {
+          filtered_data <- filtered_data[filtered_data$enrichment_type == selection$enrichment_type, ]
+        }
+        
+        if (!is.null(selection$direction) && selection$direction != "ALL") {
+          filtered_data <- filtered_data[filtered_data$direction == selection$direction, ]
+        }
+        
         data <- filtered_data
         
         message("Filtered data: ", nrow(data), " rows for visualization")
