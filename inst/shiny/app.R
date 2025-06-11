@@ -1,6 +1,5 @@
 # iSCORE-PDecipher Shiny Visualization App
 # A ShinyGO-inspired interface for Parkinson's Disease functional enrichment analysis
-# Combines reference app design with flexible data loading
 
 # Load required libraries
 library(shiny)
@@ -15,43 +14,27 @@ library(glue)
 library(tibble)
 library(colourpicker)
 
-# Check if we have data file provided or need upload interface
-has_data <- Sys.getenv("ISCORE_HAS_DATA", unset = "FALSE") == "TRUE"
-data_file <- Sys.getenv("ISCORE_DATA_FILE", unset = "")
-
 # Source global functions and configurations
-if (file.exists("global_minimal.R")) {
-  source("global_minimal.R")
-} else {
-  # Create minimal config if file doesn't exist
-  APP_CONFIG <- list(
-    analysis_types = c("MAST", "MixScale", "MixScale_CRISPRa"),
-    enrichment_types = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA")
-  )
-}
+source("global_minimal.R")
 
-# Source modules if they exist
-safe_source <- function(file) {
-  if (file.exists(file)) {
-    tryCatch(source(file), error = function(e) {
-      cat("Warning: Could not source", file, ":", e$message, "\n")
-    })
-  }
-}
+# Source new startup manager
+source("R/startup_manager.R")
 
-safe_source("R/startup_manager.R")
-safe_source("R/cache_manager.R")
-safe_source("modules/mod_landing_page.R")
-safe_source("modules/mod_precomputed_reactive.R")
-safe_source("modules/mod_visualization.R")
-safe_source("modules/mod_comparison.R")
-safe_source("modules/mod_heatmap.R")
-safe_source("modules/mod_pathview.R")
-safe_source("modules/mod_export.R")
+# Source cache manager
+source("R/cache_manager.R")
+
+# Source modules
+source("modules/mod_landing_page.R")
+source("modules/mod_precomputed_reactive.R")
+source("modules/mod_visualization.R")
+source("modules/mod_comparison.R")
+source("modules/mod_heatmap.R")
+source("modules/mod_pathview.R")
+source("modules/mod_export.R")
 
 # Define UI with persistent sidebar
 ui <- fluidPage(
-  title = "iSCORE-PDecipher",
+  title = "PD Enrichment Explorer",
   
   # Header content (shinyjs and CSS)
   useShinyjs(),
@@ -197,30 +180,6 @@ ui <- fluidPage(
         font-weight: 500;
       }
       
-      /* Upload area styling */
-      .upload-area {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 40px;
-        border-radius: 15px;
-        text-align: center;
-        margin: 20px auto;
-        max-width: 600px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      }
-      
-      .upload-box {
-        border: 3px dashed rgba(255,255,255,0.5);
-        border-radius: 10px;
-        padding: 30px;
-        transition: all 0.3s ease;
-      }
-      
-      .upload-box:hover {
-        border-color: rgba(255,255,255,0.8);
-        background-color: rgba(255,255,255,0.1);
-      }
-      
       /* Responsive */
       @media (max-width: 768px) {
         .sidebar-fixed {
@@ -238,280 +197,171 @@ ui <- fluidPage(
     "))
   ),
   
-  # Loading overlay
-  div(id = "loadingOverlay", class = "loading-overlay",
-    div(class = "loading-content",
-      div(class = "loading-spinner"),
-      h4("Loading data..."),
-      p("Please wait while we process your enrichment data.")
-    )
-  ),
-  
   # App header
   div(class = "app-header",
-    h2(icon("dna"), "iSCORE-PDecipher: PD Enrichment Explorer")
+    h2(icon("dna"), "PD Enrichment Explorer")
   ),
   
   div(class = "content-area",
-    # Conditional UI based on whether data is loaded
-    conditionalPanel(
-      condition = "!output.dataLoaded",
+    # Sidebar with global settings
+    div(class = "sidebar-fixed",
+      h3(icon("cogs"), "Global Settings"),
+      hr(),
       
-      div(class = "upload-area",
-        h2(icon("upload"), "Load Your Data"),
-        p("Upload your consolidated enrichment results to begin analysis"),
-        
-        div(class = "upload-box",
-          fileInput("dataFile", 
-                    label = NULL,
-                    accept = c(".rds", ".RDS"),
-                    placeholder = "Choose RDS file...",
-                    buttonLabel = "Browse Files",
-                    multiple = FALSE),
-          
-          br(),
-          p(icon("info-circle"), "Accepts RDS files with enrichment analysis results", 
-            style = "font-size: 14px; opacity: 0.8;")
-        ),
-        
-        # Loading indicator
-        conditionalPanel(
-          condition = "output.uploading",
-          div(
-            style = "margin-top: 20px;",
-            div(class = "loading-spinner", style = "width: 30px; height: 30px;"),
-            "Processing your data..."
+      # Data Selection
+      h5("Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
+      
+      selectInput("global_analysis_type",
+                  "Analysis Type",
+                  choices = APP_CONFIG$analysis_types,
+                  selected = APP_CONFIG$analysis_types[1],
+                  width = "100%"),
+      
+      selectInput("global_gene",
+                  "Gene/Mutation",
+                  choices = character(0),
+                  width = "100%"),
+      
+      selectInput("global_cluster",
+                  "Cell Cluster", 
+                  choices = character(0),
+                  width = "100%"),
+      
+      selectInput("global_experiment",
+                  "Experiment",
+                  choices = character(0),
+                  width = "100%"),
+      
+      selectInput("global_enrichment_type",
+                  "Enrichment Database",
+                  choices = APP_CONFIG$enrichment_types,
+                  selected = "GO_BP",
+                  width = "100%"),
+      
+      # GSEA-specific options
+      conditionalPanel(
+        condition = "input.global_enrichment_type == 'GSEA'",
+        wellPanel(
+          style = "background-color: #fff; border: 1px solid #ddd; margin-top: 10px;",
+          h5("GSEA Options", style = "margin-top: 0;"),
+          checkboxGroupInput(
+            "global_gsea_databases",
+            "Gene Set Collections:",
+            choices = c("C1: Positional" = "c1.all",
+                       "C2: Curated (CP)" = "c2.cp",
+                       "C5: GO" = "c5.all",
+                       "H: Hallmark" = "h.all"),
+            selected = c("c2.cp", "h.all")
+          ),
+          numericInput(
+            "global_min_nes",
+            "Min |NES|:",
+            value = 1.0,
+            min = 0,
+            max = 3,
+            step = 0.1,
+            width = "100%"
           )
         )
-      )
-    ),
-    
-    # Main interface (shown when data is loaded)
-    conditionalPanel(
-      condition = "output.dataLoaded",
-      
-      # Sidebar with global settings
-      div(class = "sidebar-fixed",
-        h3(icon("cogs"), "Global Settings"),
-        hr(),
-        
-        # Data overview
-        div(id = "dataOverview",
-          h5("Dataset Overview", style = "margin-bottom: 10px; font-weight: bold; color: #337ab7;"),
-          verbatimTextOutput("dataOverviewText", placeholder = TRUE),
-          hr()
-        ),
-        
-        # Data Selection
-        h5("Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
-        
-        selectInput("global_analysis_type",
-                    "Analysis Type",
-                    choices = character(0),
-                    width = "100%"),
-        
-        selectInput("global_gene",
-                    "Gene/Mutation",
-                    choices = character(0),
-                    width = "100%"),
-        
-        selectInput("global_cluster",
-                    "Cell Cluster", 
-                    choices = character(0),
-                    width = "100%"),
-        
-        selectInput("global_experiment",
-                    "Experiment",
-                    choices = character(0),
-                    width = "100%"),
-        
-        selectInput("global_enrichment_type",
-                    "Enrichment Database",
-                    choices = character(0),
-                    width = "100%"),
-        
-        # P-value threshold
-        hr(),
-        numericInput("global_pval",
-                     "P-value Threshold",
-                     value = 0.05,
-                     min = 0.001,
-                     max = 0.5,
-                     step = 0.001,
-                     width = "100%"),
-        
-        br(),
-        actionButton("resetToDefaults",
-                     "Reset to Defaults",
-                     class = "btn-warning",
-                     style = "width: 100%;")
       ),
       
-      # Main content area
-      div(class = "main-content",
-        tabsetPanel(
-          id = "main_tabs",
-          
-          # Overview/Landing Page
-          tabPanel(
-            "Overview",
-            icon = icon("home"),
-            value = "overview",
-            br(),
-            div(
-              h2("Welcome to iSCORE-PDecipher"),
-              p("Explore Parkinson's disease functional enrichment results from MAST and MixScale analyses."),
-              
-              fluidRow(
-                column(6,
-                  wellPanel(
-                    h4(icon("chart-bar"), "Basic Visualization"),
-                    p("Create dotplots and other standard visualizations"),
-                    actionButton("goToVisualization", "Start Exploring", class = "btn-primary")
-                  )
-                ),
-                column(6,
-                  wellPanel(
-                    h4(icon("th"), "Heatmap Analysis"),
-                    p("Generate clustered heatmaps for pathway comparison"),
-                    actionButton("goToHeatmap", "Create Heatmaps", class = "btn-info")
-                  )
-                )
-              ),
-              
-              fluidRow(
-                column(6,
-                  wellPanel(
-                    h4(icon("chart-line"), "Method Comparison"),
-                    p("Compare MAST vs MixScale enrichment results"),
-                    actionButton("goToComparison", "Compare Methods", class = "btn-success")
-                  )
-                ),
-                column(6,
-                  wellPanel(
-                    h4(icon("download"), "Export Results"),
-                    p("Download figures and filtered datasets"),
-                    actionButton("goToExport", "Export Data", class = "btn-warning")
-                  )
-                )
-              )
-            )
-          ),
-          
-          # Basic Visualization (main plotting interface)
-          tabPanel(
-            "Dotplot Visualization",
-            icon = icon("chart-bar"),
-            value = "visualization",
-            br(),
-            
-            # Simple version of visualization since modules might not load
-            sidebarLayout(
-              sidebarPanel(
-                width = 3,
-                h4("Plot Settings"),
-                
-                selectInput("plot_type",
-                            "Visualization Type:",
-                            choices = list("Dot Plot" = "dotplot"),
-                            selected = "dotplot"),
-                
-                numericInput("top_terms",
-                             "Number of Terms:",
-                             value = 20,
-                             min = 5,
-                             max = 50,
-                             step = 5),
-                
-                selectInput("direction_filter",
-                            "Direction:",
-                            choices = c("All" = "ALL", "Up" = "UP", "Down" = "DOWN"),
-                            selected = "ALL"),
-                
-                br(),
-                actionButton("updatePlot", "Update Plot", class = "btn-primary", width = "100%")
-              ),
-              
-              mainPanel(
-                width = 9,
-                tabsetPanel(
-                  tabPanel("Plot",
-                           withSpinner(plotlyOutput("mainPlot", height = "700px"))),
-                  tabPanel("Data Table",
-                           withSpinner(DT::dataTableOutput("plotData"))),
-                  tabPanel("Summary",
-                           verbatimTextOutput("plotSummary"))
-                )
-              )
-            )
-          ),
-          
-          # Heatmap Visualization  
-          tabPanel(
-            "Clustered Heatmaps",
-            icon = icon("th"),
-            value = "heatmap",
-            br(),
-            
-            sidebarLayout(
-              sidebarPanel(
-                width = 3,
-                h4("Heatmap Settings"),
-                
-                selectInput("heatmap_metric",
-                            "Color Metric:",
-                            choices = c("P-value" = "pvalue", "Fold Enrichment" = "foldenrich"),
-                            selected = "pvalue"),
-                
-                selectInput("heatmap_genes",
-                            "Genes to Include:",
-                            choices = character(0),
-                            multiple = TRUE),
-                
-                numericInput("heatmap_max_terms",
-                             "Max Terms per Gene:",
-                             value = 20,
-                             min = 5,
-                             max = 50),
-                
-                checkboxInput("cluster_rows", "Cluster Rows", value = TRUE),
-                checkboxInput("cluster_cols", "Cluster Columns", value = TRUE),
-                
-                br(),
-                actionButton("generateHeatmap", "Generate Heatmap", class = "btn-primary", width = "100%")
-              ),
-              
-              mainPanel(
-                width = 9,
-                withSpinner(plotOutput("heatmapPlot", height = "800px"))
-              )
-            )
-          ),
-          
-          # Export Results
-          tabPanel(
-            "Export & Download",
-            icon = icon("download"),
-            value = "export",
-            br(),
-            
-            fluidRow(
-              column(6,
-                wellPanel(
-                  h4("Download Filtered Data"),
-                  p("Export the currently filtered dataset"),
-                  downloadButton("downloadFilteredData", "Download CSV", class = "btn-success", width = "100%")
-                )
-              ),
-              column(6,
-                wellPanel(
-                  h4("Download Plots"),
-                  p("Save current visualizations"),
-                  downloadButton("downloadPlot", "Download Plot (PNG)", class = "btn-info", width = "100%")
-                )
-              )
-            )
-          )
+      radioButtons("global_direction",
+                   "Gene Regulation",
+                   choices = APP_CONFIG$direction_types,
+                   selected = "ALL"),
+      
+      hr(),
+      
+      h5("Analysis Settings", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
+      
+      sliderInput("global_pval",
+                  "P-value Threshold",
+                  min = 0.001,
+                  max = 0.05,
+                  value = 0.05,
+                  step = 0.001,
+                  width = "100%"),
+      
+      hr(),
+      
+      # Data status
+      uiOutput("data_status")
+    ),
+      
+    # Main content area
+    div(class = "main-content",
+      # Loading overlay
+      div(id = "loadingOverlay", class = "loading-overlay",
+        div(class = "loading-content",
+          div(class = "loading-spinner"),
+          h4("Loading data..."),
+          p("Please wait while we fetch your results")
+        )
+      ),
+      
+      tabsetPanel(
+        id = "main_tabs",
+        
+        # Landing Page
+        tabPanel(
+          "Overview",
+          icon = icon("home"),
+          value = "overview",
+          br(),
+          landingPageUI("landing")
+        ),
+        
+        # Basic Visualization (main plotting interface)
+        tabPanel(
+          "Basic Visualization",
+          icon = icon("chart-bar"),
+          value = "visualization",
+          br(),
+          mod_visualization_ui("visualization_module")
+        ),
+        
+        # Method Comparison
+        tabPanel(
+          "Method Comparison",
+          icon = icon("chart-line"),
+          value = "comparison",
+          br(),
+          h2("Compare Analysis Methods"),
+          p("Compare MAST vs MixScale results to identify convergent pathways"),
+          mod_comparison_ui("comparison_module")
+        ),
+        
+        # Heatmap Visualization
+        tabPanel(
+          "Heatmap Visualization",
+          icon = icon("th"),
+          value = "heatmap",
+          br(),
+          h2("Interactive Heatmaps"),
+          p("Create customizable heatmaps of enrichment results"),
+          mod_heatmap_ui("heatmap_module")
+        ),
+        
+        # KEGG Pathview
+        tabPanel(
+          "KEGG Pathview",
+          icon = icon("project-diagram"),
+          value = "pathview",
+          br(),
+          h2("KEGG Pathway Visualization"),
+          p("Visualize differential expression on KEGG pathway diagrams"),
+          mod_pathview_ui("pathview_module")
+        ),
+        
+        # Export Results
+        tabPanel(
+          "Export Results",
+          icon = icon("download"),
+          value = "export",
+          br(),
+          h2("Export Results"),
+          p("Download figures and data in various formats"),
+          mod_export_ui("export_module")
         )
       )
     )
@@ -521,288 +371,259 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output, session) {
   
-  # Reactive values
-  values <- reactiveValues(
-    full_data = NULL,
-    filtered_data = NULL,
+  # Initialize reactive values
+  app_data <- reactiveValues(
+    consolidated_data = NULL,
     data_loaded = FALSE,
-    current_plot = NULL
+    available_genes = character(0),
+    default_method = "MAST",
+    default_gene = "LRRK2",
+    default_cluster = "cluster_0",
+    default_experiment = "default",
+    default_enrichment = "GO_BP",
+    default_direction = "ALL"
   )
   
-  # Check if data was provided via launch function
-  observe({
+  # Global p-value threshold
+  global_pval <- reactive({
+    input$global_pval
+  })
+  
+  # Initialize app with data - run once
+  observeEvent(once = TRUE, ignoreNULL = FALSE, ignoreInit = FALSE, {
+    # Check environment variables first
+    has_data <- Sys.getenv("ISCORE_HAS_DATA", unset = "FALSE") == "TRUE"
+    data_file <- Sys.getenv("ISCORE_DATA_FILE", unset = "")
+    
     if (has_data && file.exists(data_file)) {
       cat("Loading provided data file:", data_file, "\n")
-      
-      tryCatch({
-        values$full_data <- readRDS(data_file)
-        values$data_loaded <- TRUE
-        
-        # Initialize UI choices
-        initialize_ui_choices()
-        
-        showNotification("Data loaded successfully!", type = "success")
-        
-      }, error = function(e) {
-        showNotification(paste("Error loading data:", e$message), type = "error")
-      })
+      initialize_app_with_data(app_data, data_file)
+    } else {
+      initialize_app_with_data(app_data)
     }
   })
   
-  # Handle file upload
-  observeEvent(input$dataFile, {
-    req(input$dataFile)
-    
-    output$uploading <- reactive({ TRUE })
-    outputOptions(output, "uploading", suspendWhenHidden = FALSE)
-    
-    tryCatch({
-      values$full_data <- readRDS(input$dataFile$datapath)
-      values$data_loaded <- TRUE
-      
-      # Initialize UI choices
-      initialize_ui_choices()
-      
-      showNotification("Data uploaded successfully!", type = "success")
-      output$uploading <- reactive({ FALSE })
-      
-    }, error = function(e) {
-      showNotification(paste("Error loading file:", e$message), type = "error")
-      output$uploading <- reactive({ FALSE })
-    })
-  })
-  
-  # Function to initialize UI choices
-  initialize_ui_choices <- function() {
-    req(values$full_data)
-    
-    # Fix column names if needed
-    if ("mutation_perturbation" %in% names(values$full_data) && !"gene" %in% names(values$full_data)) {
-      values$full_data$gene <- values$full_data$mutation_perturbation
-    }
-    
-    # Update analysis type choices
-    if ("method" %in% names(values$full_data)) {
-      analysis_types <- sort(unique(values$full_data$method))
-      updateSelectInput(session, "global_analysis_type", choices = analysis_types, selected = analysis_types[1])
-    }
-    
-    # Update enrichment type choices
-    if ("enrichment_type" %in% names(values$full_data)) {
-      enrich_types <- sort(unique(values$full_data$enrichment_type))
-      updateSelectInput(session, "global_enrichment_type", choices = enrich_types, selected = enrich_types[1])
-    }
-  }
-  
-  # Update gene choices based on analysis type
+  # Update gene choices based on consolidated data
   observe({
-    req(values$full_data, input$global_analysis_type)
+    req(app_data$data_loaded)
+    req(input$global_analysis_type)
     
-    genes <- unique(values$full_data[values$full_data$method == input$global_analysis_type, "gene"])
-    genes <- sort(genes)
-    
-    updateSelectInput(session, "global_gene", choices = genes, selected = genes[1])
-    updateSelectInput(session, "heatmap_genes", choices = genes, selected = head(genes, 3))
-  })
-  
-  # Update cluster choices
-  observe({
-    req(values$full_data, input$global_analysis_type, input$global_gene)
-    
-    clusters <- unique(values$full_data[
-      values$full_data$method == input$global_analysis_type &
-      values$full_data$gene == input$global_gene,
-      "cluster"
-    ])
-    clusters <- sort(clusters)
-    
-    updateSelectInput(session, "global_cluster", choices = clusters, selected = clusters[1])
-  })
-  
-  # Output for conditional UI
-  output$dataLoaded <- reactive({
-    return(values$data_loaded)
-  })
-  outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
-  
-  output$uploading <- reactive({ FALSE })
-  outputOptions(output, "uploading", suspendWhenHidden = FALSE)
-  
-  # Data overview
-  output$dataOverviewText <- renderText({
-    req(values$full_data)
-    
-    paste(
-      paste("Total terms:", format(nrow(values$full_data), big.mark = ",")),
-      paste("Genes:", length(unique(values$full_data$gene))),
-      paste("Methods:", length(unique(values$full_data$method))),
-      paste("Enrichment types:", length(unique(values$full_data$enrichment_type))),
-      sep = "\n"
-    )
-  })
-  
-  # Filter data for current plot
-  filtered_plot_data <- reactive({
-    req(values$full_data)
-    req(input$global_analysis_type, input$global_gene, input$global_enrichment_type)
-    
-    data <- values$full_data
-    
-    # Apply filters
-    data <- data[data$method == input$global_analysis_type, ]
-    data <- data[data$gene == input$global_gene, ]
-    data <- data[data$enrichment_type == input$global_enrichment_type, ]
-    
-    if (input$direction_filter != "ALL") {
-      data <- data[data$direction == input$direction_filter, ]
-    }
-    
-    # Filter by p-value
-    if ("p.adjust" %in% names(data)) {
-      data <- data[data$p.adjust <= input$global_pval, ]
-    }
-    
-    # Take top terms
-    if (nrow(data) > input$top_terms) {
-      data <- data[order(data$p.adjust), ][1:input$top_terms, ]
-    }
-    
-    return(data)
-  })
-  
-  # Main dotplot
-  output$mainPlot <- renderPlotly({
-    req(filtered_plot_data())
-    
-    data <- filtered_plot_data()
-    
-    if (nrow(data) == 0) {
-      return(plotly_empty("No data available for current selection"))
-    }
-    
-    # Create dotplot
-    p <- ggplot(data, aes(x = -log10(p.adjust), y = reorder(Description, -log10(p.adjust)))) +
-      geom_point(aes(size = ifelse("Count" %in% names(data), Count, 10),
-                     color = -log10(p.adjust)), alpha = 0.7) +
-      scale_color_viridis_c(name = "-log10(p.adj)") +
-      scale_size_continuous(name = "Gene Count", range = c(3, 10)) +
-      theme_minimal() +
-      theme(
-        axis.text.y = element_text(size = 10),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "bottom"
-      ) +
-      labs(
-        title = paste(input$global_gene, "-", input$global_enrichment_type, "Enrichment"),
-        x = "-log10(adjusted p-value)",
-        y = "Pathway"
-      )
-    
-    ggplotly(p, tooltip = c("x", "y", "size", "color"))
-  })
-  
-  # Heatmap
-  output$heatmapPlot <- renderPlot({
-    req(input$generateHeatmap)
-    req(values$full_data, input$heatmap_genes)
-    
-    isolate({
-      data <- values$full_data
+    if (!is.null(app_data$consolidated_data)) {
+      genes <- unique(app_data$consolidated_data[
+        app_data$consolidated_data$method == input$global_analysis_type, 
+        "gene"
+      ])
+      genes <- sort(genes)
       
-      # Filter data
-      data <- data[data$gene %in% input$heatmap_genes, ]
-      data <- data[data$enrichment_type == input$global_enrichment_type, ]
-      data <- data[data$p.adjust <= input$global_pval, ]
-      
-      if (nrow(data) == 0) {
-        plot.new()
-        text(0.5, 0.5, "No data available for current selection", cex = 1.5)
-        return()
-      }
-      
-      # Get top terms per gene
-      top_terms <- data %>%
-        group_by(gene) %>%
-        slice_min(p.adjust, n = input$heatmap_max_terms) %>%
-        ungroup()
-      
-      # Create matrix for heatmap
-      if (input$heatmap_metric == "pvalue") {
-        plot_data <- top_terms %>%
-          select(gene, Description, p.adjust) %>%
-          mutate(value = -log10(p.adjust)) %>%
-          select(-p.adjust)
-      } else {
-        # Use fold enrichment if available
-        if ("FoldEnrichment" %in% names(top_terms)) {
-          plot_data <- top_terms %>%
-            select(gene, Description, FoldEnrichment) %>%
-            rename(value = FoldEnrichment)
+      # Set default if available
+      selected <- NULL
+      if (length(genes) > 0) {
+        if (!is.null(app_data$default_gene) && app_data$default_gene %in% genes) {
+          selected <- app_data$default_gene
         } else {
-          plot_data <- top_terms %>%
-            select(gene, Description, p.adjust) %>%
-            mutate(value = -log10(p.adjust)) %>%
-            select(-p.adjust)
+          selected <- genes[1]
         }
       }
       
-      # Pivot to matrix
-      mat <- plot_data %>%
-        pivot_wider(names_from = gene, values_from = value, values_fill = 0) %>%
-        column_to_rownames("Description") %>%
-        as.matrix()
-      
-      if (ncol(mat) > 1 && nrow(mat) > 1) {
-        pheatmap::pheatmap(
-          mat,
-          clustering_distance_rows = "euclidean",
-          clustering_distance_cols = "euclidean",
-          cluster_rows = input$cluster_rows,
-          cluster_cols = input$cluster_cols,
-          color = viridis::viridis(100),
-          fontsize_row = 8,
-          fontsize_col = 10,
-          main = paste("Clustered Heatmap -", input$global_enrichment_type)
-        )
-      } else {
-        plot.new()
-        text(0.5, 0.5, "Need multiple genes and terms for clustering", cex = 1.2)
-      }
-    })
-  })
-  
-  # Data table
-  output$plotData <- DT::renderDataTable({
-    req(filtered_plot_data())
-    
-    display_cols <- c("gene", "enrichment_type", "Description", "p.adjust")
-    available_cols <- intersect(display_cols, names(filtered_plot_data()))
-    
-    DT::datatable(
-      filtered_plot_data()[, available_cols, drop = FALSE],
-      options = list(pageLength = 15, scrollX = TRUE),
-      rownames = FALSE
-    ) %>%
-      DT::formatSignif(columns = "p.adjust", digits = 3)
-  })
-  
-  # Navigation buttons
-  observeEvent(input$goToVisualization, {
-    updateTabsetPanel(session, "main_tabs", selected = "visualization")
-  })
-  
-  observeEvent(input$goToHeatmap, {
-    updateTabsetPanel(session, "main_tabs", selected = "heatmap")
-  })
-  
-  # Download handlers
-  output$downloadFilteredData <- downloadHandler(
-    filename = function() {
-      paste0("iscore_enrichment_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      write.csv(filtered_plot_data(), file, row.names = FALSE)
+      updateSelectInput(session, "global_gene", 
+                       choices = genes, 
+                       selected = selected)
     }
+  })
+  
+  # Populate cluster choices based on consolidated data
+  observe({
+    req(app_data$data_loaded)
+    req(input$global_analysis_type, input$global_gene)
+    
+    if (!is.null(app_data$consolidated_data)) {
+      clusters <- unique(app_data$consolidated_data[
+        app_data$consolidated_data$method == input$global_analysis_type &
+        app_data$consolidated_data$gene == input$global_gene,
+        "cluster"
+      ])
+      clusters <- sort(clusters)
+      
+      # Set default if available
+      selected <- NULL
+      if (length(clusters) > 0) {
+        if (!is.null(app_data$default_cluster) && app_data$default_cluster %in% clusters) {
+          selected <- app_data$default_cluster
+        } else {
+          selected <- clusters[1]
+        }
+      }
+      
+      updateSelectInput(session, "global_cluster", 
+                       choices = clusters, 
+                       selected = selected)
+    }
+  })
+  
+  # Populate experiment choices based on consolidated data
+  observe({
+    req(app_data$data_loaded)
+    req(input$global_analysis_type, input$global_gene, input$global_cluster)
+    
+    if (!is.null(app_data$consolidated_data)) {
+      experiments <- unique(app_data$consolidated_data[
+        app_data$consolidated_data$method == input$global_analysis_type &
+        app_data$consolidated_data$gene == input$global_gene &
+        app_data$consolidated_data$cluster == input$global_cluster,
+        "experiment"
+      ])
+      experiments <- sort(experiments)
+      
+      # For MAST, default should typically be "default"
+      selected <- NULL
+      if (length(experiments) > 0) {
+        if (input$global_analysis_type == "MAST" && "default" %in% experiments) {
+          selected <- "default"
+        } else {
+          selected <- experiments[1]
+        }
+      }
+      
+      updateSelectInput(session, "global_experiment", 
+                       choices = experiments, 
+                       selected = selected)
+    }
+  })
+  
+  # Update enrichment types based on what's available for current selection
+  observe({
+    req(app_data$data_loaded)
+    req(input$global_analysis_type, input$global_gene, input$global_cluster, input$global_experiment)
+    
+    if (!is.null(app_data$consolidated_data)) {
+      # Get available enrichment types for current selection
+      available_types <- unique(app_data$consolidated_data[
+        app_data$consolidated_data$method == input$global_analysis_type &
+        app_data$consolidated_data$gene == input$global_gene &
+        app_data$consolidated_data$cluster == input$global_cluster &
+        app_data$consolidated_data$experiment == input$global_experiment,
+        "enrichment_type"
+      ])
+      available_types <- sort(available_types)
+      
+      if (length(available_types) > 0) {
+        # Keep current selection if it's still available, otherwise pick first
+        current <- input$global_enrichment_type
+        selected <- if (current %in% available_types) {
+          current
+        } else {
+          # Try common defaults in order
+          defaults <- c("GO_BP", "GO_GOALL", "STRING", "GO_CC", "GO_MF")
+          default_match <- defaults[defaults %in% available_types][1]
+          if (!is.na(default_match)) default_match else available_types[1]
+        }
+        
+        updateSelectInput(session, "global_enrichment_type",
+                         choices = available_types,
+                         selected = selected)
+        
+        # Show notification if enrichment type was changed
+        if (!is.null(current) && !(current %in% available_types)) {
+          showNotification(
+            paste0("Note: ", current, " not available for this selection. Switched to ", selected),
+            type = "warning",
+            duration = 5
+          )
+        }
+      }
+    }
+  })
+  
+  # Data status display
+  output$data_status <- renderUI({
+    if (app_data$data_loaded) {
+      tags$div(
+        class = "alert alert-success",
+        style = "margin-top: 20px;",
+        icon("check-circle"),
+        " Data loaded successfully",
+        br(),
+        tags$small(
+          sprintf("%d enrichment results", 
+                  ifelse(is.null(app_data$consolidated_data), 0, nrow(app_data$consolidated_data)))
+        )
+      )
+    } else {
+      tags$div(
+        class = "alert alert-warning",
+        style = "margin-top: 20px;",
+        icon("exclamation-triangle"),
+        " Loading data..."
+      )
+    }
+  })
+  
+  # Create reactive for global data selection
+  global_data_selection <- reactive({
+    list(
+      analysis_type = input$global_analysis_type,
+      gene = input$global_gene,
+      cluster = input$global_cluster,
+      experiment = input$global_experiment,
+      enrichment_type = input$global_enrichment_type,
+      direction = input$global_direction,
+      pval_threshold = input$global_pval
+    )
+  })
+  
+  # Module servers
+  # Landing page module
+  landingPageServer("landing", app_data = app_data)
+  
+  # Create filtered data reactive for other modules to use
+  filtered_data <- reactive({
+    req(app_data$data_loaded)
+    selection <- global_data_selection()
+    
+    get_significant_terms_from_consolidated(
+      app_data$consolidated_data,
+      analysis_type = selection$analysis_type,
+      gene = selection$gene,
+      cluster = selection$cluster,
+      experiment = selection$experiment,
+      enrichment_type = selection$enrichment_type,
+      direction = selection$direction,
+      pval_threshold = selection$pval_threshold
+    )
+  })
+  
+  # Main visualization module (enhanced with interactivity)
+  visualization_results <- mod_visualization_server(
+    "visualization_module",
+    global_selection = global_data_selection,
+    enrichment_data = reactive({ app_data$consolidated_data })
+  )
+  
+  comparison_results <- mod_comparison_server(
+    "comparison_module",
+    app_data = app_data,
+    pval_threshold = global_pval
+  )
+  
+  heatmap_results <- mod_heatmap_server(
+    "heatmap_module",
+    app_data = app_data,
+    pval_threshold = global_pval
+  )
+  
+  pathview_results <- mod_pathview_server(
+    "pathview_module",
+    app_data = app_data,
+    selected_enrichment_data = filtered_data,
+    global_selection = global_data_selection
+  )
+  
+  export_status <- mod_export_server(
+    "export_module",
+    app_data = app_data,
+    precomputed_data = filtered_data,
+    comparison_data = comparison_results,
+    visualization_data = visualization_results
   )
 }
 
