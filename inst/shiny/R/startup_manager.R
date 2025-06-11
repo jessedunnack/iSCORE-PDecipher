@@ -1,70 +1,86 @@
 # startup_manager.R
-# Handles initial data loading and app initialization for the Shiny app
+# Handles initial data loading and file selection for the Shiny app
 
-initialize_app_with_data <- function(app_data, data_file = NULL) {
-  cat("Initializing app with data...\n")
+# Initialize app_data in global environment if not exists
+if (!exists("app_data")) {
+  app_data <- list(
+    data = NULL,
+    available_genes = character(),
+    available_clusters = character(),
+    startup_message = NULL,
+    file_picker_shown = FALSE
+  )
+}
+
+# Try to load consolidated data on startup
+if (!app_data$file_picker_shown) {
+  # First check environment variables
+  env_enrichment_file <- Sys.getenv("ISCORE_ENRICHMENT_FILE", "")
   
-  # Check for environment variable first
-  if (is.null(data_file)) {
-    has_data <- Sys.getenv("ISCORE_HAS_DATA", unset = "FALSE") == "TRUE"
-    if (has_data) {
-      data_file <- Sys.getenv("ISCORE_DATA_FILE", unset = "")
+  if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
+    default_path <- env_enrichment_file
+    cat("Loading data from environment variable path:", default_path, "\n")
+  } else {
+    default_path <- file.path(getwd(), "data", "consolidated_enrichment_results.rds")
+    if (file.exists(default_path)) {
+      cat("Loading consolidated data from", default_path, "\n")
     }
   }
   
-  # Try to load data file if provided
-  if (!is.null(data_file) && data_file != "" && file.exists(data_file)) {
-    cat("Loading provided data file:", data_file, "\n")
+  if (file.exists(default_path)) {
     
     tryCatch({
       # Load the data
-      data <- readRDS(data_file)
-      cat("Data loaded successfully. Rows:", nrow(data), "Columns:", ncol(data), "\n")
+      data <- readRDS(default_path)
       
-      # Fix column names if needed
-      if ("mutation_perturbation" %in% names(data) && !"gene" %in% names(data)) {
-        data$gene <- data$mutation_perturbation
+      # Process the data
+      if ("source_file" %in% names(data)) {
+        # Extract metadata from filename
+        # Assuming filename format: gene_cluster_comparison_experiment_...
+        data$gene <- sapply(strsplit(data$source_file, "_"), function(x) x[1])
+        data$cluster <- sapply(strsplit(data$source_file, "_"), function(x) x[2])
+        data$comparison <- sapply(strsplit(data$source_file, "_"), function(x) x[3])
+        data$experiment <- sapply(strsplit(data$source_file, "_"), function(x) x[4])
       }
       
-      # Map method column if needed
-      if ("method" %in% names(data) && !"analysis_type" %in% names(data)) {
-        data$analysis_type <- data$method
+      # Verify required columns
+      required_cols <- c("term", "p.adjust", "gene", "cluster", "comparison", "experiment")
+      missing_cols <- setdiff(required_cols, names(data))
+      
+      if (length(missing_cols) > 0) {
+        stop("Missing required columns after processing: ", paste(missing_cols, collapse = ", "))
+      }
+      
+      # Filter for significant results
+      if ("p.adjust" %in% names(data)) {
+        data <- data[data$p.adjust <= 0.05, ]
+        cat("Filtered to", nrow(data), "significant results (p.adjust ≤ 0.05)\n")
       }
       
       # Store in app_data
-      app_data$consolidated_data <- data
-      app_data$data_loaded <- TRUE
-      app_data$available_genes <- sort(unique(data$gene))
+      app_data$data <- data
+      app_data$available_genes <- unique(data$gene)
+      app_data$available_clusters <- unique(data$cluster)
+      app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
       
-      cat("App data initialized successfully.\n")
+      # Create gene sets
+      app_data$gene_sets <- split(data$gene_id, data$term)
+      
+      # Success message
+      cat("Successfully loaded", nrow(data), "enrichment terms\n")
+      cat("Available genes:", length(app_data$available_genes), "\n")
+      cat("Available clusters:", length(app_data$available_clusters), "\n")
       
     }, error = function(e) {
-      cat("Error loading data file:", e$message, "\n")
-      app_data$data_loaded <- FALSE
+      cat("Error loading consolidated data:", e$message, "\n")
+      app_data$data <- NULL
+      app_data$file_picker_shown <- TRUE
+      app_data$startup_message <- paste("⚠ Error loading data:", e$message)
     })
+    
   } else {
-    # Try to find data in common locations
-    possible_paths <- c(
-      "/Users/hockemeyer/Desktop/Functional Enrichment/all_enrichment_padj005_complete_with_direction.rds",
-      file.path(getwd(), "data", "all_enrichment_padj005_complete_with_direction.rds"),
-      file.path(getwd(), "all_enrichment_padj005_complete_with_direction.rds"),
-      file.path("..", "all_enrichment_padj005_complete_with_direction.rds")
-    )
-    
-    data_found <- FALSE
-    for (path in possible_paths) {
-      if (file.exists(path)) {
-        cat("Found data file at:", path, "\n")
-        initialize_app_with_data(app_data, path)
-        data_found <- TRUE
-        break
-      }
-    }
-    
-    if (!data_found) {
-      cat("Consolidated data not found at expected location\n")
-      app_data$data_loaded <- FALSE
-    }
+    cat("Consolidated data not found at expected location\n")
+    app_data$file_picker_shown <- TRUE
   }
 }
 
@@ -112,6 +128,16 @@ process_uploaded_file <- function(file_info) {
     # Filter for significant results
     if ("p.adjust" %in% names(data)) {
       data <- data[data$p.adjust <= 0.05, ]
+    }
+    
+    # Update app_data
+    app_data$data <- data
+    app_data$available_genes <- unique(data$gene)
+    app_data$available_clusters <- unique(data$cluster)
+    
+    # Create gene sets
+    if ("gene_id" %in% names(data) && "term" %in% names(data)) {
+      app_data$gene_sets <- split(data$gene_id, data$term)
     }
     
     showNotification(
