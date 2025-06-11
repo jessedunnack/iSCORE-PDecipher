@@ -1,15 +1,24 @@
-# Get command line arguments
-args <- commandArgs(trailingOnly = TRUE)
-mutation <- args[1]
-
-cat(sprintf("Processing mutation: %s\n", mutation))
-
-# Load libraries
-library(Seurat)
-
-# Load and prepare data
-cat("Loading Seurat object...\n")
-all <- readRDS("full_dataset.rds")
+#' Run MAST Differential Expression Analysis
+#'
+#' This function performs MAST analysis for a specific mutation against controls.
+#'
+#' @param mutation Character string specifying the mutation to analyze
+#' @param seurat_object_path Path to the Seurat object RDS file
+#' @param output_dir Directory to save results
+#'
+#' @return List containing MAST analysis results
+#' @export
+run_mast_analysis <- function(mutation, seurat_object_path, output_dir = ".") {
+  
+  if (!requireNamespace("Seurat", quietly = TRUE)) {
+    stop("Seurat package is required but not installed.")
+  }
+  
+  cat(sprintf("Processing mutation: %s\n", mutation))
+  
+  # Load and prepare data
+  cat("Loading Seurat object...\n")
+  all <- readRDS(seurat_object_path)
 
 # Let's process the "coarse" cell type clusters:
 all <- FindClusters(all, resolution = 0.2)
@@ -72,7 +81,6 @@ mutation_results$metadata <- list(
 )
 
 # Create output directory if it doesn't exist
-output_dir <- "./iSCORE-PD_MAST_analysis"
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
   cat(sprintf("Created output directory: %s\n", output_dir))
@@ -85,7 +93,7 @@ if (length(valid_clusters) == 0) {
   output_file <- file.path(output_dir, paste0("mutation_", gsub("[^a-zA-Z0-9]", "_", mutation), "_results.rds"))
   saveRDS(mutation_results, output_file)
   cat(sprintf("Empty results saved to %s\n", output_file))
-  quit(save = "no", status = 0)
+  return(list(results = mutation_results, output_file = output_file, valid_clusters = c()))
 }
 
 # Process each valid cluster
@@ -125,3 +133,11 @@ for (cluster in valid_clusters) {
 output_file <- file.path(output_dir, paste0("mutation_", gsub("[^a-zA-Z0-9]", "_", mutation), "_results.rds"))
 saveRDS(mutation_results, output_file)
 cat(sprintf("Results saved to %s\n", output_file))
+
+# Return results
+return(list(
+  results = mutation_results,
+  output_file = output_file,
+  valid_clusters = valid_clusters
+))
+}

@@ -50,6 +50,6 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/yourusername/iSCORE-PDecipher
-BugReports: https://github.com/yourusername/iSCORE-PDecipher/issues
+URL: https://github.com/jessedunnack/iSCORE-PDecipher
+BugReports: https://github.com/jessedunnack/iSCORE-PDecipher/issues
 LazyData: true

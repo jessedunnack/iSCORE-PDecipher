@@ -36,7 +36,7 @@ if (!require("devtools", quietly = TRUE))
     install.packages("devtools")
 
 # Install iSCORE-PDecipher
-devtools::install_github("yourusername/iSCORE-PDecipher")
+devtools::install_github("jessedunnack/iSCORE-PDecipher")
 ```
 
 ### Prerequisites
@@ -233,7 +233,7 @@ This project is licensed under the GPL-3 License - see the [LICENSE](LICENSE) fi
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/iSCORE-PDecipher/issues)
+- **Issues**: [GitHub Issues](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
 - **Documentation**: See package vignettes
 - **Contact**: jesse.dunnack@example.com
 
