@@ -5,11 +5,11 @@
 # LIBRARY LOADING - All required packages in one place
 # =============================================================================
 
-# Core Shiny libraries
+# Core Shiny libraries (order matters!)
 library(shiny)
+library(shinyjs)  # Load shinyjs early before UI definition
 library(shinyWidgets)
 library(shinycssloaders)
-library(shinyjs)
 library(DT)
 
 # Data manipulation and visualization
