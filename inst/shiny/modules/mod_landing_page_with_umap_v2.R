@@ -14,20 +14,46 @@ landingPageWithUmapUI <- function(id) {
   tagList(
     # Main content area with two columns
     fluidRow(
-      # Left column - UMAP visualization (60% width)
+      # Left column - UMAP visualization and cluster markers (60% width)
       column(7,
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-line"),
-               "Dataset UMAP Visualization")
+               "Dataset UMAP Visualization & Cluster Markers")
           ),
           div(class = "box-body", style = "padding: 10px;",
-            # UMAP plot with fixed height
-            withSpinner(
-              plotOutput(ns("umap_plot"), height = "600px"),
-              type = 4,
-              color = "#3c8dbc"
+            fluidRow(
+              # UMAP plot (left side)
+              column(7,
+                withSpinner(
+                  plotOutput(ns("umap_plot"), height = "600px"),
+                  type = 4,
+                  color = "#3c8dbc"
+                )
+              ),
+              # Cluster markers table (right side)
+              column(5,
+                h5("Cluster Markers", style = "margin-top: 0; margin-bottom: 15px; font-weight: bold;"),
+                selectInput(ns("selected_cluster"),
+                           "Select Cluster:",
+                           choices = NULL,
+                           width = "100%"),
+                numericInput(ns("max_markers"),
+                            "Max Markers:",
+                            value = 15,
+                            min = 5,
+                            max = 50,
+                            step = 5,
+                            width = "100%"),
+                div(style = "height: 500px; overflow-y: auto;",
+                  withSpinner(
+                    DT::dataTableOutput(ns("markers_table"), height = "450px"),
+                    type = 1,
+                    color = "#3c8dbc"
+                  )
+                )
+              )
             )
           )
         )
@@ -181,11 +207,12 @@ landingPageWithUmapUI <- function(id) {
 landingPageWithUmapServer <- function(id, data) {
   moduleServer(id, function(input, output, session) {
     
-    # Reactive values for UMAP data
+    # Reactive values for UMAP data and markers
     umap_data <- reactiveValues(
       sce = NULL,
       dataset_name = NULL,
-      loaded = FALSE
+      loaded = FALSE,
+      markers = NULL
     )
     
     # Determine which UMAP dataset to load based on app data
@@ -220,6 +247,16 @@ landingPageWithUmapServer <- function(id, data) {
             umap_data$sce <- readRDS(path)
             umap_data$dataset_name <- dataset_to_load
             umap_data$loaded <- TRUE
+            
+            # Try to load corresponding markers
+            markers_path <- file.path(dirname(path), paste0(dataset_to_load, "_cluster_markers.rds"))
+            if (file.exists(markers_path)) {
+              umap_data$markers <- readRDS(markers_path)
+              message("Loaded markers for ", dataset_to_load)
+            } else {
+              message("No markers found for ", dataset_to_load, " at ", markers_path)
+            }
+            
             break
           }, error = function(e) {
             message("Failed to load UMAP from ", path, ": ", e$message)
@@ -265,6 +302,57 @@ landingPageWithUmapServer <- function(id, data) {
         text(0.5, 0.5, paste("Error creating UMAP:\n", e$message), 
              cex = 1.2, col = "red")
       })
+    })
+    
+    # Update cluster choices when UMAP data is loaded
+    observe({
+      if (umap_data$loaded && !is.null(umap_data$sce)) {
+        clusters <- sort(unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters))
+        cluster_choices <- setNames(as.character(clusters), paste("Cluster", clusters))
+        
+        updateSelectInput(session, "selected_cluster",
+                         choices = cluster_choices,
+                         selected = cluster_choices[1])
+      }
+    })
+    
+    # Render markers table
+    output$markers_table <- DT::renderDataTable({
+      req(input$selected_cluster)
+      req(umap_data$markers)
+      
+      # Filter markers for selected cluster
+      cluster_markers <- umap_data$markers %>%
+        filter(cluster == input$selected_cluster) %>%
+        arrange(desc(avg_log2FC)) %>%
+        head(input$max_markers) %>%
+        select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
+        mutate(
+          avg_log2FC = round(avg_log2FC, 3),
+          p_val_adj = formatC(p_val_adj, format = "e", digits = 2),
+          pct.1 = round(pct.1, 3),
+          pct.2 = round(pct.2, 3)
+        )
+      
+      # Create DataTable
+      DT::datatable(
+        cluster_markers,
+        options = list(
+          pageLength = 15,
+          scrollY = "400px",
+          scrollCollapse = TRUE,
+          dom = 't'  # Only show table (no search/pagination)
+        ),
+        rownames = FALSE,
+        colnames = c('Gene', 'Log2FC', 'Adj. P-val', '% in cluster', '% in other')
+      ) %>%
+        DT::formatStyle(
+          'avg_log2FC',
+          background = DT::styleColorBar(cluster_markers$avg_log2FC, 'lightblue'),
+          backgroundSize = '100% 90%',
+          backgroundRepeat = 'no-repeat',
+          backgroundPosition = 'center'
+        )
     })
     
     # Cell count box
