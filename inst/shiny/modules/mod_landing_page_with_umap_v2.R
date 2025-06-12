@@ -12,44 +12,52 @@ landingPageWithUmapUI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    # Top row - Summary statistics
+    # Main content area with two columns
     fluidRow(
-      column(2,
-        uiOutput(ns("total_cells_box"))
-      ),
-      column(2,
-        uiOutput(ns("total_clusters_box"))
-      ),
-      column(2,
-        uiOutput(ns("total_results_box"))
-      ),
-      column(2,
-        uiOutput(ns("total_genes_box"))
-      ),
-      column(2,
-        uiOutput(ns("total_experiments_box"))
-      ),
-      column(2,
-        uiOutput(ns("enrichment_types_box"))
-      )
-    ),
-    
-    # Second row - UMAP visualization
-    fluidRow(
-      column(12,
-        div(class = "box box-primary", style = "margin-top: 20px;",
+      # Left column - UMAP visualization (60% width)
+      column(7,
+        div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 15px;",
-            # UMAP plot with fixed height and full width
+          div(class = "box-body", style = "padding: 10px;",
+            # UMAP plot with fixed height
             withSpinner(
-              plotOutput(ns("umap_plot"), height = "600px", width = "100%"),
+              plotOutput(ns("umap_plot"), height = "600px"),
               type = 4,
               color = "#3c8dbc"
             )
+          )
+        )
+      ),
+      
+      # Right column - Summary statistics (40% width)
+      column(5,
+        # Summary statistics cards in a grid
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_cells_box"))
+          ),
+          column(6,
+            uiOutput(ns("total_clusters_box"))
+          )
+        ),
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_results_box"))
+          ),
+          column(6,
+            uiOutput(ns("total_genes_box"))
+          )
+        ),
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_experiments_box"))
+          ),
+          column(6,
+            uiOutput(ns("enrichment_types_box"))
           )
         )
       )
@@ -63,8 +71,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Analysis Type")
           ),
-          div(class = "box-body", style = "height: 350px; padding: 10px;",
-            withSpinner(plotlyOutput(ns("analysis_type_plot"), height = "100%", width = "100%"))
+          div(class = "box-body", style = "height: 400px;",
+            withSpinner(plotlyOutput(ns("analysis_type_plot"), height = "350px"))
           )
         )
       ),
@@ -75,8 +83,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Enrichment Database")
           ),
-          div(class = "box-body", style = "height: 350px; padding: 10px;",
-            withSpinner(plotlyOutput(ns("enrichment_type_plot"), height = "100%", width = "100%"))
+          div(class = "box-body", style = "height: 400px;",
+            withSpinner(plotlyOutput(ns("enrichment_type_plot"), height = "350px"))
           )
         )
       ),
@@ -87,8 +95,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Direction")
           ),
-          div(class = "box-body", style = "height: 350px; padding: 10px;",
-            withSpinner(plotlyOutput(ns("direction_plot"), height = "100%", width = "100%"))
+          div(class = "box-body", style = "height: 400px;",
+            withSpinner(plotlyOutput(ns("direction_plot"), height = "350px"))
           )
         )
       )
@@ -377,9 +385,7 @@ landingPageWithUmapServer <- function(id, data) {
         layout(title = NULL,
                xaxis = list(title = ""),
                yaxis = list(title = "Number of Results"),
-               showlegend = FALSE,
-               margin = list(t = 10, l = 60, r = 20, b = 40),
-               autosize = TRUE)
+               showlegend = FALSE)
     })
     
     # Enrichment type plot
@@ -409,9 +415,7 @@ landingPageWithUmapServer <- function(id, data) {
         layout(title = NULL,
                xaxis = list(title = "", tickangle = -45),
                yaxis = list(title = "Number of Results"),
-               showlegend = FALSE,
-               margin = list(t = 10, b = 80, l = 60, r = 20),
-               autosize = TRUE)
+               showlegend = FALSE)
     })
     
     # Direction plot
@@ -429,10 +433,7 @@ landingPageWithUmapServer <- function(id, data) {
               type = 'pie',
               marker = list(colors = colors[summary_data$direction])) %>%
         layout(title = NULL,
-               showlegend = TRUE,
-               margin = list(t = 20, l = 10, r = 10, b = 20),
-               autosize = TRUE,
-               legend = list(orientation = "v", x = 1, y = 0.5))
+               showlegend = TRUE)
     })
     
     # Gene table
