@@ -208,7 +208,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         # Prepare data for dot plot
         plot_df <- top_data %>%
           mutate(
-            Description = factor(Description, levels = rev(Description)),
+            # Handle duplicates by making descriptions unique
+            Description = make.unique(Description, sep = " "),
+            Description = factor(Description, levels = rev(unique(Description))),
             neg_log10_pval = -log10(p.adjust)
           )
         
