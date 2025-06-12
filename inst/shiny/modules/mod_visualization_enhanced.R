@@ -136,11 +136,6 @@ mod_visualization_ui <- function(id) {
                      withSpinner(color = "#0073b7")
                  )),
         
-        tabPanel("Alternative View",
-                 value = "static",
-                 br(),
-                 plotOutput(ns("static_plot"), height = "700px") %>%
-                   withSpinner(color = "#0073b7")),
         
         tabPanel("Plot Details",
                  value = "details",
@@ -203,48 +198,72 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         arrange(p.adjust) %>%
         head(input$top_terms)
       
+      # Check if we have any data
+      if (nrow(top_data) == 0) {
+        return(ggplot() + 
+               annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 5) +
+               theme_void())
+      }
+      
       # Create appropriate plot based on type
       if (plot_type == "dotplot") {
-        # Prepare data for dot plot
+        # Prepare data for dot plot - ensure all required columns exist
         plot_df <- top_data %>%
           mutate(
             # Handle duplicates by making descriptions unique
             Description = make.unique(Description, sep = " "),
             Description = factor(Description, levels = rev(unique(Description))),
-            neg_log10_pval = -log10(p.adjust)
+            neg_log10_pval = -log10(pmax(p.adjust, 1e-100)),  # Prevent log(0)
+            # Ensure Count column exists
+            Count = if("Count" %in% names(.)) Count else if("count" %in% names(.)) count else 10,
+            # Ensure FoldEnrichment exists 
+            FoldEnrichment = if("FoldEnrichment" %in% names(.)) FoldEnrichment else 
+                           if("fold_enrichment" %in% names(.)) fold_enrichment else 
+                           if("enrichment_score" %in% names(.)) enrichment_score else 2
           )
         
-        # Determine x-axis variable
+        # Determine x-axis variable with validation
         x_var <- switch(input$x_axis,
           "neg_log10_pval" = "neg_log10_pval",
-          "FoldEnrichment" = "FoldEnrichment",
-          "Count" = "Count",
-          "GeneRatio" = "GeneRatio",
-          "RichFactor" = "RichFactor",
+          "FoldEnrichment" = if("FoldEnrichment" %in% names(plot_df)) "FoldEnrichment" else "neg_log10_pval",
+          "Count" = if("Count" %in% names(plot_df)) "Count" else "neg_log10_pval",
+          "GeneRatio" = if("GeneRatio" %in% names(plot_df)) "GeneRatio" else "neg_log10_pval",
+          "RichFactor" = if("RichFactor" %in% names(plot_df)) "RichFactor" else "neg_log10_pval",
           "neg_log10_pval"
         )
+        
+        # Validate that we have numeric data for plotting
+        if (!is.numeric(plot_df[[x_var]]) || all(is.na(plot_df[[x_var]]))) {
+          x_var <- "neg_log10_pval"  # Fallback to p-value
+        }
         
         # Create base plot using tidy evaluation
         p <- ggplot(plot_df, aes(x = .data[[x_var]], y = Description))
         
-        # Add points
+        # Add points with validation
         if (input$color_by == "p-value") {
-          p <- p + geom_point(aes(color = neg_log10_pval, size = Count))
+          p <- p + geom_point(aes(color = neg_log10_pval, size = Count), alpha = 0.8)
         } else {
-          p <- p + geom_point(aes(color = FoldEnrichment, size = Count))
+          # Validate FoldEnrichment exists and is numeric
+          if ("FoldEnrichment" %in% names(plot_df) && is.numeric(plot_df$FoldEnrichment)) {
+            p <- p + geom_point(aes(color = FoldEnrichment, size = Count), alpha = 0.8)
+          } else {
+            p <- p + geom_point(aes(color = neg_log10_pval, size = Count), alpha = 0.8)
+          }
         }
         
         # Customize appearance
         p <- p +
           scale_color_gradient(low = "blue", high = "red") +
-          scale_size_continuous(range = c(3, 10)) +
+          scale_size_continuous(range = c(3, 10), guide = guide_legend(title = "Count")) +
           theme_bw() +
           theme(
             axis.text.y = element_text(size = 10),
             axis.title = element_text(size = 12),
-            legend.title = element_text(size = 10)
+            legend.title = element_text(size = 10),
+            panel.grid.minor = element_blank()
           ) +
-          labs(x = gsub("_", " ", x_var), y = "")
+          labs(x = gsub("_", " ", tools::toTitleCase(gsub("_", " ", x_var))), y = "")
         
         return(p)
         
@@ -392,17 +411,6 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       create_gsea_plot(plot_data$data, input$gsea_plot_type)
     })
     
-    output$static_plot <- renderPlot({
-      req(plot_data$data)
-      
-      if (plot_data$is_gsea) {
-        # Alternative GSEA visualization
-        create_gsea_plot(plot_data$data, "dotplot")
-      } else {
-        # Alternative standard visualization
-        create_standard_plot(plot_data$data, "barplot")
-      }
-    })
     
     # Plot information
     output$plot_info <- renderPrint({

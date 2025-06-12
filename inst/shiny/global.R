@@ -148,6 +148,91 @@ load_package_on_demand <- function(package_name) {
 }
 
 # =============================================================================
+# FILTERING FUNCTIONS
+# =============================================================================
+
+#' Filter consolidated enrichment data based on selection criteria
+#' @param data Consolidated enrichment data frame
+#' @param gene Gene/mutation to filter by
+#' @param cluster Cell cluster to filter by 
+#' @param enrichment_type Enrichment database to filter by
+#' @param direction Gene regulation direction (ALL, UP, DOWN)
+#' @param modality Analysis modality (if applicable)
+#' @param analysis_type Analysis method (MAST, MixScale)
+#' @param experiment Experiment ID to filter by
+#' @param pval_threshold P-value threshold for significance
+#' @return Filtered data frame
+get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster = NULL, 
+                                                   enrichment_type = NULL, direction = "ALL",
+                                                   modality = NULL, analysis_type = NULL,
+                                                   experiment = NULL, pval_threshold = 0.05) {
+  
+  if (is.null(data) || nrow(data) == 0) {
+    return(data.frame())
+  }
+  
+  # Start with all data
+  filtered_data <- data
+  
+  # Filter by gene/mutation
+  if (!is.null(gene) && gene != "All" && gene != "") {
+    # Check which column to use
+    if ("gene" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$gene == gene, ]
+    } else if ("mutation_perturbation" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$mutation_perturbation == gene, ]
+    }
+  }
+  
+  # Filter by cluster
+  if (!is.null(cluster) && cluster != "All") {
+    filtered_data <- filtered_data[filtered_data$cluster == cluster, ]
+  }
+  
+  # Filter by enrichment type
+  if (!is.null(enrichment_type) && enrichment_type != "All") {
+    filtered_data <- filtered_data[filtered_data$enrichment_type == enrichment_type, ]
+  }
+  
+  # Filter by direction (FIXED: only filter when not "ALL")
+  if (!is.null(direction) && direction != "ALL") {
+    filtered_data <- filtered_data[filtered_data$direction == direction, ]
+  }
+  
+  # Filter by modality if specified
+  if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$modality == modality, ]
+  }
+  
+  # Filter by analysis type (method) if specified
+  if (!is.null(analysis_type) && analysis_type != "All" && "method" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+  }
+  
+  # Filter by experiment if specified
+  if (!is.null(experiment) && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+  }
+  
+  # Filter by p-value threshold
+  if (!is.null(pval_threshold) && "p.adjust" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$p.adjust <= pval_threshold, ]
+  }
+  
+  # Sort by p-value and limit for performance
+  if (nrow(filtered_data) > 0) {
+    filtered_data <- filtered_data[order(filtered_data$p.adjust), ]
+    
+    # Limit to top 1000 for performance
+    if (nrow(filtered_data) > 1000) {
+      filtered_data <- filtered_data[1:1000, ]
+    }
+  }
+  
+  return(filtered_data)
+}
+
+# =============================================================================
 # INITIALIZATION
 # =============================================================================
 
