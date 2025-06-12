@@ -75,7 +75,7 @@ mod_heatmap_ui <- function(id) {
         tabPanel("Heatmap",
                  br(),
                  withSpinner(
-                   plotlyOutput(ns("heatmap_plot"), height = "800px"),
+                   plotlyOutput(ns("heatmap_plot"), height = "800px", width = "100%"),
                    type = 4,
                    color = "#3c8dbc"
                  )),
@@ -159,7 +159,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           
           removeNotification("loading")
           showNotification("Data loaded successfully! Heatmap will be generated automatically.", 
-                           type = "success", duration = 3)
+                           type = "default", duration = 3)
           
         } else {
           removeNotification("loading")
@@ -177,6 +177,15 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     # Generate heatmap plot
     output$heatmap_plot <- renderPlotly({
       req(heatmap_data$data)
+      
+      # Check if heatmaply is available
+      if (!requireNamespace("heatmaply", quietly = TRUE)) {
+        showNotification("heatmaply package is required for interactive clustered heatmaps. Using plotly instead.", 
+                         type = "warning", duration = 5)
+        use_heatmaply <- FALSE
+      } else {
+        use_heatmaply <- TRUE
+      }
       
       # Create an interactive heatmap
       tryCatch({
@@ -335,83 +344,104 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             full_descriptions <- full_descriptions_all
           }
           
-          # Perform hierarchical clustering if requested
-          row_order <- 1:nrow(mat)
-          col_order <- 1:ncol(mat)
-          row_clust <- NULL
-          col_clust <- NULL
-          
-          if (input$cluster_rows && nrow(mat) > 1) {
-            # Calculate distance matrix for rows
-            row_dist <- dist(mat, method = "euclidean")
-            row_clust <- hclust(row_dist, method = "complete")
-            row_order <- row_clust$order
-          }
-          
-          if (input$cluster_cols && ncol(mat) > 1) {
-            # Calculate distance matrix for columns
-            col_dist <- dist(t(mat), method = "euclidean")
-            col_clust <- hclust(col_dist, method = "complete")
-            col_order <- col_clust$order
-          }
-          
-          # Note: For future enhancement, consider using heatmaply package
-          # which provides interactive heatmaps with dendrograms:
-          # library(heatmaply)
-          # heatmaply(mat, dendrogram = "both", ...)
-          
-          # Reorder matrix based on clustering
-          mat_clustered <- mat[row_order, col_order, drop = FALSE]
-          full_descriptions_clustered <- full_descriptions[row_order]
-          
-          # Create hover text with full descriptions
-          hover_text <- matrix(
-            paste0("Term: ", rep(full_descriptions_clustered, ncol(mat_clustered)), "<br>",
-                   "Condition: ", rep(colnames(mat_clustered), each = nrow(mat_clustered)), "<br>",
-                   "Value: ", round(as.vector(mat_clustered), 3)),
-            nrow = nrow(mat_clustered),
-            ncol = ncol(mat_clustered),
-            byrow = FALSE
-          )
-          
-          # Create color scale based on heatmap type
-          if (input$heatmap_type == "pvalue") {
-            colorscale <- list(c(0, "white"), c(1, "red"))
-          } else if (input$heatmap_type == "zscore") {
-            # For z-scores, use diverging color scale
-            colorscale <- "RdBu"
-          } else {
-            colorscale <- list(c(0, "white"), c(1, "blue"))
-          }
-          
-          # Create plotly heatmap with clustered data
-          p <- plot_ly(
-            x = colnames(mat_clustered),
-            y = rownames(mat_clustered),
-            z = mat_clustered,
-            type = "heatmap",
-            colorscale = colorscale,
-            hovertext = hover_text,
-            hovertemplate = "%{hovertext}<extra></extra>",
-            colorbar = list(title = legend_title)
-          ) %>%
-            layout(
-              title = paste("Interactive Enrichment Heatmap -", legend_title,
-                           ifelse(input$cluster_rows || input$cluster_cols, 
-                                  " (Hierarchically Clustered)", "")),
-              xaxis = list(
-                title = "",
-                tickangle = -45,
-                tickfont = list(size = 12)
-              ),
-              yaxis = list(
-                title = "",
-                tickfont = list(size = 10)
-              ),
-              margin = list(l = 250, b = 100, t = 50)
+          # Use heatmaply if available, otherwise use plotly
+          if (use_heatmaply) {
+            # Prepare custom hover text for heatmaply
+            custom_text <- matrix(
+              paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
+                     "Condition: ", rep(colnames(mat), each = nrow(mat)), "<br>",
+                     "Value: "),
+              nrow = nrow(mat),
+              ncol = ncol(mat),
+              byrow = FALSE
             )
-          
-          return(p)
+            
+            # Set color scale based on heatmap type
+            if (input$heatmap_type == "pvalue") {
+              colors <- colorRampPalette(c("white", "red"))(256)
+            } else if (input$heatmap_type == "zscore") {
+              colors <- colorRampPalette(c("blue", "white", "red"))(256)
+            } else {
+              colors <- colorRampPalette(c("white", "darkblue"))(256)
+            }
+            
+            # Determine dendrogram settings
+            dendrogram <- "none"
+            if (input$cluster_rows && input$cluster_cols) {
+              dendrogram <- "both"
+            } else if (input$cluster_rows) {
+              dendrogram <- "row"
+            } else if (input$cluster_cols) {
+              dendrogram <- "column"
+            }
+            
+            # Create heatmaply heatmap with dendrograms
+            p <- heatmaply::heatmaply(
+              mat,
+              dendrogram = dendrogram,
+              colors = colors,
+              xlab = "",
+              ylab = "",
+              main = paste("Interactive Enrichment Heatmap -", legend_title),
+              margins = c(150, 250, 50, 50),
+              custom_hovertext = custom_text,
+              label_names = c("Row", "Column", "Value"),
+              fontsize_row = 10,
+              fontsize_col = 10,
+              showticklabels = c(TRUE, TRUE),
+              plot_method = "plotly"
+            )
+            
+            return(p)
+            
+          } else {
+            # Fallback to regular plotly without clustering
+            # Create hover text with full descriptions
+            hover_text <- matrix(
+              paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
+                     "Condition: ", rep(colnames(mat), each = nrow(mat)), "<br>",
+                     "Value: ", round(as.vector(mat), 3)),
+              nrow = nrow(mat),
+              ncol = ncol(mat),
+              byrow = FALSE
+            )
+            
+            # Create color scale based on heatmap type
+            if (input$heatmap_type == "pvalue") {
+              colorscale <- list(c(0, "white"), c(1, "red"))
+            } else if (input$heatmap_type == "zscore") {
+              colorscale <- "RdBu"
+            } else {
+              colorscale <- list(c(0, "white"), c(1, "blue"))
+            }
+            
+            # Create basic plotly heatmap
+            p <- plot_ly(
+              x = colnames(mat),
+              y = rownames(mat),
+              z = mat,
+              type = "heatmap",
+              colorscale = colorscale,
+              hovertext = hover_text,
+              hovertemplate = "%{hovertext}<extra></extra>",
+              colorbar = list(title = legend_title)
+            ) %>%
+              layout(
+                title = paste("Interactive Enrichment Heatmap -", legend_title),
+                xaxis = list(
+                  title = "",
+                  tickangle = -45,
+                  tickfont = list(size = 12)
+                ),
+                yaxis = list(
+                  title = "",
+                  tickfont = list(size = 10)
+                ),
+                margin = list(l = 250, b = 100, t = 50)
+              )
+            
+            return(p)
+          }
         }
         
       }, error = function(e) {
