@@ -5,11 +5,15 @@
 # This includes all required library loading
 
 # Ensure critical libraries are loaded (fallback)
-if (!requireNamespace("shinyjs", quietly = TRUE)) {
-  stop("shinyjs package is required but not installed")
-}
-if (!"package:shinyjs" %in% search()) {
-  library(shinyjs)
+critical_packages <- c("shinyjs", "shinycssloaders", "shinyWidgets", "DT", "plotly")
+
+for (pkg in critical_packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    stop(paste(pkg, "package is required but not installed"))
+  }
+  if (!paste0("package:", pkg) %in% search()) {
+    library(pkg, character.only = TRUE)
+  }
 }
 
 # Ensure APP_CONFIG is available from global.R
@@ -43,12 +47,23 @@ source("modules/mod_heatmap_unified.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
 
-# Ensure useShinyjs is available
-if (!exists("useShinyjs")) {
-  if (requireNamespace("shinyjs", quietly = TRUE)) {
-    useShinyjs <- shinyjs::useShinyjs
-  } else {
-    stop("shinyjs package not available")
+# Ensure UI functions are available (fallback assignments)
+ui_functions <- list(
+  useShinyjs = "shinyjs",
+  withSpinner = "shinycssloaders",
+  pickerInput = "shinyWidgets",
+  dataTableOutput = "DT",
+  plotlyOutput = "plotly"
+)
+
+for (func_name in names(ui_functions)) {
+  if (!exists(func_name)) {
+    pkg_name <- ui_functions[[func_name]]
+    if (requireNamespace(pkg_name, quietly = TRUE)) {
+      assign(func_name, get(func_name, envir = asNamespace(pkg_name)))
+    } else {
+      stop(paste("Function", func_name, "not available from package", pkg_name))
+    }
   }
 }
 
