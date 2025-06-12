@@ -30,54 +30,19 @@ landingPageWithUmapUI <- function(id) {
     "))),
     # Main content area with two columns
     fluidRow(
-      # Left column - UMAP visualization and cluster markers (60% width)
+      # Left column - UMAP visualization only (expanded to use full space)
       column(7,
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-line"),
-               "Dataset UMAP Visualization & Cluster Markers")
+               "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 10px;",
-            fluidRow(
-              # UMAP plot (left side)
-              column(7,
-                withSpinner(
-                  plotOutput(ns("umap_plot"), height = "600px"),
-                  type = 4,
-                  color = "#3c8dbc"
-                )
-              ),
-              # Cluster markers table (right side) - optimized layout
-              column(5,
-                h5("Cluster Markers", style = "margin-top: 0; margin-bottom: 8px; font-weight: bold;"),
-                # Compact controls in a single row
-                fluidRow(
-                  column(7,
-                    selectInput(ns("selected_cluster"),
-                               "Select Cluster:",
-                               choices = NULL,
-                               width = "100%")
-                  ),
-                  column(5,
-                    numericInput(ns("max_markers"),
-                                "Max:",
-                                value = 15,
-                                min = 5,
-                                max = 50,
-                                step = 5,
-                                width = "100%")
-                  )
-                ),
-                # Larger markers table area
-                div(style = "height: 530px; overflow-y: auto; margin-top: 5px;",
-                  withSpinner(
-                    DT::dataTableOutput(ns("markers_table"), height = "500px"),
-                    type = 1,
-                    color = "#3c8dbc"
-                  )
-                )
-              )
+          div(class = "box-body", style = "padding: 15px;",
+            withSpinner(
+              plotOutput(ns("umap_plot"), height = "600px"),
+              type = 4,
+              color = "#3c8dbc"
             )
           )
         )
@@ -108,6 +73,47 @@ landingPageWithUmapUI <- function(id) {
           ),
           column(6,
             uiOutput(ns("enrichment_types_box"))
+          )
+        )
+      )
+    ),
+    
+    # Cluster Markers section - full width
+    fluidRow(
+      column(12,
+        div(class = "box box-info", style = "margin-top: 20px;",
+          div(class = "box-header with-border",
+            h3(class = "box-title", 
+               icon("dna"),
+               "Cluster Marker Genes")
+          ),
+          div(class = "box-body", style = "padding: 15px;",
+            fluidRow(
+              # Controls on the left
+              column(3,
+                selectInput(ns("selected_cluster"),
+                           "Select Cluster:",
+                           choices = NULL,
+                           width = "100%"),
+                numericInput(ns("max_markers"),
+                            "Max Markers:",
+                            value = 15,
+                            min = 5,
+                            max = 50,
+                            step = 5,
+                            width = "100%")
+              ),
+              # Markers table on the right
+              column(9,
+                div(style = "height: 400px; overflow-y: auto;",
+                  withSpinner(
+                    DT::dataTableOutput(ns("markers_table"), height = "350px"),
+                    type = 1,
+                    color = "#3c8dbc"
+                  )
+                )
+              )
+            )
           )
         )
       )
@@ -358,26 +364,21 @@ landingPageWithUmapServer <- function(id, data) {
           pct.2 = round(pct.2, 3)
         )
       
-      # Create DataTable with optimized settings
+      # Create DataTable with settings optimized for wider layout
       DT::datatable(
         cluster_markers,
         options = list(
-          pageLength = 25,  # Show more rows
-          scrollY = "460px",  # Use more available height
+          pageLength = 15,  # Show reasonable number of rows
+          scrollY = "320px",  # Fit in new container height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
-          compact = TRUE,  # Compact row spacing
-          autoWidth = FALSE,
+          autoWidth = TRUE,  # Let it use full width
           columnDefs = list(
-            list(width = '80px', targets = 0),  # Gene column
-            list(width = '60px', targets = 1),  # Log2FC
-            list(width = '80px', targets = 2),  # P-val
-            list(width = '50px', targets = 3),  # % in cluster
-            list(width = '50px', targets = 4)   # % in other
+            list(className = 'dt-center', targets = 1:4)  # Center align numeric columns
           )
         ),
         rownames = FALSE,
-        colnames = c('Gene', 'Log2FC', 'P-val', '% in', '% out')  # Shorter column names
+        colnames = c('Gene', 'Log2FC', 'Adj. P-value', '% in cluster', '% in other')  # Full column names since we have space
       ) %>%
         DT::formatStyle(
           'avg_log2FC',
