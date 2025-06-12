@@ -12,90 +12,47 @@ if (!exists("app_data")) {
   )
 }
 
-# Function to initialize data on startup
-initialize_data_on_startup <- function() {
-  if (!app_data$file_picker_shown) {
-    # First check environment variables
-    env_enrichment_file <- Sys.getenv("ISCORE_ENRICHMENT_FILE", "")
-    
-    if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
-      default_path <- env_enrichment_file
-      cat("Loading data from environment variable path:", default_path, "\n")
-    } else {
-      default_path <- file.path(getwd(), "data", "consolidated_enrichment_results.rds")
-      if (file.exists(default_path)) {
-        cat("Loading consolidated data from", default_path, "\n")
-      }
-    }
-    
-    if (file.exists(default_path)) {
-      
-      tryCatch({
-        # Use the load_enrichment_data function from global_minimal.R
-        cat("Attempting to load enrichment data...\n")
-        
-        # Check if we should use the env path or default
-        if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
-          # Set the global enrichment_file variable so load_enrichment_data finds it
-          assign("enrichment_file", env_enrichment_file, envir = .GlobalEnv)
-        }
-        
-        # Use the existing load_enrichment_data function which handles the data structure properly
-        data <- load_enrichment_data("all_modalities")
-      
-      # The data should already have the correct structure with these columns:
-      # mutation_perturbation, cluster, enrichment_type, direction, p.adjust, Description, etc.
-      
-      # Store in app_data with the correct column names
-      # The landing page expects 'gene' column, so rename mutation_perturbation
-      data$gene <- data$mutation_perturbation
-      
-      # Add method column if not present (infer from data source)
-      if (!"method" %in% names(data)) {
-        # Try to infer method from other columns
-        if ("log2FC" %in% names(data)) {
-          data$method <- "MixScale"
-        } else {
-          data$method <- "MAST"
-        }
-      }
-      
-      # Add experiment column if not present
-      if (!"experiment" %in% names(data)) {
-        data$experiment <- "Default"
-      }
-      
-      # Store in both locations for compatibility
-      app_data$data <- data
-      app_data$consolidated_data <- data
-      app_data$available_genes <- unique(data$mutation_perturbation)
-      app_data$available_clusters <- unique(data$cluster)
-      app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
-      
-      # Success message
-      cat("Successfully loaded", nrow(data), "enrichment terms\n")
-      cat("Available genes/perturbations:", length(app_data$available_genes), "\n")
-      cat("Available clusters:", length(app_data$available_clusters), "\n")
-      
-      # Data initialization complete
-      # initialize_app_with_data(data)  # This function may not exist yet
-      
-    }, error = function(e) {
-      cat("Error loading consolidated data:", e$message, "\n")
-      app_data$data <- NULL
-      app_data$file_picker_shown <- TRUE
-      app_data$startup_message <- paste("⚠ Error loading data:", e$message)
-    })
-    
-    } else {
-      cat("Consolidated data not found at expected location\n")
-      app_data$file_picker_shown <- TRUE
-    }
+#' Initialize App Data (Call when ready)
+#' Sets up app_data with centralized data management
+initialize_app_data <- function() {
+  
+  # Only initialize once
+  if (!is.null(app_data$data)) {
+    return(TRUE)
   }
+  
+  tryCatch({
+    # Use centralized data manager instead of loading directly
+    data <- get_enrichment_data()
+    
+    if (is.null(data)) {
+      app_data$startup_message <- "⚠ Failed to load enrichment data"
+      return(FALSE)
+    }
+    
+    # Add gene column for compatibility
+    if (!"gene" %in% names(data)) {
+      data$gene <- data$mutation_perturbation
+    }
+    
+    # Store in app_data
+    app_data$data <- data
+    app_data$consolidated_data <- data
+    app_data$available_genes <- get_available_genes()
+    app_data$available_clusters <- get_available_clusters()
+    app_data$startup_message <- paste("✓ Loaded", nrow(data), "significant enrichment results")
+    
+    cat("App data initialized with", nrow(data), "enrichment terms\n")
+    return(TRUE)
+    
+  }, error = function(e) {
+    cat("Error initializing app data:", e$message, "\n")
+    app_data$startup_message <- paste("⚠ Error:", e$message)
+    return(FALSE)
+  })
 }
 
-# Try to load data on startup - call this after global_minimal.R is loaded
-initialize_data_on_startup()
+# NOTE: No immediate execution - data loading is now on-demand
 
 #' Process uploaded enrichment file
 #' 

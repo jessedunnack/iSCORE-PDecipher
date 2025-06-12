@@ -1,29 +1,52 @@
-# Global configuration and functions for PD Enrichment Explorer
+# Consolidated Global Configuration for iSCORE-PDecipher Shiny App
+# Single point for all library loading and configuration
 
-# Load core analysis functions
-# Note: These files may not exist in all installations
-# source("data_import_functions.R")
-# source("enrichment_analysis.R")
-# source("file_access.R")
-# source("term_extraction_fixed.R")
-# source("visualization.R")
-# source("plot_enrichment_results_v7.51.R")
-# source("unified_enrichment_heatmaps.R")
+# =============================================================================
+# LIBRARY LOADING - All required packages in one place
+# =============================================================================
 
-# Additional required libraries
-library(ComplexHeatmap)
-library(circlize)
-library(viridis)
-library(RColorBrewer)
+# Core Shiny libraries
+library(shiny)
+library(shinyWidgets)
+library(shinycssloaders)
+library(shinyjs)
+library(DT)
+
+# Data manipulation and visualization
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(glue)
+library(tibble)
 library(tidyr)
 library(stringr)
-library(tibble)
 
-# Global configuration
+# Color and styling
+library(viridis)
+library(RColorBrewer)
+library(colourpicker)
+
+# Advanced visualization (lazy load these - they're heavy)
+# library(ComplexHeatmap)  # Load on demand
+# library(circlize)        # Load on demand
+
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+
+# Shiny app settings
+options(shiny.maxRequestSize = 500*1024^2)  # 500MB upload limit
+
+# Environment variables
+data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+de_file <- Sys.getenv("ISCORE_DE_FILE", "")
+enrichment_file <- Sys.getenv("ISCORE_ENRICHMENT_FILE", "")
+enrichment_dir <- Sys.getenv("ISCORE_ENRICHMENT_DIR", "")
+
+# Application configuration
 APP_CONFIG <- list(
   # Data paths
-  enrichment_base_dir = Sys.getenv("ISCORE_ENRICHMENT_DIR", 
-                                   file.path(dirname(dirname(getwd())), "extdata", "enrichment_results")),
+  enrichment_base_dir = enrichment_dir,
   
   # Analysis parameters
   default_pval_threshold = 0.05,
@@ -48,232 +71,86 @@ APP_CONFIG <- list(
     "All" = "all",
     "MAST only" = "MAST",
     "MixScale only" = "MixScale",
-    "Intersection" = "intersection",
-    "Union" = "union"
-  ),
-  
-  # Heatmap metric options
-  heatmap_metrics = c(
-    "P-value (-log10)" = "p.adjust",
-    "Fold Enrichment" = "FoldEnrichment",
-    "Z-score" = "zScore",
-    "NES (GSEA)" = "NES"
+    "Union" = "union",
+    "Intersection" = "intersection"
   )
 )
 
-# Utility functions
+# =============================================================================
+# UTILITY FUNCTIONS (Essential only - moved complex ones to modules)
+# =============================================================================
 
-#' Get available genes from enrichment results directory
-get_available_genes <- function(base_dir = APP_CONFIG$enrichment_base_dir, 
-                               analysis_type = NULL) {
-  if (!dir.exists(base_dir)) {
-    return(character(0))
-  }
+#' Get significant terms with filtering
+#' Simplified version for core filtering needs
+get_significant_terms_simple <- function(data, 
+                                       analysis_type = NULL,
+                                       gene = NULL, 
+                                       cluster = NULL,
+                                       enrichment_type = NULL,
+                                       direction = NULL,
+                                       modality = NULL) {
   
-  if (!is.null(analysis_type)) {
-    type_dir <- file.path(base_dir, analysis_type)
-    if (dir.exists(type_dir)) {
-      genes <- list.dirs(type_dir, full.names = FALSE, recursive = FALSE)
-      return(sort(unique(genes[genes != ""])))
-    }
-  } else {
-    # Get genes from all analysis types
-    all_genes <- character(0)
-    for (type in APP_CONFIG$analysis_types) {
-      type_dir <- file.path(base_dir, type)
-      if (dir.exists(type_dir)) {
-        genes <- list.dirs(type_dir, full.names = FALSE, recursive = FALSE)
-        all_genes <- c(all_genes, genes[genes != ""])
-      }
-    }
-    return(sort(unique(all_genes)))
-  }
-}
-
-#' Get available clusters for a gene
-get_available_clusters <- function(base_dir = APP_CONFIG$enrichment_base_dir,
-                                 analysis_type, gene) {
-  gene_dir <- file.path(base_dir, analysis_type, gene)
-  if (!dir.exists(gene_dir)) {
-    return(character(0))
-  }
+  if (is.null(data) || nrow(data) == 0) return(data.frame())
   
-  clusters <- list.dirs(gene_dir, full.names = FALSE, recursive = FALSE)
-  clusters <- clusters[grepl("^cluster_", clusters)]
+  # Apply filters
+  filtered_data <- data
   
-  # Sort numerically
-  cluster_nums <- as.numeric(gsub("cluster_", "", clusters))
-  clusters <- clusters[order(cluster_nums)]
-  
-  return(clusters)
-}
-
-#' Get available experiments for a gene/cluster
-get_available_experiments <- function(base_dir = APP_CONFIG$enrichment_base_dir,
-                                    analysis_type, gene, cluster) {
-  cluster_dir <- file.path(base_dir, analysis_type, gene, cluster)
-  if (!dir.exists(cluster_dir)) {
-    return(character(0))
-  }
-  
-  experiments <- list.dirs(cluster_dir, full.names = FALSE, recursive = FALSE)
-  experiments <- experiments[experiments != ""]
-  
-  # For MAST, should primarily be "default"
-  # For MixScale, various experiment codes
-  return(sort(experiments))
-}
-
-#' Load enrichment result safely
-load_enrichment_safe <- function(file_path) {
-  tryCatch({
-    if (file.exists(file_path)) {
-      result <- readRDS(file_path)
-      return(result)
-    } else {
-      return(NULL)
-    }
-  }, error = function(e) {
-    message("Error loading file: ", file_path)
-    message("Error: ", e$message)
-    return(NULL)
-  })
-}
-
-#' Create a summary of enrichment results
-summarize_enrichment <- function(enrichment_data, 
-                               enrichment_type,
-                               pval_threshold = 0.05) {
-  if (is.null(enrichment_data)) {
-    return(data.frame(
-      total_terms = 0,
-      significant_terms = 0,
-      top_term = NA,
-      top_pvalue = NA
-    ))
-  }
-  
-  # Extract the result based on enrichment type
-  if (enrichment_type == "STRING") {
-    if (is.list(enrichment_data) && "enrichment" %in% names(enrichment_data)) {
-      result_df <- enrichment_data$enrichment
-      pval_col <- "fdr"
-      desc_col <- "description"
-    } else {
-      return(data.frame(
-        total_terms = 0,
-        significant_terms = 0,
-        top_term = NA,
-        top_pvalue = NA
-      ))
-    }
-  } else if (enrichment_type == "GSEA") {
-    # Handle GSEA format
-    pval_col <- "padj"
-    desc_col <- "pathway"
-    result_df <- enrichment_data
-  } else {
-    # Standard enrichResult S4 object
-    if (methods::is(enrichment_data, "enrichResult")) {
-      result_df <- enrichment_data@result
-      pval_col <- "p.adjust"
-      desc_col <- "Description"
-    } else {
-      return(data.frame(
-        total_terms = 0,
-        significant_terms = 0,
-        top_term = NA,
-        top_pvalue = NA
-      ))
+  if (!is.null(analysis_type) && analysis_type != "ALL") {
+    if ("analysis_type" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$analysis_type == analysis_type, ]
+    } else if ("method" %in% names(filtered_data)) {
+      # Map method to analysis_type
+      method_filter <- switch(analysis_type,
+                             "MAST" = "MAST",
+                             "MixScale" = c("MixScale", "MixScale_CRISPRa"),
+                             analysis_type)
+      filtered_data <- filtered_data[filtered_data$method %in% method_filter, ]
     }
   }
   
-  # Calculate summary statistics
-  total_terms <- nrow(result_df)
+  if (!is.null(gene) && gene != "ALL") {
+    filtered_data <- filtered_data[filtered_data$mutation_perturbation == gene, ]
+  }
   
-  if (pval_col %in% names(result_df)) {
-    significant_terms <- sum(result_df[[pval_col]] < pval_threshold, na.rm = TRUE)
-    
-    if (significant_terms > 0) {
-      top_idx <- which.min(result_df[[pval_col]])
-      top_term <- result_df[[desc_col]][top_idx]
-      top_pvalue <- result_df[[pval_col]][top_idx]
-    } else {
-      top_term <- NA
-      top_pvalue <- NA
+  if (!is.null(cluster) && cluster != "ALL") {
+    filtered_data <- filtered_data[filtered_data$cluster == cluster, ]
+  }
+  
+  if (!is.null(enrichment_type) && enrichment_type != "ALL") {
+    filtered_data <- filtered_data[filtered_data$enrichment_type == enrichment_type, ]
+  }
+  
+  if (!is.null(direction) && direction != "ALL") {
+    filtered_data <- filtered_data[filtered_data$direction == direction, ]
+  }
+  
+  if (!is.null(modality) && modality != "ALL") {
+    if ("modality" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$modality == modality, ]
     }
-  } else {
-    significant_terms <- 0
-    top_term <- NA
-    top_pvalue <- NA
   }
   
-  return(data.frame(
-    total_terms = total_terms,
-    significant_terms = significant_terms,
-    top_term = top_term,
-    top_pvalue = top_pvalue
-  ))
+  return(filtered_data)
 }
 
-#' Format p-value for display
-format_pvalue <- function(p) {
-  if (is.na(p)) return("NA")
-  if (p < 0.001) return(formatC(p, format = "e", digits = 2))
-  return(formatC(p, format = "f", digits = 4))
-}
-
-#' Create a color palette for heatmaps
-get_heatmap_colors <- function(metric_type) {
-  if (metric_type == "NES") {
-    # Divergent colors for NES
-    colorRamp2(c(-3, 0, 3), c("blue", "white", "red"))
-  } else {
-    # Sequential colors for other metrics
-    colorRamp2(c(0, 2, 5, 10, 20), 
-              c("white", "#fee5d9", "#fcae91", "#fb6a4a", "#cb181d"))
+#' Load heavy packages on demand
+#' @param package_name Name of package to load
+load_package_on_demand <- function(package_name) {
+  if (!requireNamespace(package_name, quietly = TRUE)) {
+    warning(paste("Package", package_name, "not available"))
+    return(FALSE)
   }
+  
+  if (!package_name %in% (.packages())) {
+    library(package_name, character.only = TRUE)
+  }
+  return(TRUE)
 }
 
-#' Validate gene list input
-validate_gene_list <- function(genes, species = "human") {
-  # Remove empty strings and whitespace
-  genes <- trimws(genes)
-  genes <- genes[genes != ""]
-  
-  # Remove duplicates
-  genes <- unique(genes)
-  
-  # Basic validation
-  valid_genes <- genes[nchar(genes) > 1]
-  
-  return(list(
-    valid_genes = valid_genes,
-    n_input = length(genes),
-    n_valid = length(valid_genes),
-    n_invalid = length(genes) - length(valid_genes)
-  ))
-}
+# =============================================================================
+# INITIALIZATION
+# =============================================================================
 
-#' Create safe file name from user input
-safe_filename <- function(name) {
-  # Remove special characters and spaces
-  name <- gsub("[^[:alnum:]_-]", "_", name)
-  # Remove multiple underscores
-  name <- gsub("_+", "_", name)
-  # Add timestamp
-  paste0(name, "_", format(Sys.time(), "%Y%m%d_%H%M%S"))
-}
-
-# Set options for the app
-options(
-  shiny.maxRequestSize = 50*1024^2,  # 50MB file upload limit
-  scipen = 999  # Avoid scientific notation
-)
-
-# Create necessary directories if they don't exist
-if (!dir.exists("www")) dir.create("www")
-if (!dir.exists("data")) dir.create("data")
-if (!dir.exists("modules")) dir.create("modules")
-
-message("Global functions loaded successfully")
+cat("Global configuration loaded successfully\n")
+cat("Environment variables configured\n")
+cat("Ready for data loading\n")

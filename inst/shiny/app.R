@@ -1,20 +1,8 @@
 # iSCORE-PDecipher Shiny Visualization App
 # A ShinyGO-inspired interface for Parkinson's Disease functional enrichment analysis
 
-# Load required libraries
-library(shiny)
-library(shinyWidgets)
-library(shinycssloaders)
-library(shinyjs)
-library(DT)
-library(plotly)
-library(dplyr)
-library(ggplot2)
-library(glue)
-library(tibble)
-library(colourpicker)
-
 # Note: global.R is automatically loaded by Shiny before app.R
+# This includes all required library loading
 
 # Ensure APP_CONFIG is available from global.R
 if (!exists("APP_CONFIG")) {
@@ -26,11 +14,10 @@ if (!exists("APP_CONFIG")) {
   )
 }
 
-# Source global functions and configurations
-# We also source global_minimal.R for additional functions
-source("global_minimal.R")
+# Source core data management (NEW - centralized data loading)
+source("R/data_manager.R")
 
-# Source new startup manager AFTER global_minimal.R
+# Source startup manager (NO immediate execution now)
 source("R/startup_manager.R")
 
 # Source cache manager
