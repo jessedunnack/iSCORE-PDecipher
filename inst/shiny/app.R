@@ -14,10 +14,23 @@ library(glue)
 library(tibble)
 library(colourpicker)
 
+# Note: global.R is automatically loaded by Shiny before app.R
+
+# Ensure APP_CONFIG is available from global.R
+if (!exists("APP_CONFIG")) {
+  # If global.R wasn't loaded properly, create minimal config
+  APP_CONFIG <- list(
+    analysis_types = c("MAST", "MixScale"),
+    enrichment_types = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA"),
+    directions = c("ALL", "UP", "DOWN")
+  )
+}
+
 # Source global functions and configurations
+# We also source global_minimal.R for additional functions
 source("global_minimal.R")
 
-# Source new startup manager
+# Source new startup manager AFTER global_minimal.R
 source("R/startup_manager.R")
 
 # Source cache manager
@@ -216,8 +229,8 @@ ui <- fluidPage(
       
       selectInput("global_analysis_type",
                   "Analysis Type",
-                  choices = APP_CONFIG$analysis_types,
-                  selected = APP_CONFIG$analysis_types[1],
+                  choices = c("MAST", "MixScale"),
+                  selected = "MAST",
                   width = "100%"),
       
       selectInput("global_gene",
@@ -237,7 +250,7 @@ ui <- fluidPage(
       
       selectInput("global_enrichment_type",
                   "Enrichment Database",
-                  choices = APP_CONFIG$enrichment_types,
+                  choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA"),
                   selected = "GO_BP",
                   width = "100%"),
       
@@ -270,7 +283,7 @@ ui <- fluidPage(
       
       radioButtons("global_direction",
                    "Gene Regulation",
-                   choices = APP_CONFIG$direction_types,
+                   choices = c("ALL", "UP", "DOWN"),
                    selected = "ALL"),
       
       hr(),

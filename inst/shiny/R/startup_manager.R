@@ -12,35 +12,36 @@ if (!exists("app_data")) {
   )
 }
 
-# Try to load consolidated data on startup
-if (!app_data$file_picker_shown) {
-  # First check environment variables
-  env_enrichment_file <- Sys.getenv("ISCORE_ENRICHMENT_FILE", "")
-  
-  if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
-    default_path <- env_enrichment_file
-    cat("Loading data from environment variable path:", default_path, "\n")
-  } else {
-    default_path <- file.path(getwd(), "data", "consolidated_enrichment_results.rds")
-    if (file.exists(default_path)) {
-      cat("Loading consolidated data from", default_path, "\n")
-    }
-  }
-  
-  if (file.exists(default_path)) {
+# Function to initialize data on startup
+initialize_data_on_startup <- function() {
+  if (!app_data$file_picker_shown) {
+    # First check environment variables
+    env_enrichment_file <- Sys.getenv("ISCORE_ENRICHMENT_FILE", "")
     
-    tryCatch({
-      # Use the load_enrichment_data function from global_minimal.R
-      cat("Attempting to load enrichment data...\n")
-      
-      # Check if we should use the env path or default
-      if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
-        # Set the global enrichment_file variable so load_enrichment_data finds it
-        assign("enrichment_file", env_enrichment_file, envir = .GlobalEnv)
+    if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
+      default_path <- env_enrichment_file
+      cat("Loading data from environment variable path:", default_path, "\n")
+    } else {
+      default_path <- file.path(getwd(), "data", "consolidated_enrichment_results.rds")
+      if (file.exists(default_path)) {
+        cat("Loading consolidated data from", default_path, "\n")
       }
+    }
+    
+    if (file.exists(default_path)) {
       
-      # Use the existing load_enrichment_data function which handles the data structure properly
-      data <- load_enrichment_data("all_modalities")
+      tryCatch({
+        # Use the load_enrichment_data function from global_minimal.R
+        cat("Attempting to load enrichment data...\n")
+        
+        # Check if we should use the env path or default
+        if (env_enrichment_file != "" && file.exists(env_enrichment_file)) {
+          # Set the global enrichment_file variable so load_enrichment_data finds it
+          assign("enrichment_file", env_enrichment_file, envir = .GlobalEnv)
+        }
+        
+        # Use the existing load_enrichment_data function which handles the data structure properly
+        data <- load_enrichment_data("all_modalities")
       
       # The data should already have the correct structure with these columns:
       # mutation_perturbation, cluster, enrichment_type, direction, p.adjust, Description, etc.
@@ -86,11 +87,15 @@ if (!app_data$file_picker_shown) {
       app_data$startup_message <- paste("⚠ Error loading data:", e$message)
     })
     
-  } else {
-    cat("Consolidated data not found at expected location\n")
-    app_data$file_picker_shown <- TRUE
+    } else {
+      cat("Consolidated data not found at expected location\n")
+      app_data$file_picker_shown <- TRUE
+    }
   }
 }
+
+# Try to load data on startup - call this after global_minimal.R is loaded
+initialize_data_on_startup()
 
 #' Process uploaded enrichment file
 #' 

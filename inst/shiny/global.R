@@ -1,13 +1,14 @@
 # Global configuration and functions for PD Enrichment Explorer
 
 # Load core analysis functions
-source("data_import_functions.R")
-source("enrichment_analysis.R")
-source("file_access.R")
-source("term_extraction_fixed.R")
-source("visualization.R")
-source("plot_enrichment_results_v7.51.R")
-source("unified_enrichment_heatmaps.R")
+# Note: These files may not exist in all installations
+# source("data_import_functions.R")
+# source("enrichment_analysis.R")
+# source("file_access.R")
+# source("term_extraction_fixed.R")
+# source("visualization.R")
+# source("plot_enrichment_results_v7.51.R")
+# source("unified_enrichment_heatmaps.R")
 
 # Additional required libraries
 library(ComplexHeatmap)
@@ -21,7 +22,8 @@ library(tibble)
 # Global configuration
 APP_CONFIG <- list(
   # Data paths
-  enrichment_base_dir = "/Users/hockemeyer/Desktop/Functional Enrichment/enrichment_results",
+  enrichment_base_dir = Sys.getenv("ISCORE_ENRICHMENT_DIR", 
+                                   file.path(dirname(dirname(getwd())), "extdata", "enrichment_results")),
   
   # Analysis parameters
   default_pval_threshold = 0.05,
@@ -274,4 +276,4 @@ if (!dir.exists("www")) dir.create("www")
 if (!dir.exists("data")) dir.create("data")
 if (!dir.exists("modules")) dir.create("modules")
 
-print("Global configuration loaded successfully")
+message("Global functions loaded successfully")

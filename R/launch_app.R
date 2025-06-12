@@ -189,6 +189,5 @@ select_dataset_directory <- function() {
   return(select_dataset_directory())
 }
 
-#' @rdname launch_iscore_app
-#' @export
+# Create alias for backward compatibility (not exported)
 launch_app <- launch_iscore_app
