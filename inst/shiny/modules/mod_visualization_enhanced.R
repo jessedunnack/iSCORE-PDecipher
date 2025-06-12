@@ -224,8 +224,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           "neg_log10_pval"
         )
         
-        # Create base plot
-        p <- ggplot(plot_df, aes_string(x = x_var, y = "Description"))
+        # Create base plot using tidy evaluation
+        p <- ggplot(plot_df, aes(x = .data[[x_var]], y = Description))
         
         # Add points
         if (input$color_by == "p-value") {
@@ -252,7 +252,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         # Bar plot implementation
         plot_df <- top_data %>%
           mutate(
-            Description = factor(Description, levels = Description),
+            # Handle duplicates by making descriptions unique
+            Description = make.unique(Description, sep = " "),
+            Description = factor(Description, levels = rev(unique(Description))),
             neg_log10_pval = -log10(p.adjust)
           )
         
@@ -267,7 +269,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         # Lollipop plot implementation
         plot_df <- top_data %>%
           mutate(
-            Description = factor(Description, levels = Description),
+            # Handle duplicates by making descriptions unique
+            Description = make.unique(Description, sep = " "),
+            Description = factor(Description, levels = rev(unique(Description))),
             neg_log10_pval = -log10(p.adjust)
           )
         

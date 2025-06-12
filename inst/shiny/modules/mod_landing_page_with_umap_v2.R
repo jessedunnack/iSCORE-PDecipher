@@ -16,16 +16,16 @@ landingPageWithUmapUI <- function(id) {
     fluidRow(
       # Left column - UMAP visualization (60% width)
       column(7,
-        div(class = "box box-primary", style = "margin-top: 0; height: 650px;",
+        div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-scatter", lib = "font-awesome"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 10px; height: calc(100% - 50px);",
-            # UMAP plot without settings - fill available space
+          div(class = "box-body", style = "padding: 10px;",
+            # UMAP plot with fixed height
             withSpinner(
-              plotOutput(ns("umap_plot"), height = "100%", width = "100%"),
+              plotOutput(ns("umap_plot"), height = "600px"),
               type = 4,
               color = "#3c8dbc"
             )
@@ -81,8 +81,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Analysis Type")
           ),
-          div(class = "box-body", style = "height: 350px; display: flex; align-items: center; justify-content: center;",
-            withSpinner(plotlyOutput(ns("analysis_type_plot"), height = "300px", width = "100%"))
+          div(class = "box-body", style = "height: 350px; padding: 20px;",
+            withSpinner(plotlyOutput(ns("analysis_type_plot"), height = "280px"))
           )
         )
       ),
@@ -93,8 +93,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Enrichment Database")
           ),
-          div(class = "box-body", style = "height: 350px; display: flex; align-items: center; justify-content: center;",
-            withSpinner(plotlyOutput(ns("enrichment_type_plot"), height = "300px", width = "100%"))
+          div(class = "box-body", style = "height: 350px; padding: 20px;",
+            withSpinner(plotlyOutput(ns("enrichment_type_plot"), height = "280px"))
           )
         )
       ),
@@ -105,8 +105,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", "Results by Direction")
           ),
-          div(class = "box-body", style = "height: 350px; display: flex; align-items: center; justify-content: center;",
-            withSpinner(plotlyOutput(ns("direction_plot"), height = "300px", width = "100%"))
+          div(class = "box-body", style = "height: 350px; padding: 20px;",
+            withSpinner(plotlyOutput(ns("direction_plot"), height = "280px"))
           )
         )
       )

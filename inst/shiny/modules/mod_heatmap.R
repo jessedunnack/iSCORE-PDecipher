@@ -514,7 +514,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 dplyr::filter(Description %in% full_descriptions) %>%
                 dplyr::arrange(match(Description, full_descriptions))
               
-              if (nrow(row_annotations) > 0) {
+              if (nrow(row_annotations) > 0 && nrow(row_annotations) == nrow(mat)) {
                 # Create color vectors for annotations
                 type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
                                 "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
@@ -525,8 +525,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 # Keep the original categorical values for heatmaply
                 # heatmaply will handle the color mapping internally
                 row_side_colors <- data.frame(
-                  Type = row_annotations$enrichment_type,
-                  Direction = row_annotations$direction
+                  Type = as.character(row_annotations$enrichment_type),
+                  Direction = as.character(row_annotations$direction),
+                  stringsAsFactors = FALSE
                 )
                 rownames(row_side_colors) <- rownames(mat)
                 
@@ -535,27 +536,48 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                   Type = type_colors,
                   Direction = dir_colors
                 )
+              } else {
+                row_side_colors <- NULL
+                row_side_palette <- NULL
               }
             }
             
             # Create heatmaply heatmap with dendrograms
-            p <- heatmaply::heatmaply(
-              mat,
-              dendrogram = dendrogram,
-              colors = colors,
-              xlab = "",
-              ylab = "",
-              main = paste("Interactive Enrichment Heatmap -", legend_title),
-              margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
-              custom_hovertext = custom_text,
-              label_names = c("Row", "Column", "Value"),
-              fontsize_row = 10,
-              fontsize_col = 10,
-              showticklabels = c(TRUE, TRUE),
-              plot_method = "plotly",
-              row_side_colors = row_side_colors,
-              row_side_palette = row_side_palette  # Use the color mapping we defined
-            )
+            if (!is.null(row_side_colors) && !is.null(row_side_palette)) {
+              p <- heatmaply::heatmaply(
+                mat,
+                dendrogram = dendrogram,
+                colors = colors,
+                xlab = "",
+                ylab = "",
+                main = paste("Interactive Enrichment Heatmap -", legend_title),
+                margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
+                custom_hovertext = custom_text,
+                label_names = c("Row", "Column", "Value"),
+                fontsize_row = 10,
+                fontsize_col = 10,
+                showticklabels = c(TRUE, TRUE),
+                plot_method = "plotly",
+                row_side_colors = row_side_colors,
+                row_side_palette = row_side_palette  # Use the color mapping we defined
+              )
+            } else {
+              p <- heatmaply::heatmaply(
+                mat,
+                dendrogram = dendrogram,
+                colors = colors,
+                xlab = "",
+                ylab = "",
+                main = paste("Interactive Enrichment Heatmap -", legend_title),
+                margins = c(150, 250, 50, 50),
+                custom_hovertext = custom_text,
+                label_names = c("Row", "Column", "Value"),
+                fontsize_row = 10,
+                fontsize_col = 10,
+                showticklabels = c(TRUE, TRUE),
+                plot_method = "plotly"
+              )
+            }
             
             # Store the plotly object for download
             heatmap_data$plotly_object <- p
