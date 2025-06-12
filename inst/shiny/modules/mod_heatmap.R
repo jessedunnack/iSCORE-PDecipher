@@ -507,6 +507,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             
             # Prepare row annotations if requested
             row_side_colors <- NULL
+            row_side_palette <- NULL
             if (input$show_annotations) {
               # Get annotation data for each row
               row_annotations <- df[!duplicated(df$Description), ] %>%
@@ -517,23 +518,23 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 # Create color vectors for annotations
                 type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
                                 "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
-                                "WikiPathways" = "#FDB462", "STRING" = "#B3DE69")
-                dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple")
+                                "WikiPathways" = "#FDB462", "STRING" = "#B3DE69",
+                                "GSEA" = "#FCCDE5")
+                dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple", "RANKED" = "darkgreen")
                 
-                # Map enrichment types to colors
-                type_col <- type_colors[row_annotations$enrichment_type]
-                type_col[is.na(type_col)] <- "grey"
-                
-                # Map directions to colors
-                dir_col <- dir_colors[row_annotations$direction]
-                dir_col[is.na(dir_col)] <- "grey"
-                
-                # Combine annotations
+                # Keep the original categorical values for heatmaply
+                # heatmaply will handle the color mapping internally
                 row_side_colors <- data.frame(
-                  Type = type_col,
-                  Direction = dir_col
+                  Type = row_annotations$enrichment_type,
+                  Direction = row_annotations$direction
                 )
                 rownames(row_side_colors) <- rownames(mat)
+                
+                # Create color lists for heatmaply
+                row_side_palette <- list(
+                  Type = type_colors,
+                  Direction = dir_colors
+                )
               }
             }
             
@@ -553,7 +554,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               showticklabels = c(TRUE, TRUE),
               plot_method = "plotly",
               row_side_colors = row_side_colors,
-              row_side_palette = NULL  # Use actual colors provided
+              row_side_palette = row_side_palette  # Use the color mapping we defined
             )
             
             # Store the plotly object for download
@@ -806,7 +807,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
                             "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
                             "WikiPathways" = "#FDB462", "STRING" = "#B3DE69", "GSEA" = "#FCCDE5")
-            dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple")
+            dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple", "RANKED" = "darkgreen")
             
             row_ha <- ComplexHeatmap::rowAnnotation(
               Type = row_ann_data$enrichment_type,

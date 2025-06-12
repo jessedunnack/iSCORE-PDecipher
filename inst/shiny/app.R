@@ -24,9 +24,12 @@ source("R/startup_manager.R")
 source("R/cache_manager.R")
 
 # Source modules
-source("modules/mod_landing_page.R")
+# source("modules/mod_landing_page.R")  # Original landing page
+# source("modules/mod_landing_page_with_umap.R")  # Enhanced with UMAP viewer v1
+source("modules/mod_landing_page_with_umap_v2.R")  # Compact layout with auto-dataset selection
 source("modules/mod_precomputed_reactive.R")
-source("modules/mod_visualization.R")
+# source("modules/mod_visualization.R")  # Original version
+source("modules/mod_visualization_enhanced.R")  # Enhanced with GSEA support
 source("modules/mod_comparison.R")
 source("modules/mod_heatmap.R")
 source("modules/mod_pathview.R")
@@ -308,7 +311,7 @@ ui <- fluidPage(
           icon = icon("home"),
           value = "overview",
           br(),
-          landingPageUI("landing")
+          landingPageWithUmapUI("landing")
         ),
         
         # Basic Visualization (main plotting interface)
@@ -576,7 +579,7 @@ server <- function(input, output, session) {
   
   # Module servers
   # Landing page module
-  landingPageServer("landing", app_data = app_data)
+  landingPageWithUmapServer("landing", data = app_data)
   
   # Create filtered data reactive for other modules to use
   filtered_data <- reactive({

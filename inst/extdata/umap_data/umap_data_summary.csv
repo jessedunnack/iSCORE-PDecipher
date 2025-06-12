@@ -1,0 +1,4 @@
+"dataset","n_cells","n_clusters_coarse","n_clusters_fine","has_perturbation_info","extraction_date"
+"iSCORE_PD",201679,15,1,TRUE,"2025-06-11"
+"iSCORE_PD_CRISPRi",219109,36,24,TRUE,"2025-06-11"
+"Full_Dataset",222063,36,24,TRUE,"2025-06-11"

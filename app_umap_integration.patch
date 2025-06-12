@@ -1,0 +1,33 @@
+# Patch file to integrate UMAP viewer into app.R
+# Apply with: patch -p0 < app_umap_integration.patch
+
+--- inst/shiny/app.R.original
++++ inst/shiny/app.R
+@@ -24,7 +24,8 @@
+ source("R/cache_manager.R")
+ 
+ # Source modules
+-source("modules/mod_landing_page.R")
++# source("modules/mod_landing_page.R")  # Original landing page
++source("modules/mod_landing_page_with_umap.R")  # Enhanced with UMAP
+ source("modules/mod_precomputed_reactive.R")
+ source("modules/mod_visualization.R")
+ source("modules/mod_comparison.R")
+@@ -177,7 +178,7 @@
+         tabItems(
+           # Landing page
+           tabItem(tabName = "home",
+-                  mod_landing_page_ui("landing")
++                  landingPageWithUmapUI("landing")  # Changed to include UMAP
+           ),
+           
+           # Precomputed results
+@@ -345,7 +346,7 @@
+   })
+   
+   # Landing page module
+-  mod_landing_page_server("landing", app_data)
++  landingPageWithUmapServer("landing", app_data)  # Changed to include UMAP
+   
+   # Precomputed results module
+   selected_data <- mod_precomputed_reactive_server("precomputed", app_data)

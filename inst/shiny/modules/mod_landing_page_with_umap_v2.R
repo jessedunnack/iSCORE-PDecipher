@@ -1,0 +1,564 @@
+# Landing Page Module with UMAP Visualization (Version 2)
+# Compact layout with UMAP on left, summary boxes on right
+# UMAP dataset determined by loaded data, not user selection
+
+# Source the UMAP viewer module
+source("modules/mod_umap_viewer.R")
+
+#' Landing Page UI with UMAP (Version 2)
+#' 
+#' @param id Module namespace
+landingPageWithUmapUI <- function(id) {
+  ns <- NS(id)
+  
+  tagList(
+    # Main content area with two columns
+    fluidRow(
+      # Left column - UMAP visualization (60% width)
+      column(7,
+        div(class = "box box-primary", style = "margin-top: 0;",
+          div(class = "box-header with-border",
+            h3(class = "box-title", 
+               icon("chart-scatter", lib = "font-awesome"),
+               "Dataset UMAP Visualization")
+          ),
+          div(class = "box-body", style = "padding: 10px;",
+            # UMAP plot without settings
+            withSpinner(
+              plotOutput(ns("umap_plot"), height = "500px"),
+              type = 4,
+              color = "#3c8dbc"
+            )
+          )
+        )
+      ),
+      
+      # Right column - Summary statistics (40% width)
+      column(5,
+        # Summary statistics cards in a grid
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_cells_box"))
+          ),
+          column(6,
+            uiOutput(ns("total_clusters_box"))
+          )
+        ),
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_results_box"))
+          ),
+          column(6,
+            uiOutput(ns("total_genes_box"))
+          )
+        ),
+        fluidRow(
+          column(6,
+            uiOutput(ns("total_experiments_box"))
+          ),
+          column(6,
+            uiOutput(ns("enrichment_types_box"))
+          )
+        ),
+        
+        # Quick info panel
+        div(class = "box box-info", style = "margin-top: 20px;",
+          div(class = "box-header with-border",
+            h4(class = "box-title", "Dataset Information")
+          ),
+          div(class = "box-body",
+            uiOutput(ns("dataset_info"))
+          )
+        )
+      )
+    ),
+    
+    # Detailed breakdown - full width below
+    fluidRow(
+      # By Analysis Type
+      column(4,
+        div(class = "box box-primary",
+          div(class = "box-header with-border",
+            h3(class = "box-title", "Results by Analysis Type")
+          ),
+          div(class = "box-body", style = "height: 350px;",
+            withSpinner(plotlyOutput(ns("analysis_type_plot"), height = "300px"))
+          )
+        )
+      ),
+      
+      # By Enrichment Type
+      column(4,
+        div(class = "box box-success",
+          div(class = "box-header with-border",
+            h3(class = "box-title", "Results by Enrichment Database")
+          ),
+          div(class = "box-body", style = "height: 350px;",
+            withSpinner(plotlyOutput(ns("enrichment_type_plot"), height = "300px"))
+          )
+        )
+      ),
+      
+      # By Direction
+      column(4,
+        div(class = "box box-info",
+          div(class = "box-header with-border",
+            h3(class = "box-title", "Results by Direction")
+          ),
+          div(class = "box-body", style = "height: 350px;",
+            withSpinner(plotlyOutput(ns("direction_plot"), height = "300px"))
+          )
+        )
+      )
+    ),
+    
+    # Detailed tables
+    fluidRow(
+      column(12,
+        div(class = "nav-tabs-custom",
+          h3("Detailed Result Counts", style = "margin-top: 20px; margin-bottom: 20px;"),
+          tabsetPanel(
+            id = ns("detail_tabs"),
+            
+            # By Gene/Mutation
+            tabPanel(
+              "By Gene/Mutation",
+              div(style = "margin-top: 15px;",
+                DT::dataTableOutput(ns("gene_table"))
+              )
+            ),
+            
+            # By Cluster
+            tabPanel(
+              "By Cluster",
+              div(style = "margin-top: 15px;",
+                DT::dataTableOutput(ns("cluster_table"))
+              )
+            ),
+            
+            # Complete Matrix
+            tabPanel(
+              "Complete Matrix",
+              div(style = "margin-top: 15px;",
+                p("This table shows the number of significant terms for each combination of parameters."),
+                p("Use the filters to explore specific combinations."),
+                DT::dataTableOutput(ns("matrix_table"))
+              )
+            ),
+            
+            # Top Terms
+            tabPanel(
+              "Top Enriched Terms",
+              div(style = "margin-top: 15px;",
+                fluidRow(
+                  column(4,
+                    selectInput(ns("top_terms_method"),
+                               "Filter by Method:",
+                               choices = c("All Methods" = "all",
+                                         "MAST" = "MAST",
+                                         "MixScale" = "MixScale"),
+                               selected = "all")
+                  ),
+                  column(4,
+                    selectInput(ns("top_terms_gene"),
+                               "Filter by Gene:",
+                               choices = c("All Genes" = "all"),
+                               selected = "all")
+                  ),
+                  column(4,
+                    numericInput(ns("top_terms_n"),
+                                "Number of top terms:",
+                                value = 20,
+                                min = 10,
+                                max = 100,
+                                step = 10)
+                  )
+                ),
+                DT::dataTableOutput(ns("top_terms_table"))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+}
+
+#' Landing Page Server with UMAP (Version 2)
+#' 
+#' @param id Module namespace
+#' @param data Reactive data object from app
+landingPageWithUmapServer <- function(id, data) {
+  moduleServer(id, function(input, output, session) {
+    
+    # Reactive values for UMAP data
+    umap_data <- reactiveValues(
+      sce = NULL,
+      dataset_name = NULL,
+      loaded = FALSE
+    )
+    
+    # Determine which UMAP dataset to load based on app data
+    observe({
+      req(data$data_loaded)
+      
+      # Determine dataset based on loaded data
+      # Check for specific markers in the data
+      has_crispri <- any(grepl("MixScale", data$consolidated_data$method))
+      has_mutations <- any(grepl("MAST", data$consolidated_data$method))
+      
+      # Determine which dataset to load
+      if (has_crispri && has_mutations) {
+        dataset_to_load <- "Full_Dataset"
+      } else if (has_crispri) {
+        dataset_to_load <- "iSCORE_PD_CRISPRi"
+      } else {
+        dataset_to_load <- "iSCORE_PD"
+      }
+      
+      # Try to load the appropriate UMAP data
+      possible_paths <- c(
+        system.file("extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds"), 
+                    package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds")),
+        paste0("../../inst/extdata/umap_data/", dataset_to_load, "_umap_data.rds")
+      )
+      
+      for (path in possible_paths) {
+        if (file.exists(path)) {
+          tryCatch({
+            umap_data$sce <- readRDS(path)
+            umap_data$dataset_name <- dataset_to_load
+            umap_data$loaded <- TRUE
+            break
+          }, error = function(e) {
+            message("Failed to load UMAP from ", path, ": ", e$message)
+          })
+        }
+      }
+    })
+    
+    # Render UMAP plot
+    output$umap_plot <- renderPlot({
+      if (!umap_data$loaded || is.null(umap_data$sce)) {
+        # Placeholder when no data
+        plot.new()
+        text(0.5, 0.5, "UMAP data not available\nPlease run extract_umap_data.R", 
+             cex = 1.2, col = "gray60")
+        return()
+      }
+      
+      # Check if dittoSeq is available
+      if (!requireNamespace("dittoSeq", quietly = TRUE)) {
+        plot.new()
+        text(0.5, 0.5, "dittoSeq package required\nInstall with: BiocManager::install('dittoSeq')", 
+             cex = 1.2, col = "red")
+        return()
+      }
+      
+      library(dittoSeq)
+      
+      # Create UMAP plot colored by clusters
+      tryCatch({
+        dittoDimPlot(
+          umap_data$sce,
+          var = "seurat_clusters",
+          reduction.use = "UMAP",
+          size = 0.3,
+          do.label = TRUE,
+          labels.size = 3,
+          legend.show = TRUE,
+          main = ""  # No title to save space
+        )
+      }, error = function(e) {
+        plot.new()
+        text(0.5, 0.5, paste("Error creating UMAP:\n", e$message), 
+             cex = 1.2, col = "red")
+      })
+    })
+    
+    # Cell count box
+    output$total_cells_box <- renderUI({
+      if (umap_data$loaded && !is.null(umap_data$sce)) {
+        n_cells <- ncol(umap_data$sce)
+        valueBox(
+          value = format(n_cells, big.mark = ","),
+          subtitle = "Total Cells",
+          icon = icon("microscope"),
+          color = "aqua"
+        )
+      } else {
+        valueBox(
+          value = "N/A",
+          subtitle = "Total Cells",
+          icon = icon("microscope"),
+          color = "gray"
+        )
+      }
+    })
+    
+    # Cluster count box
+    output$total_clusters_box <- renderUI({
+      if (umap_data$loaded && !is.null(umap_data$sce)) {
+        n_clusters <- length(unique(colData(umap_data$sce)$seurat_clusters))
+        valueBox(
+          value = n_clusters,
+          subtitle = "Cell Clusters",
+          icon = icon("object-group"),
+          color = "yellow"
+        )
+      } else {
+        n_clusters <- length(unique(data$consolidated_data$cluster))
+        valueBox(
+          value = n_clusters,
+          subtitle = "Cell Clusters",
+          icon = icon("object-group"),
+          color = "yellow"
+        )
+      }
+    })
+    
+    # Results count box
+    output$total_results_box <- renderUI({
+      valueBox(
+        value = format(nrow(data$consolidated_data), big.mark = ","),
+        subtitle = "Enrichment Results",
+        icon = icon("chart-bar"),
+        color = "blue"
+      )
+    })
+    
+    # Genes count box
+    output$total_genes_box <- renderUI({
+      n_genes <- length(unique(data$consolidated_data$gene))
+      valueBox(
+        value = n_genes,
+        subtitle = "Genes Analyzed",
+        icon = icon("dna"),
+        color = "green"
+      )
+    })
+    
+    # Experiments count box
+    output$total_experiments_box <- renderUI({
+      n_exp <- length(unique(data$consolidated_data$method))
+      valueBox(
+        value = n_exp,
+        subtitle = "Analysis Methods",
+        icon = icon("flask"),
+        color = "purple"
+      )
+    })
+    
+    # Enrichment types box
+    output$enrichment_types_box <- renderUI({
+      n_types <- length(unique(data$consolidated_data$enrichment_type))
+      valueBox(
+        value = n_types,
+        subtitle = "Enrichment Types",
+        icon = icon("database"),
+        color = "orange"
+      )
+    })
+    
+    # Dataset info panel
+    output$dataset_info <- renderUI({
+      if (umap_data$loaded) {
+        dataset_label <- switch(umap_data$dataset_name,
+          "iSCORE_PD" = "iSCORE-PD (Mutations Only)",
+          "iSCORE_PD_CRISPRi" = "iSCORE-PD + CRISPRi",
+          "Full_Dataset" = "Full Dataset (CRISPRi + CRISPRa)",
+          umap_data$dataset_name
+        )
+        
+        tagList(
+          p(strong("Active Dataset:"), dataset_label),
+          p(strong("Analysis Types:"), paste(unique(data$consolidated_data$method), collapse = ", ")),
+          p(strong("Data Loaded:"), format(Sys.time(), "%Y-%m-%d %H:%M"))
+        )
+      } else {
+        p("Loading dataset information...", style = "color: gray;")
+      }
+    })
+    
+    # Analysis type plot
+    output$analysis_type_plot <- renderPlotly({
+      summary_data <- data$consolidated_data %>%
+        group_by(method) %>%
+        summarise(count = n(), .groups = 'drop')
+      
+      plot_ly(summary_data, 
+              x = ~method, 
+              y = ~count, 
+              type = 'bar',
+              marker = list(color = c('#374E55', '#DF8F44'))) %>%
+        layout(title = NULL,
+               xaxis = list(title = ""),
+               yaxis = list(title = "Number of Results"),
+               showlegend = FALSE,
+               margin = list(t = 10))
+    })
+    
+    # Enrichment type plot
+    output$enrichment_type_plot <- renderPlotly({
+      summary_data <- data$consolidated_data %>%
+        group_by(enrichment_type) %>%
+        summarise(count = n(), .groups = 'drop') %>%
+        arrange(desc(count))
+      
+      # Define colors for each enrichment type
+      colors <- c(
+        "GO_BP" = "#8dd3c7",
+        "GO_CC" = "#ffffb3", 
+        "GO_MF" = "#bebada",
+        "KEGG" = "#fb8072",
+        "Reactome" = "#80b1d3",
+        "WikiPathways" = "#fdb462",
+        "STRING" = "#b3de69",
+        "GSEA" = "#fccde5"
+      )
+      
+      plot_ly(summary_data,
+              x = ~enrichment_type,
+              y = ~count,
+              type = 'bar',
+              marker = list(color = colors[summary_data$enrichment_type])) %>%
+        layout(title = NULL,
+               xaxis = list(title = "", tickangle = -45),
+               yaxis = list(title = "Number of Results"),
+               showlegend = FALSE,
+               margin = list(t = 10, b = 60))
+    })
+    
+    # Direction plot
+    output$direction_plot <- renderPlotly({
+      summary_data <- data$consolidated_data %>%
+        filter(direction != "RANKED") %>%
+        group_by(direction) %>%
+        summarise(count = n(), .groups = 'drop')
+      
+      colors <- c("UP" = "#DC3220", "DOWN" = "#005AB5", "ALL" = "#7C4DFF")
+      
+      plot_ly(summary_data,
+              labels = ~direction,
+              values = ~count,
+              type = 'pie',
+              marker = list(colors = colors[summary_data$direction])) %>%
+        layout(title = NULL,
+               showlegend = TRUE,
+               margin = list(t = 10))
+    })
+    
+    # Gene table
+    output$gene_table <- DT::renderDataTable({
+      gene_summary <- data$consolidated_data %>%
+        group_by(gene, method) %>%
+        summarise(
+          total_terms = n(),
+          enrichment_types = n_distinct(enrichment_type),
+          clusters = n_distinct(cluster),
+          .groups = 'drop'
+        ) %>%
+        arrange(desc(total_terms))
+      
+      DT::datatable(gene_summary,
+                    options = list(pageLength = 15),
+                    rownames = FALSE) %>%
+        formatStyle('total_terms',
+                   background = styleColorBar(gene_summary$total_terms, 'lightblue'),
+                   backgroundSize = '100% 90%',
+                   backgroundRepeat = 'no-repeat',
+                   backgroundPosition = 'center')
+    })
+    
+    # Cluster table
+    output$cluster_table <- DT::renderDataTable({
+      cluster_summary <- data$consolidated_data %>%
+        group_by(cluster) %>%
+        summarise(
+          total_terms = n(),
+          genes = n_distinct(gene),
+          methods = paste(unique(method), collapse = ", "),
+          .groups = 'drop'
+        ) %>%
+        arrange(cluster)
+      
+      DT::datatable(cluster_summary,
+                    options = list(pageLength = 15),
+                    rownames = FALSE)
+    })
+    
+    # Complete matrix table
+    output$matrix_table <- DT::renderDataTable({
+      matrix_data <- data$consolidated_data %>%
+        group_by(gene, cluster, method, enrichment_type, direction) %>%
+        summarise(n_terms = n(), .groups = 'drop') %>%
+        arrange(gene, cluster, method)
+      
+      DT::datatable(matrix_data,
+                    filter = 'top',
+                    options = list(
+                      pageLength = 20,
+                      scrollX = TRUE
+                    ),
+                    rownames = FALSE)
+    })
+    
+    # Update gene choices for top terms
+    observe({
+      gene_choices <- c("All Genes" = "all")
+      unique_genes <- sort(unique(data$consolidated_data$gene))
+      gene_choices <- c(gene_choices, setNames(unique_genes, unique_genes))
+      
+      updateSelectInput(session, "top_terms_gene",
+                       choices = gene_choices)
+    })
+    
+    # Top terms table
+    output$top_terms_table <- DT::renderDataTable({
+      top_data <- data$consolidated_data
+      
+      # Apply filters
+      if (input$top_terms_method != "all") {
+        top_data <- top_data %>%
+          filter(method == input$top_terms_method)
+      }
+      
+      if (!is.null(input$top_terms_gene) && input$top_terms_gene != "all") {
+        top_data <- top_data %>%
+          filter(gene == input$top_terms_gene)
+      }
+      
+      # Get top terms by p.adjust
+      top_terms <- top_data %>%
+        arrange(p.adjust) %>%
+        head(input$top_terms_n) %>%
+        select(gene, cluster, method, enrichment_type, direction, 
+               Description, p.adjust, Count) %>%
+        mutate(p.adjust = format(p.adjust, scientific = TRUE, digits = 3))
+      
+      DT::datatable(top_terms,
+                    options = list(
+                      pageLength = 20,
+                      scrollX = TRUE
+                    ),
+                    rownames = FALSE)
+    })
+    
+  })
+}
+
+# Helper function for value boxes (if not already defined)
+valueBox <- function(value, subtitle, icon = NULL, color = "blue", width = 12) {
+  div(class = paste0("small-box bg-", color), style = "margin-bottom: 15px;",
+    div(class = "inner",
+      h3(value, style = "margin-bottom: 5px;"),
+      p(subtitle, style = "margin: 0;")
+    ),
+    if (!is.null(icon)) {
+      div(class = "icon",
+        icon
+      )
+    }
+  )
+}
