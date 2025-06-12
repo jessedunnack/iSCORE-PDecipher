@@ -75,7 +75,7 @@ mod_heatmap_ui <- function(id) {
         tabPanel("Heatmap",
                  br(),
                  withSpinner(
-                   plotOutput(ns("heatmap_plot"), height = "800px"),
+                   plotlyOutput(ns("heatmap_plot"), height = "800px"),
                    type = 4,
                    color = "#3c8dbc"
                  )),
@@ -105,7 +105,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     observeEvent(input$generate_heatmap, {
       req(input$enrichment_types)
       
-      showNotification("Loading data for heatmap...", type = "message", duration = NULL, id = "loading")
+      showNotification("Loading data for heatmap...", type = "default", duration = NULL, id = "loading")
       
       tryCatch({
         # Use the consolidated data from app_data
@@ -175,10 +175,10 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     })
     
     # Generate heatmap plot
-    output$heatmap_plot <- renderPlot({
+    output$heatmap_plot <- renderPlotly({
       req(heatmap_data$data)
       
-      # Create a simplified heatmap
+      # Create an interactive heatmap
       tryCatch({
         df <- heatmap_data$data
         message("Creating heatmap with ", nrow(df), " rows")
@@ -217,33 +217,95 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           y_var <- "term_id"
         }
         
-        # Determine value column
+        # Determine value column based on heatmap type
         if (input$heatmap_type == "pvalue" && "p.adjust" %in% names(df)) {
           df$heatmap_value <- -log10(pmax(df$p.adjust, 1e-300))
           value_var <- "heatmap_value"
           legend_title <- "-log10(p-value)"
+        } else if (input$heatmap_type == "foldenrichment") {
+          # Check for fold enrichment columns
+          if ("FoldEnrichment" %in% names(df)) {
+            value_var <- "FoldEnrichment"
+            legend_title <- "Fold Enrichment"
+          } else if ("fold_enrichment" %in% names(df)) {
+            value_var <- "fold_enrichment"
+            legend_title <- "Fold Enrichment"
+          } else if ("RichFactor" %in% names(df)) {
+            value_var <- "RichFactor"
+            legend_title <- "Rich Factor"
+          } else {
+            # Calculate fold enrichment if we have the necessary columns
+            if ("Count" %in% names(df) && "GeneRatio" %in% names(df)) {
+              # Parse GeneRatio (format: "X/Y")
+              df$heatmap_value <- sapply(df$GeneRatio, function(x) {
+                parts <- as.numeric(strsplit(x, "/")[[1]])
+                if (length(parts) == 2 && parts[2] > 0) parts[1]/parts[2] else 1
+              })
+              value_var <- "heatmap_value"
+              legend_title <- "Gene Ratio"
+            } else {
+              df$heatmap_value <- 1
+              value_var <- "heatmap_value"
+              legend_title <- "Fold Enrichment (not available)"
+            }
+          }
+        } else if (input$heatmap_type == "zscore") {
+          if ("zScore" %in% names(df)) {
+            value_var <- "zScore"
+            legend_title <- "Z-score"
+          } else if ("z_score" %in% names(df)) {
+            value_var <- "z_score"
+            legend_title <- "Z-score"
+          } else {
+            # Calculate z-score from p-values if available
+            if ("p.adjust" %in% names(df)) {
+              df$heatmap_value <- qnorm(1 - df$p.adjust/2) * sign(rnorm(nrow(df)))
+              value_var <- "heatmap_value"
+              legend_title <- "Z-score (approximated)"
+            } else {
+              df$heatmap_value <- 0
+              value_var <- "heatmap_value"
+              legend_title <- "Z-score (not available)"
+            }
+          }
         } else if (input$heatmap_type == "count" && "Count" %in% names(df)) {
           value_var <- "Count"
           legend_title <- "Gene Count"
         } else {
-          # Default to a simple presence/absence
-          df$heatmap_value <- 1
-          value_var <- "heatmap_value"
-          legend_title <- "Presence"
+          # Default to p-value if available
+          if ("p.adjust" %in% names(df)) {
+            df$heatmap_value <- -log10(pmax(df$p.adjust, 1e-300))
+            value_var <- "heatmap_value"
+            legend_title <- "-log10(p-value)"
+          } else {
+            df$heatmap_value <- 1
+            value_var <- "heatmap_value"
+            legend_title <- "Presence"
+          }
         }
         
         # Create matrix
         if (length(unique(df[[x_var]])) < 2) {
-          # If only one condition, create a simple bar plot instead
+          # If only one condition, create a simple bar plot
           top_terms <- head(df[order(df[[value_var]], decreasing = TRUE), ], input$max_terms)
           
-          barplot(top_terms[[value_var]], 
-                  names.arg = substr(top_terms[[y_var]], 1, 30),
-                  las = 2,
-                  main = paste("Top Terms -", input$heatmap_type),
-                  ylab = legend_title,
-                  cex.names = 0.7,
-                  col = heat.colors(nrow(top_terms)))
+          p <- plot_ly(
+            x = top_terms[[value_var]],
+            y = substr(top_terms[[y_var]], 1, 50),
+            type = "bar",
+            orientation = "h",
+            text = top_terms[[y_var]],
+            hovertemplate = "%{text}<br>%{x:.2f}<extra></extra>",
+            marker = list(color = top_terms[[value_var]], colorscale = "Viridis")
+          ) %>%
+            layout(
+              title = paste("Top Terms -", legend_title),
+              xaxis = list(title = legend_title),
+              yaxis = list(title = "", tickfont = list(size = 10)),
+              margin = list(l = 200)
+            )
+          
+          return(p)
           
         } else {
           # Create proper heatmap matrix
@@ -256,38 +318,85 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           
           # Convert to matrix
           mat <- as.matrix(data_wide[,-1])
-          rownames(mat) <- substr(data_wide[[y_var]], 1, 50)  # Truncate long names
+          rownames(mat) <- substr(data_wide[[y_var]], 1, 80)  # Truncate long names
           
           # Limit to max terms
           if (nrow(mat) > input$max_terms) {
             # Keep most significant terms (highest values)
             row_means <- rowMeans(mat, na.rm = TRUE)
-            mat <- mat[order(row_means, decreasing = TRUE)[1:input$max_terms], ]
-          }
-          
-          # Create color palette
-          if (input$heatmap_type == "pvalue") {
-            col_fun <- colorRampPalette(c("white", "red"))(100)
+            top_indices <- order(row_means, decreasing = TRUE)[1:input$max_terms]
+            mat <- mat[top_indices, , drop = FALSE]
+            full_descriptions <- data_wide[[y_var]][top_indices]
           } else {
-            col_fun <- colorRampPalette(c("white", "blue"))(100)
+            full_descriptions <- data_wide[[y_var]]
           }
           
-          # Basic heatmap using base R
-          heatmap(mat,
-                  col = col_fun,
-                  scale = "none",
-                  Rowv = if(input$cluster_rows) TRUE else NA,
-                  Colv = if(input$cluster_cols) TRUE else NA,
-                  margins = c(10, 15),
-                  cexRow = 0.7,
-                  cexCol = 0.8,
-                  main = paste("Enrichment Heatmap -", legend_title))
+          # Create hover text with full descriptions
+          hover_text <- matrix(
+            paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
+                   "Condition: ", rep(colnames(mat), each = nrow(mat)), "<br>",
+                   "Value: ", round(as.vector(mat), 3)),
+            nrow = nrow(mat),
+            ncol = ncol(mat),
+            byrow = FALSE
+          )
+          
+          # Create color scale based on heatmap type
+          if (input$heatmap_type == "pvalue") {
+            colorscale <- list(c(0, "white"), c(1, "red"))
+          } else if (input$heatmap_type == "zscore") {
+            # For z-scores, use diverging color scale
+            colorscale <- "RdBu"
+          } else {
+            colorscale <- list(c(0, "white"), c(1, "blue"))
+          }
+          
+          # Create plotly heatmap
+          p <- plot_ly(
+            x = colnames(mat),
+            y = rownames(mat),
+            z = mat,
+            type = "heatmap",
+            colorscale = colorscale,
+            hovertext = hover_text,
+            hovertemplate = "%{hovertext}<extra></extra>",
+            colorbar = list(title = legend_title)
+          ) %>%
+            layout(
+              title = paste("Interactive Enrichment Heatmap -", legend_title),
+              xaxis = list(
+                title = "",
+                tickangle = -45,
+                tickfont = list(size = 12)
+              ),
+              yaxis = list(
+                title = "",
+                tickfont = list(size = 10),
+                autorange = "reversed"  # Keep terms in order
+              ),
+              margin = list(l = 250, b = 100, t = 50)
+            )
+          
+          return(p)
         }
         
       }, error = function(e) {
         message("Heatmap error: ", e$message)
-        plot.new()
-        text(0.5, 0.5, paste("Error creating heatmap:\n", e$message), cex = 1.2)
+        # Return an empty plotly object with error message
+        plot_ly() %>%
+          add_annotations(
+            text = paste("Error creating heatmap:\n", e$message),
+            x = 0.5,
+            y = 0.5,
+            xref = "paper",
+            yref = "paper",
+            showarrow = FALSE,
+            font = list(size = 14)
+          ) %>%
+          layout(
+            xaxis = list(visible = FALSE),
+            yaxis = list(visible = FALSE)
+          )
       })
     })
     
@@ -295,9 +404,16 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     output$heatmap_data <- DT::renderDataTable({
       req(heatmap_data$data)
       
+      # Select available columns
+      available_cols <- intersect(
+        c("gene", "mutation_perturbation", "cluster", "enrichment_type", "Description", 
+          "term_name", "p.adjust", "Count", "FoldEnrichment", "RichFactor"),
+        names(heatmap_data$data)
+      )
+      
       DT::datatable(
         heatmap_data$data %>%
-          dplyr::select(gene, cluster, enrichment_type, term_name, p.adjust, Count) %>%
+          dplyr::select(all_of(available_cols)) %>%
           dplyr::arrange(p.adjust),
         options = list(pageLength = 25, scrollX = TRUE),
         filter = 'top'
