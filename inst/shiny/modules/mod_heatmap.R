@@ -320,24 +320,57 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           mat <- as.matrix(data_wide[,-1])
           rownames(mat) <- substr(data_wide[[y_var]], 1, 80)  # Truncate long names
           
+          # Store original row names and full descriptions
+          original_rownames <- rownames(mat)
+          full_descriptions_all <- data_wide[[y_var]]
+          
           # Limit to max terms
           if (nrow(mat) > input$max_terms) {
             # Keep most significant terms (highest values)
             row_means <- rowMeans(mat, na.rm = TRUE)
             top_indices <- order(row_means, decreasing = TRUE)[1:input$max_terms]
             mat <- mat[top_indices, , drop = FALSE]
-            full_descriptions <- data_wide[[y_var]][top_indices]
+            full_descriptions <- full_descriptions_all[top_indices]
           } else {
-            full_descriptions <- data_wide[[y_var]]
+            full_descriptions <- full_descriptions_all
           }
+          
+          # Perform hierarchical clustering if requested
+          row_order <- 1:nrow(mat)
+          col_order <- 1:ncol(mat)
+          row_clust <- NULL
+          col_clust <- NULL
+          
+          if (input$cluster_rows && nrow(mat) > 1) {
+            # Calculate distance matrix for rows
+            row_dist <- dist(mat, method = "euclidean")
+            row_clust <- hclust(row_dist, method = "complete")
+            row_order <- row_clust$order
+          }
+          
+          if (input$cluster_cols && ncol(mat) > 1) {
+            # Calculate distance matrix for columns
+            col_dist <- dist(t(mat), method = "euclidean")
+            col_clust <- hclust(col_dist, method = "complete")
+            col_order <- col_clust$order
+          }
+          
+          # Note: For future enhancement, consider using heatmaply package
+          # which provides interactive heatmaps with dendrograms:
+          # library(heatmaply)
+          # heatmaply(mat, dendrogram = "both", ...)
+          
+          # Reorder matrix based on clustering
+          mat_clustered <- mat[row_order, col_order, drop = FALSE]
+          full_descriptions_clustered <- full_descriptions[row_order]
           
           # Create hover text with full descriptions
           hover_text <- matrix(
-            paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
-                   "Condition: ", rep(colnames(mat), each = nrow(mat)), "<br>",
-                   "Value: ", round(as.vector(mat), 3)),
-            nrow = nrow(mat),
-            ncol = ncol(mat),
+            paste0("Term: ", rep(full_descriptions_clustered, ncol(mat_clustered)), "<br>",
+                   "Condition: ", rep(colnames(mat_clustered), each = nrow(mat_clustered)), "<br>",
+                   "Value: ", round(as.vector(mat_clustered), 3)),
+            nrow = nrow(mat_clustered),
+            ncol = ncol(mat_clustered),
             byrow = FALSE
           )
           
@@ -351,11 +384,11 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             colorscale <- list(c(0, "white"), c(1, "blue"))
           }
           
-          # Create plotly heatmap
+          # Create plotly heatmap with clustered data
           p <- plot_ly(
-            x = colnames(mat),
-            y = rownames(mat),
-            z = mat,
+            x = colnames(mat_clustered),
+            y = rownames(mat_clustered),
+            z = mat_clustered,
             type = "heatmap",
             colorscale = colorscale,
             hovertext = hover_text,
@@ -363,7 +396,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             colorbar = list(title = legend_title)
           ) %>%
             layout(
-              title = paste("Interactive Enrichment Heatmap -", legend_title),
+              title = paste("Interactive Enrichment Heatmap -", legend_title,
+                           ifelse(input$cluster_rows || input$cluster_cols, 
+                                  " (Hierarchically Clustered)", "")),
               xaxis = list(
                 title = "",
                 tickangle = -45,
@@ -371,8 +406,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               ),
               yaxis = list(
                 title = "",
-                tickfont = list(size = 10),
-                autorange = "reversed"  # Keep terms in order
+                tickfont = list(size = 10)
               ),
               margin = list(l = 250, b = 100, t = 50)
             )
