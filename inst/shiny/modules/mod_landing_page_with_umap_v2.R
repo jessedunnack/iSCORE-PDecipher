@@ -381,11 +381,15 @@ landingPageWithUmapServer <- function(id, data) {
               x = ~method, 
               y = ~count, 
               type = 'bar',
+              width = 0.8,
               marker = list(color = c('#374E55', '#DF8F44'))) %>%
         layout(title = NULL,
-               xaxis = list(title = ""),
+               xaxis = list(title = "", automargin = TRUE),
                yaxis = list(title = "Number of Results"),
-               showlegend = FALSE)
+               showlegend = FALSE,
+               autosize = TRUE,
+               margin = list(l = 50, r = 20, t = 20, b = 40),
+               bargap = 0.3)
     })
     
     # Enrichment type plot
@@ -411,11 +415,15 @@ landingPageWithUmapServer <- function(id, data) {
               x = ~enrichment_type,
               y = ~count,
               type = 'bar',
+              width = 0.8,
               marker = list(color = colors[summary_data$enrichment_type])) %>%
         layout(title = NULL,
-               xaxis = list(title = "", tickangle = -45),
+               xaxis = list(title = "", tickangle = -45, automargin = TRUE),
                yaxis = list(title = "Number of Results"),
-               showlegend = FALSE)
+               showlegend = FALSE,
+               autosize = TRUE,
+               margin = list(l = 50, r = 20, t = 20, b = 80),
+               bargap = 0.2)
     })
     
     # Direction plot
@@ -431,9 +439,12 @@ landingPageWithUmapServer <- function(id, data) {
               labels = ~direction,
               values = ~count,
               type = 'pie',
+              hole = 0.3,
               marker = list(colors = colors[summary_data$direction])) %>%
         layout(title = NULL,
-               showlegend = TRUE)
+               showlegend = TRUE,
+               autosize = TRUE,
+               margin = list(l = 20, r = 20, t = 20, b = 20))
     })
     
     # Gene table
