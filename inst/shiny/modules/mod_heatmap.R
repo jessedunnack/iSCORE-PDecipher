@@ -108,13 +108,11 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       showNotification("Loading data for heatmap...", type = "message", duration = NULL, id = "loading")
       
       tryCatch({
-        # Check if we have the aggregated data file
-        data_file <- "/Users/hockemeyer/Desktop/Functional Enrichment/all_enrichment_padj005_complete_with_direction.rds"
-        
-        if (file.exists(data_file)) {
-          # Load the pre-processed data
-          all_data <- readRDS(data_file)
-          message("Loaded aggregated data with ", nrow(all_data), " rows")
+        # Use the consolidated data from app_data
+        if (!is.null(app_data$consolidated_data) && nrow(app_data$consolidated_data) > 0) {
+          # Use the data already loaded in the app
+          all_data <- app_data$consolidated_data
+          message("Using consolidated data with ", nrow(all_data), " rows")
           message("Columns available: ", paste(names(all_data), collapse = ", "))
           
           # Filter by enrichment types
@@ -132,8 +130,14 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           # Filter by method
           if (input$method_filter != "all") {
             if (input$method_filter %in% c("MAST", "MixScale")) {
-              filtered_data <- filtered_data %>%
-                dplyr::filter(analysis_type == input$method_filter)
+              # Check which column name to use
+              if ("method" %in% names(filtered_data)) {
+                filtered_data <- filtered_data %>%
+                  dplyr::filter(method == input$method_filter)
+              } else if ("analysis_type" %in% names(filtered_data)) {
+                filtered_data <- filtered_data %>%
+                  dplyr::filter(analysis_type == input$method_filter)
+              }
               message("After method filter: ", nrow(filtered_data), " rows")
             }
           }
@@ -159,7 +163,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           
         } else {
           removeNotification("loading")
-          showNotification("Aggregated data file not found. Please ensure data is properly processed.", 
+          showNotification("No consolidated data available. Please ensure data is loaded properly.", 
                            type = "warning", duration = 5)
         }
         
@@ -192,7 +196,13 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           x_var <- "cluster"
         } else {
           # Create a composite identifier
-          df$condition <- paste(df$analysis_type, df$cluster, sep = "_")
+          if ("method" %in% names(df)) {
+            df$condition <- paste(df$method, df$cluster, sep = "_")
+          } else if ("analysis_type" %in% names(df)) {
+            df$condition <- paste(df$analysis_type, df$cluster, sep = "_")
+          } else {
+            df$condition <- df$cluster
+          }
           x_var <- "condition"
         }
         
