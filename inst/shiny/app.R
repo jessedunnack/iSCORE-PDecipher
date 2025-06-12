@@ -4,6 +4,14 @@
 # Note: global.R is automatically loaded by Shiny before app.R
 # This includes all required library loading
 
+# Ensure critical libraries are loaded (fallback)
+if (!requireNamespace("shinyjs", quietly = TRUE)) {
+  stop("shinyjs package is required but not installed")
+}
+if (!"package:shinyjs" %in% search()) {
+  library(shinyjs)
+}
+
 # Ensure APP_CONFIG is available from global.R
 if (!exists("APP_CONFIG")) {
   # If global.R wasn't loaded properly, create minimal config
@@ -34,6 +42,15 @@ source("modules/mod_comparison.R")
 source("modules/mod_heatmap_unified.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
+
+# Ensure useShinyjs is available
+if (!exists("useShinyjs")) {
+  if (requireNamespace("shinyjs", quietly = TRUE)) {
+    useShinyjs <- shinyjs::useShinyjs
+  } else {
+    stop("shinyjs package not available")
+  }
+}
 
 # Define UI with persistent sidebar
 ui <- fluidPage(
