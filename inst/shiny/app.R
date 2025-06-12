@@ -31,7 +31,7 @@ source("modules/mod_precomputed_reactive.R")
 # source("modules/mod_visualization.R")  # Original version
 source("modules/mod_visualization_enhanced.R")  # Enhanced with GSEA support
 source("modules/mod_comparison.R")
-source("modules/mod_heatmap.R")
+source("modules/mod_heatmap_unified.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
 
