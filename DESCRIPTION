@@ -1,6 +1,6 @@
 Package: iSCORE.PDecipher
 Title: Integrated Analysis of Parkinson's Disease Mutations and Perturbations
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: 
     person("Jesse", "Dunnack", , "jesse.dunnack@example.com", role = c("aut", "cre"),
            comment = c(ORCID = ""))
@@ -43,7 +43,10 @@ Imports:
     stats,
     utils,
     methods,
-    grDevices
+    grDevices,
+    heatmaply,
+    colourpicker,
+    ComplexHeatmap
 Suggests:
     knitr,
     rmarkdown,

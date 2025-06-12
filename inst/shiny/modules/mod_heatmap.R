@@ -14,7 +14,8 @@ mod_heatmap_ui <- function(id) {
                   choices = c("P-value" = "pvalue",
                               "Fold Enrichment" = "foldenrichment", 
                               "Z-score" = "zscore",
-                              "Gene Count" = "count"),
+                              "Gene Count" = "count",
+                              "GSEA NES" = "nes"),
                   selected = "pvalue"),
       
       selectInput(ns("method_filter"),
@@ -28,8 +29,21 @@ mod_heatmap_ui <- function(id) {
       
       checkboxGroupInput(ns("enrichment_types"),
                          "Enrichment Types:",
-                         choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "STRING"),
+                         choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "STRING", "GSEA"),
                          selected = c("GO_BP", "KEGG")),
+      
+      # GSEA-specific options
+      conditionalPanel(
+        condition = paste0("input['", ns("heatmap_type"), "'] == 'nes' || input['", ns("enrichment_types"), "'].includes('GSEA')"),
+        wellPanel(
+          style = "background-color: #f0f0f0; margin-top: 10px;",
+          h5("GSEA Options"),
+          checkboxInput(ns("gsea_only"), "Show GSEA results only", value = FALSE),
+          sliderInput(ns("nes_threshold"), 
+                      "Min |NES| threshold:",
+                      min = 0, max = 3, value = 1, step = 0.1)
+        )
+      ),
       
       selectInput(ns("cluster_select"),
                   "Cluster:",
@@ -43,8 +57,32 @@ mod_heatmap_ui <- function(id) {
                   value = 50,
                   step = 10),
       
-      checkboxInput(ns("show_direction"),
-                    "Show Direction Annotation",
+      selectInput(ns("direction_filter"),
+                  "Gene Direction:",
+                  choices = c("All Directions" = "ALL_DIR",
+                              "Up-regulated only" = "UP",
+                              "Down-regulated only" = "DOWN",
+                              "Both (non-ALL)" = "BOTH"),
+                  selected = "ALL_DIR"),
+      
+      selectInput(ns("color_scale"),
+                  "Color Scale:",
+                  choices = c("Red (0 to max)" = "red",
+                              "Blue (0 to max)" = "blue",
+                              "Red-Blue (diverging)" = "RdBu",
+                              "Viridis" = "viridis",
+                              "Yellow-Orange-Red" = "YlOrRd"),
+                  selected = "red"),
+      
+      selectInput(ns("scale_method"),
+                  "Color Scaling Method:",
+                  choices = c("Linear" = "linear",
+                              "Quantile (adaptive)" = "quantile",
+                              "Fixed breaks" = "fixed"),
+                  selected = "linear"),
+      
+      checkboxInput(ns("show_annotations"),
+                    "Show Row Annotations",
                     value = TRUE),
       
       checkboxInput(ns("cluster_rows"),
@@ -83,6 +121,28 @@ mod_heatmap_ui <- function(id) {
         tabPanel("Data View",
                  br(),
                  DT::dataTableOutput(ns("heatmap_data"))),
+        
+        tabPanel("PDF Export",
+                 br(),
+                 h4("Generate Publication-Quality PDF"),
+                 p("This will create a static PDF version using ComplexHeatmap with the same settings as the interactive heatmap."),
+                 br(),
+                 fluidRow(
+                   column(6,
+                     numericInput(ns("pdf_width"), "Width (inches):", value = 12, min = 6, max = 24),
+                     numericInput(ns("pdf_height"), "Height (inches):", value = 10, min = 6, max = 36)
+                   ),
+                   column(6,
+                     numericInput(ns("pdf_fontsize"), "Base Font Size:", value = 10, min = 6, max = 16),
+                     numericInput(ns("pdf_dpi"), "DPI:", value = 300, min = 150, max = 600)
+                   )
+                 ),
+                 br(),
+                 actionButton(ns("generate_pdf"), "Generate PDF", class = "btn-success"),
+                 br(),
+                 br(),
+                 uiOutput(ns("pdf_status"))
+        ),
         
         tabPanel("Settings Info",
                  br(),
@@ -142,6 +202,34 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             }
           }
           
+          # GSEA-specific filtering
+          if (input$gsea_only) {
+            filtered_data <- filtered_data %>%
+              dplyr::filter(enrichment_type == "GSEA")
+            message("After GSEA-only filter: ", nrow(filtered_data), " rows")
+          }
+          
+          # Filter by NES threshold if GSEA data
+          if (input$heatmap_type == "nes" && "NES" %in% names(filtered_data)) {
+            filtered_data <- filtered_data %>%
+              dplyr::filter(abs(NES) >= input$nes_threshold)
+            message("After NES threshold filter: ", nrow(filtered_data), " rows")
+          }
+          
+          # Filter by direction
+          if (input$direction_filter != "ALL_DIR") {
+            if (input$direction_filter == "BOTH") {
+              # Filter out "ALL" direction, keep only UP and DOWN
+              filtered_data <- filtered_data %>%
+                dplyr::filter(direction %in% c("UP", "DOWN"))
+            } else {
+              # Filter for specific direction
+              filtered_data <- filtered_data %>%
+                dplyr::filter(direction == input$direction_filter)
+            }
+            message("After direction filter: ", nrow(filtered_data), " rows")
+          }
+          
           # Filter by significance
           if ("p.adjust" %in% names(filtered_data)) {
             filtered_data <- filtered_data %>%
@@ -180,8 +268,8 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       
       # Check if heatmaply is available
       if (!requireNamespace("heatmaply", quietly = TRUE)) {
-        showNotification("heatmaply package is required for interactive clustered heatmaps. Using plotly instead.", 
-                         type = "warning", duration = 5)
+        showNotification("heatmaply package is required for interactive clustered heatmaps with dendrograms. Install with: install.packages('heatmaply')", 
+                         type = "warning", duration = 10)
         use_heatmaply <- FALSE
       } else {
         use_heatmaply <- TRUE
@@ -280,6 +368,24 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         } else if (input$heatmap_type == "count" && "Count" %in% names(df)) {
           value_var <- "Count"
           legend_title <- "Gene Count"
+        } else if (input$heatmap_type == "nes") {
+          # Handle GSEA NES values
+          if ("NES" %in% names(df)) {
+            value_var <- "NES"
+            legend_title <- "Normalized Enrichment Score"
+          } else if ("nes" %in% names(df)) {
+            value_var <- "nes"
+            legend_title <- "Normalized Enrichment Score"
+          } else if ("normalizedEnrichmentScore" %in% names(df)) {
+            value_var <- "normalizedEnrichmentScore"
+            legend_title <- "Normalized Enrichment Score"
+          } else {
+            # If no NES column, show warning and use p-values
+            showNotification("NES values not found. Using p-values instead.", type = "warning", duration = 5)
+            df$heatmap_value <- -log10(pmax(df$p.adjust, 1e-300))
+            value_var <- "heatmap_value"
+            legend_title <- "-log10(p-value)"
+          }
         } else {
           # Default to p-value if available
           if ("p.adjust" %in% names(df)) {
@@ -356,13 +462,37 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               byrow = FALSE
             )
             
-            # Set color scale based on heatmap type
-            if (input$heatmap_type == "pvalue") {
+            # Set color scale based on user selection
+            if (input$color_scale == "red") {
               colors <- colorRampPalette(c("white", "red"))(256)
-            } else if (input$heatmap_type == "zscore") {
-              colors <- colorRampPalette(c("blue", "white", "red"))(256)
-            } else {
+            } else if (input$color_scale == "blue") {
               colors <- colorRampPalette(c("white", "darkblue"))(256)
+            } else if (input$color_scale == "RdBu") {
+              colors <- colorRampPalette(c("blue", "white", "red"))(256)
+            } else if (input$color_scale == "viridis") {
+              colors <- viridis::viridis(256)
+            } else if (input$color_scale == "YlOrRd") {
+              colors <- colorRampPalette(RColorBrewer::brewer.pal(9, "YlOrRd"))(256)
+            } else {
+              colors <- colorRampPalette(c("white", "red"))(256)
+            }
+            
+            # Apply scaling method if specified
+            if (input$scale_method == "quantile") {
+              # Use quantile breaks for adaptive scaling
+              mat_values <- as.vector(mat)
+              mat_values <- mat_values[!is.na(mat_values)]
+              if (length(mat_values) > 0) {
+                quantile_breaks <- quantile(mat_values, probs = seq(0, 1, length.out = 10))
+                mat <- matrix(
+                  cut(as.vector(mat), breaks = quantile_breaks, labels = FALSE, include.lowest = TRUE),
+                  nrow = nrow(mat),
+                  ncol = ncol(mat)
+                )
+              }
+            } else if (input$scale_method == "fixed" && input$heatmap_type == "pvalue") {
+              # Use fixed breaks for p-values
+              mat[mat > 20] <- 20  # Cap at -log10(1e-20)
             }
             
             # Determine dendrogram settings
@@ -375,6 +505,38 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               dendrogram <- "column"
             }
             
+            # Prepare row annotations if requested
+            row_side_colors <- NULL
+            if (input$show_annotations) {
+              # Get annotation data for each row
+              row_annotations <- df[!duplicated(df$Description), ] %>%
+                dplyr::filter(Description %in% full_descriptions) %>%
+                dplyr::arrange(match(Description, full_descriptions))
+              
+              if (nrow(row_annotations) > 0) {
+                # Create color vectors for annotations
+                type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
+                                "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
+                                "WikiPathways" = "#FDB462", "STRING" = "#B3DE69")
+                dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple")
+                
+                # Map enrichment types to colors
+                type_col <- type_colors[row_annotations$enrichment_type]
+                type_col[is.na(type_col)] <- "grey"
+                
+                # Map directions to colors
+                dir_col <- dir_colors[row_annotations$direction]
+                dir_col[is.na(dir_col)] <- "grey"
+                
+                # Combine annotations
+                row_side_colors <- data.frame(
+                  Type = type_col,
+                  Direction = dir_col
+                )
+                rownames(row_side_colors) <- rownames(mat)
+              }
+            }
+            
             # Create heatmaply heatmap with dendrograms
             p <- heatmaply::heatmaply(
               mat,
@@ -383,14 +545,19 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               xlab = "",
               ylab = "",
               main = paste("Interactive Enrichment Heatmap -", legend_title),
-              margins = c(150, 250, 50, 50),
+              margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
               custom_hovertext = custom_text,
               label_names = c("Row", "Column", "Value"),
               fontsize_row = 10,
               fontsize_col = 10,
               showticklabels = c(TRUE, TRUE),
-              plot_method = "plotly"
+              plot_method = "plotly",
+              row_side_colors = row_side_colors,
+              row_side_palette = NULL  # Use actual colors provided
             )
+            
+            # Store the plotly object for download
+            heatmap_data$plotly_object <- p
             
             return(p)
             
@@ -406,13 +573,19 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               byrow = FALSE
             )
             
-            # Create color scale based on heatmap type
-            if (input$heatmap_type == "pvalue") {
+            # Create color scale based on user selection
+            if (input$color_scale == "red") {
               colorscale <- list(c(0, "white"), c(1, "red"))
-            } else if (input$heatmap_type == "zscore") {
+            } else if (input$color_scale == "blue") {
+              colorscale <- list(c(0, "white"), c(1, "darkblue"))
+            } else if (input$color_scale == "RdBu") {
               colorscale <- "RdBu"
+            } else if (input$color_scale == "viridis") {
+              colorscale <- "Viridis"
+            } else if (input$color_scale == "YlOrRd") {
+              colorscale <- list(c(0, "white"), c(0.5, "yellow"), c(0.75, "orange"), c(1, "red"))
             } else {
-              colorscale <- list(c(0, "white"), c(1, "blue"))
+              colorscale <- list(c(0, "white"), c(1, "red"))
             }
             
             # Create basic plotly heatmap
@@ -439,6 +612,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 ),
                 margin = list(l = 250, b = 100, t = 50)
               )
+            
+            # Store the plotly object for download
+            heatmap_data$plotly_object <- p
             
             return(p)
           }
@@ -494,9 +670,19 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       cat("Enrichment Types:", paste(input$enrichment_types, collapse = ", "), "\n")
       cat("Cluster:", input$cluster_select, "\n")
       cat("Max Terms:", input$max_terms, "\n")
-      cat("Show Direction:", input$show_direction, "\n")
+      cat("Direction Filter:", input$direction_filter, "\n")
+      cat("Color Scale:", input$color_scale, "\n")
+      cat("Scaling Method:", input$scale_method, "\n")
+      cat("Show Annotations:", input$show_annotations, "\n")
       cat("Cluster Rows:", input$cluster_rows, "\n")
       cat("Cluster Columns:", input$cluster_cols, "\n")
+      
+      # GSEA-specific settings
+      if (input$heatmap_type == "nes" || "GSEA" %in% input$enrichment_types) {
+        cat("\nGSEA Settings:\n")
+        cat("GSEA Only:", input$gsea_only, "\n")
+        cat("Min |NES| Threshold:", input$nes_threshold, "\n")
+      }
       
       if (!is.null(heatmap_data$data)) {
         cat("\nData Summary:\n")
@@ -506,22 +692,221 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       }
     })
     
-    # Download handler
-    output$download_heatmap <- downloadHandler(
+    # PDF Export functionality
+    observeEvent(input$generate_pdf, {
+      req(heatmap_data$data)
+      
+      showNotification("Generating PDF heatmap...", type = "default", duration = NULL, id = "pdf_loading")
+      
+      # Create a temporary file
+      temp_file <- tempfile(fileext = ".pdf")
+      
+      tryCatch({
+        # Get the current data
+        df <- heatmap_data$data
+        
+        # Same data preparation as for interactive heatmap
+        if ("gene" %in% names(df)) {
+          x_var <- "gene"
+        } else if ("mutation" %in% names(df)) {
+          x_var <- "mutation"
+        } else if ("cluster" %in% names(df)) {
+          x_var <- "cluster"
+        } else {
+          if ("method" %in% names(df)) {
+            df$condition <- paste(df$method, df$cluster, sep = "_")
+          } else {
+            df$condition <- df$cluster
+          }
+          x_var <- "condition"
+        }
+        
+        y_var <- if ("Description" %in% names(df)) "Description" else "term_id"
+        
+        # Get value variable based on heatmap type
+        value_var <- switch(input$heatmap_type,
+          "pvalue" = {
+            df$heatmap_value <- -log10(pmax(df$p.adjust, 1e-300))
+            "heatmap_value"
+          },
+          "foldenrichment" = {
+            if ("FoldEnrichment" %in% names(df)) {
+              "FoldEnrichment"
+            } else if ("fold_enrichment" %in% names(df)) {
+              "fold_enrichment"
+            } else if ("RichFactor" %in% names(df)) {
+              "RichFactor"
+            } else {
+              df$heatmap_value <- 1
+              "heatmap_value"
+            }
+          },
+          "zscore" = {
+            if ("zScore" %in% names(df)) {
+              "zScore"
+            } else if ("z_score" %in% names(df)) {
+              "z_score"
+            } else {
+              df$heatmap_value <- 0
+              "heatmap_value"
+            }
+          },
+          "nes" = if("NES" %in% names(df)) "NES" else "heatmap_value",
+          "count" = if("Count" %in% names(df)) "Count" else "heatmap_value",
+          "heatmap_value"
+        )
+        
+        # Create matrix
+        data_wide <- df %>%
+          dplyr::select(all_of(c(y_var, x_var, value_var))) %>%
+          tidyr::pivot_wider(names_from = all_of(x_var), 
+                            values_from = all_of(value_var), 
+                            values_fill = 0,
+                            values_fn = mean)
+        
+        mat <- as.matrix(data_wide[,-1])
+        rownames(mat) <- substr(data_wide[[y_var]], 1, 100)
+        
+        # Limit rows if needed
+        if (nrow(mat) > input$max_terms) {
+          row_means <- rowMeans(mat, na.rm = TRUE)
+          mat <- mat[order(abs(row_means), decreasing = TRUE)[1:input$max_terms], , drop = FALSE]
+        }
+        
+        # Create color function based on settings
+        if (input$color_scale == "YlOrRd") {
+          col_fun <- circlize::colorRamp2(
+            breaks = seq(min(mat, na.rm = TRUE), max(mat, na.rm = TRUE), length.out = 9),
+            colors = RColorBrewer::brewer.pal(9, "YlOrRd")
+          )
+        } else if (input$color_scale == "RdBu" || input$heatmap_type == "nes") {
+          col_fun <- circlize::colorRamp2(
+            breaks = c(min(mat, na.rm = TRUE), 0, max(mat, na.rm = TRUE)), 
+            colors = c("blue", "white", "red")
+          )
+        } else if (input$color_scale == "viridis") {
+          col_fun <- circlize::colorRamp2(
+            breaks = seq(min(mat, na.rm = TRUE), max(mat, na.rm = TRUE), length.out = 100),
+            colors = viridis::viridis(100)
+          )
+        } else {
+          col_fun <- circlize::colorRamp2(
+            breaks = seq(0, max(mat, na.rm = TRUE), length.out = 100),
+            colors = colorRampPalette(c("white", ifelse(input$color_scale == "blue", "darkblue", "red")))(100)
+          )
+        }
+        
+        # Create row annotations if requested
+        row_ha <- NULL
+        if (input$show_annotations && nrow(df) > 0) {
+          # Get unique rows for annotations
+          row_ann_data <- df[match(rownames(mat), substr(df[[y_var]], 1, 100)), ]
+          
+          if (nrow(row_ann_data) > 0 && all(c("enrichment_type", "direction") %in% names(row_ann_data))) {
+            type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
+                            "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
+                            "WikiPathways" = "#FDB462", "STRING" = "#B3DE69", "GSEA" = "#FCCDE5")
+            dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple")
+            
+            row_ha <- ComplexHeatmap::rowAnnotation(
+              Type = row_ann_data$enrichment_type,
+              Direction = row_ann_data$direction,
+              col = list(Type = type_colors, Direction = dir_colors),
+              annotation_name_gp = grid::gpar(fontsize = 8),
+              simple_anno_size = grid::unit(0.3, "cm")
+            )
+          }
+        }
+        
+        # Create ComplexHeatmap
+        ht <- ComplexHeatmap::Heatmap(
+          mat,
+          name = switch(input$heatmap_type,
+            "pvalue" = "-log10(p.adj)",
+            "nes" = "NES",
+            "count" = "Count",
+            "foldenrichment" = "Fold Enrich",
+            "zscore" = "Z-score",
+            "Value"
+          ),
+          col = col_fun,
+          cluster_rows = input$cluster_rows && nrow(mat) > 1,
+          cluster_columns = input$cluster_cols && ncol(mat) > 1,
+          show_row_names = TRUE,
+          show_column_names = TRUE,
+          row_names_gp = grid::gpar(fontsize = max(4, input$pdf_fontsize - nrow(mat)/10)),
+          column_names_gp = grid::gpar(fontsize = input$pdf_fontsize),
+          column_names_rot = 45,
+          column_title = paste("Enrichment Heatmap -", input$heatmap_type),
+          column_title_gp = grid::gpar(fontsize = input$pdf_fontsize + 2),
+          left_annotation = row_ha,
+          use_raster = FALSE
+        )
+        
+        # Save to PDF
+        pdf(temp_file, width = input$pdf_width, height = input$pdf_height)
+        ComplexHeatmap::draw(ht, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
+        dev.off()
+        
+        removeNotification("pdf_loading")
+        
+        # Update status
+        output$pdf_status <- renderUI({
+          tags$div(
+            class = "alert alert-success",
+            icon("check-circle"),
+            "PDF generated successfully!",
+            br(),
+            downloadButton(session$ns("download_pdf"), "Download PDF", class = "btn-primary")
+          )
+        })
+        
+        # Store the temp file path
+        heatmap_data$pdf_file <- temp_file
+        
+      }, error = function(e) {
+        removeNotification("pdf_loading")
+        output$pdf_status <- renderUI({
+          tags$div(
+            class = "alert alert-danger",
+            icon("exclamation-triangle"),
+            "Error generating PDF: ", e$message
+          )
+        })
+      })
+    })
+    
+    # Download handler for PDF
+    output$download_pdf <- downloadHandler(
       filename = function() {
-        paste0("enrichment_heatmap_", input$heatmap_type, "_", Sys.Date(), ".pdf")
+        paste0("heatmap_", format(Sys.Date(), "%Y%m%d"), "_", 
+               input$heatmap_type, "_", 
+               gsub("[^A-Za-z0-9]", "", paste(input$enrichment_types, collapse = "_")), 
+               ".pdf")
       },
       content = function(file) {
-        pdf(file, width = 12, height = 10)
-        # Recreate the heatmap for download
-        if (!is.null(heatmap_data$data)) {
-          # Same heatmap code as above
-          tryCatch({
-            # ... (same heatmap generation code)
-            dev.off()
-          }, error = function(e) {
-            dev.off()
-          })
+        if (!is.null(heatmap_data$pdf_file) && file.exists(heatmap_data$pdf_file)) {
+          file.copy(heatmap_data$pdf_file, file)
+        } else {
+          showNotification("No PDF file available. Please generate one first.", type = "error")
+        }
+      }
+    )
+    
+    # Download handler for interactive heatmap
+    output$download_heatmap <- downloadHandler(
+      filename = function() {
+        paste0("heatmap_interactive_", Sys.Date(), ".html")
+      },
+      content = function(file) {
+        if (!is.null(heatmap_data$plotly_object)) {
+          htmlwidgets::saveWidget(
+            heatmap_data$plotly_object,
+            file,
+            selfcontained = TRUE
+          )
+        } else {
+          showNotification("No heatmap available. Please generate one first.", type = "error")
         }
       }
     )
