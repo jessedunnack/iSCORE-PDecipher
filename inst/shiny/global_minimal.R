@@ -161,7 +161,8 @@ get_available_datasets <- function() {
 #' @return Filtered data frame
 get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster = NULL, 
                                                    enrichment_type = NULL, direction = "ALL",
-                                                   modality = NULL) {
+                                                   modality = NULL, analysis_type = NULL,
+                                                   experiment = NULL, pval_threshold = 0.05) {
   
   if (is.null(data) || nrow(data) == 0) {
     return(data.frame())
@@ -171,8 +172,13 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   filtered_data <- data
   
   # Filter by gene/mutation
-  if (!is.null(gene) && gene != "All") {
-    filtered_data <- filtered_data[filtered_data$mutation_perturbation == gene, ]
+  if (!is.null(gene) && gene != "All" && gene != "") {
+    # Check which column to use
+    if ("gene" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$gene == gene, ]
+    } else if ("mutation_perturbation" %in% names(filtered_data)) {
+      filtered_data <- filtered_data[filtered_data$mutation_perturbation == gene, ]
+    }
   }
   
   # Filter by cluster
@@ -193,6 +199,21 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   # Filter by modality if specified
   if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
     filtered_data <- filtered_data[filtered_data$modality == modality, ]
+  }
+  
+  # Filter by analysis type (method) if specified
+  if (!is.null(analysis_type) && analysis_type != "All" && "method" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+  }
+  
+  # Filter by experiment if specified
+  if (!is.null(experiment) && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+  }
+  
+  # Filter by p-value threshold
+  if (!is.null(pval_threshold) && "p.adjust" %in% names(filtered_data)) {
+    filtered_data <- filtered_data[filtered_data$p.adjust <= pval_threshold, ]
   }
   
   # Sort by p-value and limit for performance
