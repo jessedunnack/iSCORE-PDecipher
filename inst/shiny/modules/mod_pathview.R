@@ -333,11 +333,15 @@ mod_pathview_server <- function(id, app_data, selected_enrichment_data, global_s
       # Load the actual DE results from full_DE_results.rds
       tryCatch({
         # Look for the DE results file
+      de_env_path <- Sys.getenv("ISCORE_DE_FILE", "")
       possible_paths <- c(
+        de_env_path,
         "/Users/hockemeyer/Desktop/Functional Enrichment/full_DE_results.rds",
         "/Users/hockemeyer/Desktop/Functional Enrichment/shiny_vis/full_DE_results.rds",
-        file.path(dirname(APP_CONFIG$enrichment_results_path), "..", "full_DE_results.rds")
+        file.path(dirname(Sys.getenv("ISCORE_ENRICHMENT_DIR", "")), "full_DE_results.rds")
       )
+      # Remove empty paths
+      possible_paths <- possible_paths[possible_paths != ""]
       
       de_file_path <- NULL
       for (path in possible_paths) {
