@@ -48,9 +48,9 @@ landingPageWithUmapUI <- function(id) {
         )
       ),
       
-      # Right column - Summary statistics (40% width)
+      # Right column - Summary statistics + Cluster Markers (40% width)
       column(5,
-        # Summary statistics cards in a grid
+        # Summary statistics cards in a grid (top half)
         fluidRow(
           column(6,
             uiOutput(ns("total_cells_box"))
@@ -74,27 +74,25 @@ landingPageWithUmapUI <- function(id) {
           column(6,
             uiOutput(ns("enrichment_types_box"))
           )
-        )
-      )
-    ),
-    
-    # Cluster Markers section - full width
-    fluidRow(
-      column(12,
+        ),
+        
+        # Cluster Markers section (bottom half)
         div(class = "box box-info", style = "margin-top: 20px;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("dna"),
                "Cluster Marker Genes")
           ),
-          div(class = "box-body", style = "padding: 15px;",
+          div(class = "box-body", style = "padding: 10px;",
+            # Compact controls
             fluidRow(
-              # Controls on the left
-              column(3,
+              column(6,
                 selectInput(ns("selected_cluster"),
                            "Select Cluster:",
                            choices = NULL,
-                           width = "100%"),
+                           width = "100%")
+              ),
+              column(6,
                 numericInput(ns("max_markers"),
                             "Max Markers:",
                             value = 15,
@@ -102,16 +100,14 @@ landingPageWithUmapUI <- function(id) {
                             max = 50,
                             step = 5,
                             width = "100%")
-              ),
-              # Markers table on the right
-              column(9,
-                div(style = "height: 400px; overflow-y: auto;",
-                  withSpinner(
-                    DT::dataTableOutput(ns("markers_table"), height = "350px"),
-                    type = 1,
-                    color = "#3c8dbc"
-                  )
-                )
+              )
+            ),
+            # Markers table
+            div(style = "height: 300px; overflow-y: auto; margin-top: 10px;",
+              withSpinner(
+                DT::dataTableOutput(ns("markers_table"), height = "270px"),
+                type = 1,
+                color = "#3c8dbc"
               )
             )
           )
@@ -364,21 +360,26 @@ landingPageWithUmapServer <- function(id, data) {
           pct.2 = round(pct.2, 3)
         )
       
-      # Create DataTable with settings optimized for wider layout
+      # Create DataTable with settings optimized for compact right column
       DT::datatable(
         cluster_markers,
         options = list(
-          pageLength = 15,  # Show reasonable number of rows
-          scrollY = "320px",  # Fit in new container height
+          pageLength = 12,  # Show fewer rows to fit in compact space
+          scrollY = "240px",  # Fit in smaller container height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
-          autoWidth = TRUE,  # Let it use full width
+          autoWidth = FALSE,  # Control column widths
           columnDefs = list(
+            list(width = '60px', targets = 0),  # Gene column
+            list(width = '50px', targets = 1),  # Log2FC
+            list(width = '60px', targets = 2),  # P-val
+            list(width = '40px', targets = 3),  # % in cluster
+            list(width = '40px', targets = 4),  # % in other
             list(className = 'dt-center', targets = 1:4)  # Center align numeric columns
           )
         ),
         rownames = FALSE,
-        colnames = c('Gene', 'Log2FC', 'Adj. P-value', '% in cluster', '% in other')  # Full column names since we have space
+        colnames = c('Gene', 'Log2FC', 'P-val', '% in', '% out')  # Short names for compact space
       ) %>%
         DT::formatStyle(
           'avg_log2FC',
