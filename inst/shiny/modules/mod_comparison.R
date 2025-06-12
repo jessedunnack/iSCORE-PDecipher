@@ -108,7 +108,9 @@ mod_comparison_server <- function(id, app_data, pval_threshold) {
     
     # Helper function to get clusters for a gene
     get_clusters_for_gene <- function(gene) {
-      base_path <- APP_CONFIG$enrichment_results_path
+      # Use environment variable or fallback to default
+      base_path <- Sys.getenv("ISCORE_ENRICHMENT_DIR", 
+                              file.path(dirname(dirname(getwd())), "extdata", "enrichment_results"))
       mast_path <- file.path(base_path, "MAST", gene)
       mixscale_path <- file.path(base_path, "MixScale", gene)
       

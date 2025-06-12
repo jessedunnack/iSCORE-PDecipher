@@ -19,7 +19,7 @@ landingPageWithUmapUI <- function(id) {
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
-               icon("chart-scatter", lib = "font-awesome"),
+               icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
           div(class = "box-body", style = "padding: 10px;",
@@ -300,7 +300,7 @@ landingPageWithUmapServer <- function(id, data) {
     # Cluster count box
     output$total_clusters_box <- renderUI({
       if (umap_data$loaded && !is.null(umap_data$sce)) {
-        n_clusters <- length(unique(colData(umap_data$sce)$seurat_clusters))
+        n_clusters <- length(unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters))
         valueBox(
           value = n_clusters,
           subtitle = "Cell Clusters",
