@@ -38,7 +38,7 @@ landingPageWithUmapUI <- function(id) {
                icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 15px;",
+          div(class = "box-body", style = "padding: 5px; text-align: center; display: flex; justify-content: center; align-items: center;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
                         height = "700px",  # Explicit height that works
@@ -328,28 +328,31 @@ landingPageWithUmapServer <- function(id, data) {
           main = ""  # No title to save space
         )
         
-        # Additional customization to maximize plot area and improve readability
+        # Maximize plot to fill the entire container space
         p <- p + 
           theme(
-            # Maximize plot area by minimizing margins
-            plot.margin = margin(2, 2, 2, 2, "pt"),  # Minimal margins
-            # Larger legend text for better readability
-            legend.text = element_text(size = 14),
-            legend.title = element_text(size = 16),
+            # MAXIMIZE plot area - remove all margins
+            plot.margin = margin(0, 0, 0, 0, "pt"),  # Zero margins
+            # Larger legend text positioned close to plot
+            legend.text = element_text(size = 16),
+            legend.title = element_text(size = 18),
             legend.position = "right",
-            legend.margin = margin(0, 0, 0, 10, "pt"),
-            # Ensure axis text is readable but compact
-            axis.text = element_text(size = 12),
-            axis.title = element_text(size = 14),
-            # Remove unnecessary background elements
+            legend.margin = margin(0, 0, 0, 5, "pt"),
+            legend.key.size = unit(1.2, "lines"),
+            # Larger axis text for the bigger plot
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16),
+            # Clean backgrounds
             panel.background = element_rect(fill = "white", color = NA),
             plot.background = element_rect(fill = "white", color = NA),
-            # Optimize panel grid
-            panel.grid.major = element_line(color = "grey95", size = 0.2),
-            panel.grid.minor = element_blank()
+            # Minimal grid
+            panel.grid.major = element_line(color = "grey96", size = 0.3),
+            panel.grid.minor = element_blank(),
+            # Remove axis ticks to save space
+            axis.ticks = element_blank()
           ) +
-          # Use coord_fixed but allow some flexibility for the container
-          coord_fixed(ratio = 1, expand = FALSE)
+          # Remove coord_fixed to allow plot to fill container better
+          coord_cartesian(expand = FALSE)
         
         return(p)
       }, error = function(e) {
