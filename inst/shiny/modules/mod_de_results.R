@@ -85,6 +85,8 @@ mod_de_results_ui <- function(id) {
 mod_de_results_server <- function(id, global_selection, app_data) {
   moduleServer(id, function(input, output, session) {
     
+    cat("[DE Results] Module server starting...\n")
+    
     # Reactive values
     values <- reactiveValues(
       selected_cluster = NULL,
@@ -93,42 +95,64 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       umap_data = NULL
     )
     
+    # Helper function to generate mock UMAP data (moved up for access)
+    generate_mock_umap_data <- function() {
+      cat("[DE Results] Generating mock UMAP data...\n")
+      # In production, this would compute from actual single-cell data
+      set.seed(42)
+      n_cells <- 5000
+      clusters <- paste0("cluster_", 0:9)
+      
+      umap_data <- data.frame(
+        UMAP1 = rnorm(n_cells),
+        UMAP2 = rnorm(n_cells),
+        cluster = sample(clusters, n_cells, replace = TRUE),
+        stringsAsFactors = FALSE
+      )
+      
+      # Add some structure to make clusters visible
+      for (i in seq_along(clusters)) {
+        idx <- umap_data$cluster == clusters[i]
+        umap_data$UMAP1[idx] <- umap_data$UMAP1[idx] + cos(2*pi*i/length(clusters)) * 3
+        umap_data$UMAP2[idx] <- umap_data$UMAP2[idx] + sin(2*pi*i/length(clusters)) * 3
+      }
+      cat("[DE Results] Mock UMAP data generated with", n_cells, "cells\n")
+      return(umap_data)
+    }
+    
     # Load UMAP data
     observe({
+      cat("[DE Results] UMAP data observe block triggered\n")
+      cat("[DE Results] app_data$data_loaded =", app_data$data_loaded, "\n")
+      
       req(app_data$data_loaded)
+      cat("[DE Results] app_data is loaded, attempting to populate UMAP data...\n")
       
       # Try to load pre-computed UMAP data
       umap_file <- file.path(dirname(Sys.getenv("ISCORE_DATA_FILE", "")), "umap_data.rds")
+      cat("[DE Results] Looking for UMAP file at:", umap_file, "\n")
       
       if (file.exists(umap_file)) {
+        cat("[DE Results] UMAP file exists, attempting to load...\n")
         tryCatch({
           values$umap_data <- readRDS(umap_file)
-          cat("[DE Results] Loaded UMAP data from:", umap_file, "\n")
+          cat("[DE Results] Successfully loaded UMAP data from:", umap_file, "\n")
+          cat("[DE Results] UMAP data dimensions:", nrow(values$umap_data), "cells x", ncol(values$umap_data), "columns\n")
         }, error = function(e) {
           showNotification("Could not load UMAP data", type = "warning")
           cat("[DE Results] Error loading UMAP data:", e$message, "\n")
+          cat("[DE Results] Falling back to mock data generation...\n")
+          # Generate mock data on error too
+          values$umap_data <- generate_mock_umap_data()
         })
       } else {
+        cat("[DE Results] UMAP file not found, generating mock data...\n")
         # Generate mock UMAP data if file not found
-        # In production, this would compute from actual single-cell data
-        set.seed(42)
-        n_cells <- 5000
-        clusters <- paste0("cluster_", 0:9)
-        
-        values$umap_data <- data.frame(
-          UMAP1 = rnorm(n_cells),
-          UMAP2 = rnorm(n_cells),
-          cluster = sample(clusters, n_cells, replace = TRUE),
-          stringsAsFactors = FALSE
-        )
-        
-        # Add some structure to make clusters visible
-        for (i in seq_along(clusters)) {
-          idx <- values$umap_data$cluster == clusters[i]
-          values$umap_data$UMAP1[idx] <- values$umap_data$UMAP1[idx] + cos(2*pi*i/length(clusters)) * 3
-          values$umap_data$UMAP2[idx] <- values$umap_data$UMAP2[idx] + sin(2*pi*i/length(clusters)) * 3
-        }
+        values$umap_data <- generate_mock_umap_data()
       }
+      
+      cat("[DE Results] UMAP data population complete. values$umap_data is", 
+          ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
     })
     
     # Load DE results data
@@ -167,7 +191,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
 
     # Render UMAP plot
     output$umap_plot <- renderPlotly({
+      cat("[DE Results] Attempting to render UMAP plot...\n")
+      cat("[DE Results] values$umap_data is", ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
+      
       req(values$umap_data)
+      cat("[DE Results] req(values$umap_data) satisfied, proceeding with plot...\n")
       
       # Create color palette
       clusters <- unique(values$umap_data$cluster)
@@ -374,6 +402,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # Render MAST volcano plot
     output$mast_volcano <- renderPlotly({
+      cat("[DE Results] Attempting to render MAST volcano plot...\n")
+      cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
+      cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
+      
       # Use mock data if no real DE data available
       if (is.null(values$de_data_mast)) {
         # Generate mock DE data from enrichment results
@@ -398,6 +430,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # Render MixScale volcano plot
     output$mixscale_volcano <- renderPlotly({
+      cat("[DE Results] Attempting to render MixScale volcano plot...\n")
+      cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
+      cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
+      
       # Use mock data if no real DE data available
       if (is.null(values$de_data_mixscale)) {
         # Generate mock DE data
@@ -463,6 +499,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         p(paste("Statistics for", cluster_text), class = "text-muted text-center")
       )
     })
+    
+    # Return values for potential use by other modules
+    return(list(
+      selected_cluster = reactive({ values$selected_cluster }),
+      de_data_mast = reactive({ values$de_data_mast }),
+      de_data_mixscale = reactive({ values$de_data_mixscale })
+    ))
     
   })
 }
