@@ -309,12 +309,26 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
                            if("enrichment_score" %in% names(.)) enrichment_score else 2
           )
         
+        # CRITICAL FIX: Convert GeneRatio from "x/y" format to numeric
+        if ("GeneRatio" %in% names(plot_df) && is.character(plot_df$GeneRatio)) {
+          ratio_parts <- strsplit(plot_df$GeneRatio, "/")
+          plot_df$GeneRatio_numeric <- sapply(ratio_parts, function(x) {
+            if(length(x) == 2 && !is.na(x[1]) && !is.na(x[2])) {
+              as.numeric(x[1]) / as.numeric(x[2])
+            } else {
+              NA
+            }
+          })
+        } else {
+          plot_df$GeneRatio_numeric <- plot_df$Count / 100  # Fallback estimate
+        }
+        
         # Determine x-axis variable with validation
         x_var <- switch(input$x_axis,
           "neg_log10_pval" = "neg_log10_pval",
           "FoldEnrichment" = if("FoldEnrichment" %in% names(plot_df)) "FoldEnrichment" else "neg_log10_pval",
           "Count" = if("Count" %in% names(plot_df)) "Count" else "neg_log10_pval",
-          "GeneRatio" = if("GeneRatio" %in% names(plot_df)) "GeneRatio" else "neg_log10_pval",
+          "GeneRatio" = if("GeneRatio_numeric" %in% names(plot_df)) "GeneRatio_numeric" else "neg_log10_pval",  # FIXED: Use numeric version
           "RichFactor" = if("RichFactor" %in% names(plot_df)) "RichFactor" else "neg_log10_pval",
           "neg_log10_pval"
         )
