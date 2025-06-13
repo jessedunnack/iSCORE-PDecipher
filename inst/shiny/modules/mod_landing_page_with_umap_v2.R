@@ -38,15 +38,13 @@ landingPageWithUmapUI <- function(id) {
                icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 5px; text-align: center; display: flex; justify-content: center; align-items: center;",
-            div(style = "width: 100%; max-width: 1000px; height: 700px; display: flex; justify-content: center; align-items: center;",
-              withSpinner(
-                plotOutput(ns("umap_plot"), 
-                          height = "700px",  # Perfect height maintained
-                          width = "100%"),   # Will now stretch within max-width container
-                type = 4,
-                color = "#3c8dbc"
-              )
+          div(class = "box-body", style = "padding: 5px; text-align: center;",
+            withSpinner(
+              plotOutput(ns("umap_plot"), 
+                        height = "700px",     # Keep the working height
+                        width = "950px"),     # Explicit width for 1.36:1 ratio (950/700)
+              type = 4,
+              color = "#3c8dbc"
             )
           )
         )
@@ -353,8 +351,8 @@ landingPageWithUmapServer <- function(id, data) {
             # Remove axis ticks to save space
             axis.ticks = element_blank()
           ) +
-          # Allow moderate aspect ratio expansion while preventing extreme widening
-          coord_fixed(ratio = 0.75, expand = FALSE)  # Slightly wider than square (1.33:1 aspect ratio)
+          # Let plot fill the explicit container dimensions without restrictions
+          coord_cartesian(expand = FALSE)
         
         return(p)
       }, error = function(e) {
