@@ -100,6 +100,17 @@ main()  # Creates interactive UMAP visualizations
 
 ## 🖥️ Shiny App Features
 
+### **Collapsible Global Settings** ⭐ NEW
+- Streamlined leftward-collapsing sidebar for all settings
+- Clean interface with icon representations when collapsed
+- Synchronizes with all visualization modules
+
+### **DE Results Page** ⭐ NEW
+- **Interactive UMAP**: Click clusters to update volcano plots
+- **Dual Volcano Plots**: MAST and MixScale results side-by-side
+- **Dynamic Coloring**: By significance, experiment, or gene
+- **Real-time Updates**: Instant synchronization between panels
+
 ### **Overview Dashboard**
 - Interactive UMAP plots with cell cluster visualization
 - Dataset metrics and cluster marker tables

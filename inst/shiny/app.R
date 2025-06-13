@@ -124,6 +124,7 @@ source("modules/mod_precomputed_reactive.R")
 # source("modules/mod_visualization.R")  # Original version
 source("modules/mod_visualization_enhanced.R")  # Enhanced with GSEA support
 source("modules/mod_comparison.R")
+source("modules/mod_de_results.R")  # NEW: DE Results with volcano plots
 source("modules/mod_heatmap.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
@@ -180,9 +181,17 @@ ui <- fluidPage(
       $(document).on('shiny:idle', function(event) {
         $('#loadingOverlay').removeClass('active');
       });
+      
+      // Sidebar toggle functionality
+      $(document).ready(function() {
+        $('.sidebar-toggle').click(function() {
+          $('.sidebar-fixed').toggleClass('collapsed');
+          $('.main-content').toggleClass('expanded');
+        });
+      });
     ")),
     tags$style(HTML("
-      /* Sidebar styling */
+      /* Sidebar styling with collapse support */
       .sidebar-fixed {
         position: fixed;
         top: 60px;
@@ -194,14 +203,66 @@ ui <- fluidPage(
         border-right: 1px solid #dee2e6;
         overflow-y: auto;
         z-index: 1000;
+        transition: all 0.3s ease;
       }
       
-      /* Main content offset */
+      /* Collapsed sidebar */
+      .sidebar-fixed.collapsed {
+        width: 50px;
+        padding: 10px 5px;
+        overflow: hidden;
+      }
+      
+      /* Hide content when collapsed */
+      .sidebar-fixed.collapsed .sidebar-content {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease;
+      }
+      
+      /* Show icons when collapsed */
+      .sidebar-fixed.collapsed .collapse-icon {
+        display: block;
+        text-align: center;
+        margin: 10px 0;
+        font-size: 20px;
+        color: #337ab7;
+      }
+      
+      .sidebar-fixed .collapse-icon {
+        display: none;
+      }
+      
+      /* Toggle button */
+      .sidebar-toggle {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #337ab7;
+        cursor: pointer;
+        z-index: 1001;
+        transition: transform 0.3s ease;
+      }
+      
+      .sidebar-fixed.collapsed .sidebar-toggle {
+        transform: rotate(180deg);
+        right: 15px;
+      }
+      
+      /* Main content offset with transition */
       .main-content {
         margin-left: 320px;
         padding: 20px;
         position: relative;
         min-height: calc(100vh - 60px);
+        transition: margin-left 0.3s ease;
+      }
+      
+      .main-content.expanded {
+        margin-left: 70px;
       }
       
       /* Loading overlay */
@@ -321,11 +382,23 @@ ui <- fluidPage(
   div(class = "content-area",
     # Sidebar with global settings
     div(class = "sidebar-fixed",
-      h3(icon("cogs"), "Global Settings"),
-      hr(),
+      # Toggle button
+      tags$button(class = "sidebar-toggle",
+                  icon("chevron-left"),
+                  title = "Toggle Sidebar"),
       
-      # Data Selection
-      h5("Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
+      # Icons shown when collapsed
+      div(class = "collapse-icon", icon("cogs"), title = "Settings"),
+      div(class = "collapse-icon", icon("dna"), title = "Gene Selection"),
+      div(class = "collapse-icon", icon("chart-bar"), title = "Analysis"),
+      
+      # Main sidebar content
+      div(class = "sidebar-content",
+        h3(icon("cogs"), "Global Settings"),
+        hr(),
+        
+        # Data Selection
+        h5("Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
       
       selectInput("global_analysis_type",
                   "Analysis Type",
@@ -402,7 +475,8 @@ ui <- fluidPage(
       
       # Data status
       uiOutput("data_status")
-    ),
+      ) # End sidebar-content
+    ), # End sidebar-fixed
       
     # Main content area
     div(class = "main-content",
@@ -425,6 +499,15 @@ ui <- fluidPage(
           value = "overview",
           br(),
           landingPageWithUmapUI("landing")
+        ),
+        
+        # DE Results Page
+        tabPanel(
+          "DE Results",
+          icon = icon("volcano"),
+          value = "de_results",
+          br(),
+          mod_de_results_ui("de_results_module")
         ),
         
         # Basic Visualization (main plotting interface)
@@ -716,6 +799,13 @@ server <- function(input, output, session) {
     "visualization_module",
     global_selection = global_data_selection,
     enrichment_data = filtered_data
+  )
+  
+  # DE Results module (NEW - volcano plots with UMAP)
+  de_results <- mod_de_results_server(
+    "de_results_module",
+    global_selection = global_data_selection,
+    app_data = app_data
   )
   
   comparison_results <- mod_comparison_server(

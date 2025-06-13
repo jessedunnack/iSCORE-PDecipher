@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(ssh:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(Rscript:*)",
+      "Bash(rg:*)",
+      "Bash(rm:*)",
+      "Bash(R:*)",
+      "Bash(timeout:*)",
+      "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\" 2 >& 1)",
+      "Bash(git fetch:*)",
+      "Bash(cp:*)",
+      "Bash(git tag:*)"
+    ],
+    "deny": []
+  }
+}
