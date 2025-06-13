@@ -1,6 +1,70 @@
 # Module for DE Results page with interactive UMAP and volcano plots
 # Allows clicking on UMAP clusters to update volcano plots
 
+# Helper functions to process DE data for volcano plots
+process_mast_for_volcano <- function(mast_data) {
+  # Convert MAST data structure to volcano plot format
+  volcano_data <- data.frame()
+  
+  for (gene in names(mast_data)) {
+    for (cluster in names(mast_data[[gene]])) {
+      if (!is.null(mast_data[[gene]][[cluster]])) {
+        de_results <- mast_data[[gene]][[cluster]]
+        
+        # Extract log2FC and p-values
+        if ("log2FC" %in% colnames(de_results) && "pvalue" %in% colnames(de_results)) {
+          cluster_data <- data.frame(
+            gene = gene,
+            cluster = cluster,
+            gene_name = rownames(de_results),
+            log2FC = de_results$log2FC,
+            pvalue = de_results$pvalue,
+            experiment = "default",
+            stringsAsFactors = FALSE
+          )
+          volcano_data <- rbind(volcano_data, cluster_data)
+        }
+      }
+    }
+  }
+  
+  return(volcano_data)
+}
+
+process_mixscale_for_volcano <- function(mixscale_data) {
+  # Convert MixScale data structure to volcano plot format
+  volcano_data <- data.frame()
+  
+  for (gene in names(mixscale_data)) {
+    for (cluster in names(mixscale_data[[gene]])) {
+      if (!is.null(mixscale_data[[gene]][[cluster]])) {
+        for (exp in names(mixscale_data[[gene]][[cluster]])) {
+          de_results <- mixscale_data[[gene]][[cluster]][[exp]]
+          
+          # Extract log2FC column (e.g., log2FC_C12_FPD-23)
+          log2fc_col <- paste0("log2FC_", exp)
+          pval_col <- paste0("p_cell_type", exp, ":weight")
+          
+          if (log2fc_col %in% colnames(de_results) && pval_col %in% colnames(de_results)) {
+            cluster_data <- data.frame(
+              gene = gene,
+              cluster = cluster,
+              gene_name = rownames(de_results),
+              log2FC = de_results[[log2fc_col]],
+              pvalue = de_results[[pval_col]],
+              experiment = exp,
+              stringsAsFactors = FALSE
+            )
+            volcano_data <- rbind(volcano_data, cluster_data)
+          }
+        }
+      }
+    }
+  }
+  
+  return(volcano_data)
+}
+
 # UI function
 mod_de_results_ui <- function(id) {
   ns <- NS(id)
@@ -92,90 +156,129 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       selected_cluster = NULL,
       de_data_mast = NULL,
       de_data_mixscale = NULL,
-      umap_data = NULL
+      umap_data = NULL,
+      sce_list = NULL
     )
     
-    # Helper function to generate mock UMAP data (moved up for access)
-    generate_mock_umap_data <- function() {
-      cat("[DE Results] Generating mock UMAP data...\n")
-      # In production, this would compute from actual single-cell data
-      set.seed(42)
-      n_cells <- 5000
-      clusters <- paste0("cluster_", 0:9)
-      
-      umap_data <- data.frame(
-        UMAP1 = rnorm(n_cells),
-        UMAP2 = rnorm(n_cells),
-        cluster = sample(clusters, n_cells, replace = TRUE),
-        stringsAsFactors = FALSE
-      )
-      
-      # Add some structure to make clusters visible
-      for (i in seq_along(clusters)) {
-        idx <- umap_data$cluster == clusters[i]
-        umap_data$UMAP1[idx] <- umap_data$UMAP1[idx] + cos(2*pi*i/length(clusters)) * 3
-        umap_data$UMAP2[idx] <- umap_data$UMAP2[idx] + sin(2*pi*i/length(clusters)) * 3
-      }
-      cat("[DE Results] Mock UMAP data generated with", n_cells, "cells\n")
-      return(umap_data)
-    }
-    
-    # Load UMAP data
+    # Load UMAP data using the same approach as the landing page
     observe({
       cat("[DE Results] UMAP data observe block triggered\n")
       cat("[DE Results] app_data$data_loaded =", app_data$data_loaded, "\n")
       
       req(app_data$data_loaded)
-      cat("[DE Results] app_data is loaded, attempting to populate UMAP data...\n")
+      cat("[DE Results] app_data is loaded, attempting to load UMAP data...\n")
       
-      # Try to load pre-computed UMAP data
-      umap_file <- file.path(dirname(Sys.getenv("ISCORE_DATA_FILE", "")), "umap_data.rds")
-      cat("[DE Results] Looking for UMAP file at:", umap_file, "\n")
+      # Determine which dataset to load based on app data
+      has_crispri <- any(grepl("MixScale", app_data$consolidated_data$method))
+      has_mutations <- any(grepl("MAST", app_data$consolidated_data$method))
       
-      if (file.exists(umap_file)) {
-        cat("[DE Results] UMAP file exists, attempting to load...\n")
-        tryCatch({
-          values$umap_data <- readRDS(umap_file)
-          cat("[DE Results] Successfully loaded UMAP data from:", umap_file, "\n")
-          cat("[DE Results] UMAP data dimensions:", nrow(values$umap_data), "cells x", ncol(values$umap_data), "columns\n")
-        }, error = function(e) {
-          showNotification("Could not load UMAP data", type = "warning")
-          cat("[DE Results] Error loading UMAP data:", e$message, "\n")
-          cat("[DE Results] Falling back to mock data generation...\n")
-          # Generate mock data on error too
-          values$umap_data <- generate_mock_umap_data()
-        })
+      if (has_crispri && has_mutations) {
+        dataset_to_load <- "Full_Dataset"
+      } else if (has_crispri) {
+        dataset_to_load <- "iSCORE_PD_CRISPRi"
       } else {
-        cat("[DE Results] UMAP file not found, generating mock data...\n")
-        # Generate mock UMAP data if file not found
-        values$umap_data <- generate_mock_umap_data()
+        dataset_to_load <- "iSCORE_PD"
+      }
+      
+      cat("[DE Results] Determined dataset to load:", dataset_to_load, "\n")
+      
+      # Try to load the appropriate UMAP data
+      possible_paths <- c(
+        system.file("extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds"), 
+                    package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds")),
+        paste0("../../inst/extdata/umap_data/", dataset_to_load, "_umap_data.rds")
+      )
+      
+      data_loaded <- FALSE
+      for (path in possible_paths) {
+        cat("[DE Results] Checking path:", path, "\n")
+        if (file.exists(path)) {
+          tryCatch({
+            sce <- readRDS(path)
+            cat("[DE Results] Successfully loaded UMAP SCE data from:", path, "\n")
+            
+            # Extract UMAP coordinates
+            if (!is.null(sce)) {
+              umap_coords <- reducedDim(sce, "UMAP")
+              
+              # Create data frame for plotting
+              values$umap_data <- data.frame(
+                UMAP1 = umap_coords[, 1],
+                UMAP2 = umap_coords[, 2],
+                cluster = as.character(colData(sce)$seurat_clusters),
+                stringsAsFactors = FALSE
+              )
+              
+              cat("[DE Results] UMAP data extracted:", nrow(values$umap_data), "cells\n")
+              data_loaded <- TRUE
+            }
+            break
+          }, error = function(e) {
+            cat("[DE Results] Failed to load from", path, ":", e$message, "\n")
+          })
+        }
+      }
+      
+      if (!data_loaded) {
+        showNotification("UMAP data not found. Please run extract_umap_data.R first.", 
+                       type = "error",
+                       duration = NULL)
       }
       
       cat("[DE Results] UMAP data population complete. values$umap_data is", 
           ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
     })
     
-    # Load DE results data
+    # Load DE results data from full_DE_results.rds
     observe({
       req(app_data$data_loaded)
+      cat("[DE Results] Loading DE results data...\n")
       
-      # Try to load pre-computed DE results
-      de_file <- Sys.getenv("ISCORE_DE_FILE", "")
+      # Try to find full_DE_results.rds file
+      possible_de_paths <- c(
+        file.path(dirname(Sys.getenv("ISCORE_DATA_FILE", "")), "full_DE_results.rds"),
+        file.path(getwd(), "full_DE_results.rds"),
+        file.path(dirname(getwd()), "full_DE_results.rds"),
+        "../../full_DE_results.rds"
+      )
       
-      if (file.exists(de_file)) {
-        tryCatch({
-          de_results <- readRDS(de_file)
-          values$de_data_mast <- de_results$MAST
-          values$de_data_mixscale <- de_results$MixScale
-          cat("[DE Results] Loaded DE data from:", de_file, "\n")
-        }, error = function(e) {
-          showNotification("Could not load DE results", type = "warning")
-          cat("[DE Results] Error loading DE data:", e$message, "\n")
-        })
-      } else {
-        # Use enrichment data as fallback (extract genes from enrichment results)
-        # In production, this would load actual DE results
-        showNotification("Using enrichment data for volcano plots", type = "message")
+      de_loaded <- FALSE
+      for (path in possible_de_paths) {
+        cat("[DE Results] Checking DE path:", path, "\n")
+        if (file.exists(path)) {
+          tryCatch({
+            de_results <- readRDS(path)
+            cat("[DE Results] Successfully loaded DE results from:", path, "\n")
+            cat("[DE Results] DE results structure:", paste(names(de_results), collapse=", "), "\n")
+            
+            # Extract MAST and MixScale data
+            if ("iSCORE_PD_MAST" %in% names(de_results)) {
+              # Convert MAST data to volcano plot format
+              mast_data <- de_results$iSCORE_PD_MAST
+              values$de_data_mast <- process_mast_for_volcano(mast_data)
+              cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
+            }
+            
+            if ("CRISPRi_Mixscale" %in% names(de_results)) {
+              # Convert MixScale data to volcano plot format  
+              mixscale_data <- de_results$CRISPRi_Mixscale
+              values$de_data_mixscale <- process_mixscale_for_volcano(mixscale_data)
+              cat("[DE Results] Processed MixScale data:", nrow(values$de_data_mixscale), "rows\n")
+            }
+            
+            de_loaded <- TRUE
+            break
+          }, error = function(e) {
+            cat("[DE Results] Failed to load DE results from", path, ":", e$message, "\n")
+          })
+        }
+      }
+      
+      if (!de_loaded) {
+        showNotification("DE results file not found. Volcano plots will not be available.", 
+                       type = "warning",
+                       duration = 5)
       }
     })
     
@@ -333,8 +436,6 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           plot_data$color_group <- plot_data$experiment
           color_scale <- NULL # Use default plotly colors
         } else {
-          # FALLBACK if 'experiment' column is missing
-          showNotification("'Experiment' column not found. Coloring by significance instead.", type = "warning")
           plot_data$color_group <- ifelse(plot_data$significant, "Significant", "Not Significant")
           color_scale <- c("Significant" = "#FF6B6B", "Not Significant" = "#CCCCCC")
         }
@@ -343,8 +444,6 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           plot_data$color_group <- plot_data$gene
           color_scale <- NULL # Use default plotly colors
         } else {
-          # FALLBACK if 'gene' column is missing
-          showNotification("'Gene' column not found. Coloring by significance instead.", type = "warning")
           plot_data$color_group <- ifelse(plot_data$significant, "Significant", "Not Significant")
           color_scale <- c("Significant" = "#FF6B6B", "Not Significant" = "#CCCCCC")
         }
@@ -360,10 +459,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         type = 'scatter',
         mode = 'markers',
         marker = list(size = 5, opacity = 0.7),
-        text = ~paste("Gene:", gene,
+        text = ~paste("Gene:", gene_name,
                      "<br>Log2FC:", round(log2FC, 3),
                      "<br>P-value:", format(pvalue, digits = 3),
-                     "<br>Experiment:", experiment),
+                     "<br>Experiment:", experiment,
+                     "<br>Mutation/Perturbation:", gene),
         hoverinfo = "text"
       ) %>%
         layout(
@@ -413,23 +513,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
         cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
         
-        # Use mock data if no real DE data available
         if (is.null(values$de_data_mast)) {
-          # Generate mock DE data from enrichment results
-          set.seed(123)
-          genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
-          mock_data <- expand.grid(
-            gene = rep(genes, each = 20),
-            cluster = paste0("cluster_", 0:9),
-            stringsAsFactors = FALSE
-          ) %>%
-            mutate(
-              log2FC = rnorm(n(), mean = 0, sd = 1.5),
-              pvalue = 10^(-rexp(n(), rate = 0.5)),
-              experiment = "MAST_analysis"
+          # No data available - show empty plot with message
+          plot_ly() %>%
+            layout(
+              title = "MAST Volcano Plot - No Data",
+              xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+              yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+              annotations = list(
+                x = 0,
+                y = 5,
+                text = "MAST DE results not available.\nPlease ensure full_DE_results.rds is present.",
+                showarrow = FALSE,
+                font = list(size = 16, color = "gray")
+              )
             )
-          
-          generate_volcano_plot(mock_data, "MAST", values$selected_cluster, input$color_by)
         } else {
           generate_volcano_plot(values$de_data_mast, "MAST", values$selected_cluster, input$color_by)
         }
@@ -447,25 +545,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
         cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
         
-        # Use mock data if no real DE data available
         if (is.null(values$de_data_mixscale)) {
-          # Generate mock DE data
-          set.seed(456)
-          genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
-          experiments <- c("C12_FPD-23", "C12_FPD-24", "C18_FPD-23")
-          
-          mock_data <- expand.grid(
-            gene = rep(genes, each = 15),
-            cluster = paste0("cluster_", 0:9),
-            experiment = sample(experiments, 10, replace = TRUE),
-            stringsAsFactors = FALSE
-          ) %>%
-            mutate(
-              log2FC = rnorm(n(), mean = 0, sd = 1.2),
-              pvalue = 10^(-rexp(n(), rate = 0.6))
+          # No data available - show empty plot with message
+          plot_ly() %>%
+            layout(
+              title = "MixScale Volcano Plot - No Data",
+              xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+              yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+              annotations = list(
+                x = 0,
+                y = 5,
+                text = "MixScale DE results not available.\nPlease ensure full_DE_results.rds is present.",
+                showarrow = FALSE,
+                font = list(size = 16, color = "gray")
+              )
             )
-          
-          generate_volcano_plot(mock_data, "MixScale", values$selected_cluster, input$color_by)
         } else {
           generate_volcano_plot(values$de_data_mixscale, "MixScale", values$selected_cluster, input$color_by)
         }

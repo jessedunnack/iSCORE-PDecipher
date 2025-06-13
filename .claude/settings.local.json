@@ -23,7 +23,8 @@
       "Bash(git fetch:*)",
       "Bash(cp:*)",
       "Bash(git tag:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\")"
     ],
     "deny": []
   }
