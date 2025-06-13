@@ -215,9 +215,9 @@ initialize_app_with_data <- function(app_data, data_file = NULL) {
       app_data$data_loaded <- FALSE
     })
   } else {
-    # Try default loading through load_enrichment_data
+    # Try default loading through get_enrichment_data
     tryCatch({
-      data <- load_enrichment_data("all_modalities")
+      data <- get_enrichment_data()
       
       # Process column names
       if ("mutation_perturbation" %in% names(data)) {
