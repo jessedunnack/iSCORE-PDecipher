@@ -578,25 +578,17 @@ details[open] summary {
   padding: 10px;
 }
 
-/* UMAP Plot Optimization */
-.umap-maximized {
-  height: calc(80vh - 100px) !important;
-  width: 100% !important;
-}
-
+/* UMAP Plot Optimization - FIXED VERSION */
 .umap-container {
-  height: 100% !important;
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .umap-container .shiny-plot-output {
-  height: 100% !important;
-  width: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
+  width: 100%;
+  max-width: none;
 }
 
 /* Optimize plot responsiveness */

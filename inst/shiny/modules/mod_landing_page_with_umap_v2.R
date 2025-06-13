@@ -28,32 +28,30 @@ landingPageWithUmapUI <- function(id) {
         font-size: 11px !important;
       }
     "))),
-    # Main content area with two columns - MAXIMIZED FOR SCREEN SPACE
-    fluidRow(class = "landing-row-maximized", style = "min-height: 80vh;", # Use 80% of viewport height
-      # Left column - UMAP visualization (expanded and taller)
-      column(8, class = "umap-column-maximized",  # Increased from 7 to 8 for more width
-        div(class = "box box-primary", style = "margin-top: 0; height: calc(80vh - 40px);", # Full height minus margins
+    # Main content area with two columns - OPTIMIZED LAYOUT
+    fluidRow(style = "min-height: 700px;", # Use explicit minimum height
+      # Left column - UMAP visualization (expanded width)
+      column(8,  # Increased from 7 to 8 for more width
+        div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body umap-container", style = "padding: 15px; height: calc(100% - 60px);", # Simplified styling
-            div(class = "umap-maximized",
-              withSpinner(
-                plotOutput(ns("umap_plot"), 
-                          height = "100%",  # Fill available height
-                          width = "100%"),  # Fill available width
-                type = 4,
-                color = "#3c8dbc"
-              )
+          div(class = "box-body", style = "padding: 15px;",
+            withSpinner(
+              plotOutput(ns("umap_plot"), 
+                        height = "700px",  # Explicit height that works
+                        width = "100%"),   # Full width is safe
+              type = 4,
+              color = "#3c8dbc"
             )
           )
         )
       ),
       
-      # Right column - Summary statistics + Cluster Markers (reduced width but same height)
-      column(4, class = "markers-column-optimized",  # Reduced from 5 to 4 to give UMAP more space
+      # Right column - Summary statistics + Cluster Markers (reduced width)
+      column(4,  # Reduced from 5 to 4 to give UMAP more space
         # Summary statistics cards in a grid (top half) - Compact layout
         div(class = "value-box-compact",
           fluidRow(
@@ -82,14 +80,14 @@ landingPageWithUmapUI <- function(id) {
           )
         ),
         
-        # Cluster Markers section (fill remaining height)
-        div(class = "box box-info", style = "margin-top: 20px; height: calc(80vh - 260px);", # Fill remaining space after metrics boxes
+        # Cluster Markers section (explicit height)
+        div(class = "box box-info", style = "margin-top: 20px;",
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("dna"),
                "Cluster Marker Genes")
           ),
-          div(class = "box-body", style = "padding: 10px; height: calc(100% - 60px); display: flex; flex-direction: column;",
+          div(class = "box-body", style = "padding: 10px;",
             # Compact controls
             fluidRow(
               column(6,
@@ -108,10 +106,10 @@ landingPageWithUmapUI <- function(id) {
                             width = "100%")
               )
             ),
-            # Markers table - use flex-grow to fill remaining space
-            div(class = "markers-table-optimized", style = "flex-grow: 1; overflow-y: auto; margin-top: 10px;",
+            # Markers table - explicit height
+            div(style = "height: 400px; overflow-y: auto; margin-top: 10px;",
               withSpinner(
-                DT::dataTableOutput(ns("markers_table"), height = "100%"),
+                DT::dataTableOutput(ns("markers_table"), height = "350px"),
                 type = 1,
                 color = "#3c8dbc"
               )
