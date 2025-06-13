@@ -43,7 +43,7 @@ source("modules/mod_precomputed_reactive.R")
 # source("modules/mod_visualization.R")  # Original version
 source("modules/mod_visualization_enhanced.R")  # Enhanced with GSEA support
 source("modules/mod_comparison.R")
-source("modules/mod_heatmap_unified.R")
+source("modules/mod_heatmap.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
 
@@ -374,7 +374,7 @@ ui <- fluidPage(
           br(),
           h2("Interactive Heatmaps"),
           p("Create customizable heatmaps of enrichment results"),
-          mod_heatmap_unified_ui("heatmap_module")
+          mod_heatmap_ui("heatmap_module")
         ),
         
         # KEGG Pathview
@@ -643,10 +643,10 @@ server <- function(input, output, session) {
     pval_threshold = global_pval
   )
   
-  heatmap_results <- mod_heatmap_unified_server(
+  heatmap_results <- mod_heatmap_server(
     "heatmap_module",
     app_data = app_data,
-    global_selection = global_data_selection
+    pval_threshold = global_pval
   )
   
   pathview_results <- mod_pathview_server(
