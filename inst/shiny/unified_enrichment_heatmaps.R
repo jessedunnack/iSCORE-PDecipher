@@ -108,6 +108,20 @@ create_unified_enrichment_heatmap <- function(data_full,
     }
   }
   
+  # Defensive: check for any problematic enrichment type color data in the input
+  # Remove any variables that might contain string representations of color vectors
+  problematic_pattern <- "c\\(.*GO_BP.*=.*#[0-9A-Fa-f]{6}"
+  env_vars <- ls(envir = .GlobalEnv)
+  for (var_name in env_vars) {
+    if (exists(var_name, envir = .GlobalEnv)) {
+      var_value <- get(var_name, envir = .GlobalEnv)
+      if (is.character(var_value) && any(grepl(problematic_pattern, var_value))) {
+        log_message_fn(paste("WARNING: Removing problematic variable:", var_name), "WARNING")
+        rm(list = var_name, envir = .GlobalEnv)
+      }
+    }
+  }
+  
   # Validate heatmap type
   valid_heatmap_types <- c("standard", "gsea")
   if (!heatmap_type %in% valid_heatmap_types) {
@@ -414,7 +428,11 @@ create_unified_enrichment_heatmap <- function(data_full,
   }
   
   display_term_row_names <- make.unique(str_trunc(display_names, 80), sep = "_")
-  cols_for_matrix <- setdiff(colnames(matrix_values_df), c("term_label", "direction"))
+  
+  # Defensive: exclude any annotation-related columns from matrix
+  # This prevents issues where enrichment_type or other annotation data might accidentally get processed
+  excluded_cols <- c("term_label", "direction", "enrichment_type", "ID", "Description")
+  cols_for_matrix <- setdiff(colnames(matrix_values_df), excluded_cols)
   heatmap_matrix <- as.matrix(matrix_values_df[, cols_for_matrix])
   rownames(heatmap_matrix) <- display_term_row_names
   heatmap_matrix[is.na(heatmap_matrix) | is.infinite(heatmap_matrix)] <- 0
@@ -525,7 +543,21 @@ create_unified_enrichment_heatmap <- function(data_full,
   row_ha <- NULL
   if (show_direction_annotation && !is.null(row_directions)) {
     direction_colors <- CONFIG$DIRECTION_COLORS
+    
+    # Ensure direction_colors is a proper named vector (defensive programming)
+    if (!is.vector(direction_colors) || is.null(names(direction_colors))) {
+      direction_colors <- c("UP" = "#E41A1C", "DOWN" = "#377EB8", "ALL" = "#4DAF4A")
+    }
+    
     row_directions_factor <- factor(row_directions, levels = c("UP", "DOWN", "ALL"))
+    
+    # Defensive: ensure no enrichment_type information accidentally gets into annotations
+    # Only create direction annotation, nothing else
+    # Also ensure direction_colors is not accidentally a string representation
+    if (is.character(direction_colors) && length(direction_colors) == 1 && grepl("^c\\(", direction_colors)) {
+      log_message_fn("WARNING: Detected string representation of direction colors, using defaults", "WARNING")
+      direction_colors <- c("UP" = "#E41A1C", "DOWN" = "#377EB8", "ALL" = "#4DAF4A")
+    }
     
     row_ha <- rowAnnotation(
       Direction = row_directions_factor,
@@ -571,7 +603,14 @@ create_unified_enrichment_heatmap <- function(data_full,
     )
   }
   
-  # Create heatmap
+  # Create heatmap with defensive checks
+  # Ensure col_fun is properly formatted and not a string representation of a vector
+  if (is.character(col_fun) && length(col_fun) == 1 && grepl("^c\\(", col_fun)) {
+    # If col_fun is accidentally a string representation of a vector, fix it
+    log_message_fn("WARNING: Detected string representation of color function, using default", "WARNING")
+    col_fun <- colorRampPalette(RColorBrewer::brewer.pal(9, "YlOrRd"))(100)
+  }
+  
   ht_plot <- Heatmap(
     heatmap_matrix,
     name = heatmap_name,
