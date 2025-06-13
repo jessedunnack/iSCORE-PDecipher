@@ -10,6 +10,7 @@ if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
 }
 library(ggplot2)
 library(dplyr)
+library(ggrepel)
 
 # Helper functions to process DE data for volcano plots
 process_mast_for_volcano <- function(mast_data) {
@@ -316,6 +317,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               mast_data <- de_results$iSCORE_PD_MAST
               values$de_data_mast <- process_mast_for_volcano(mast_data)
               cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
+            cat("[DE Results] Available MAST genes:", paste(unique(values$de_data_mast$gene), collapse=", "), "\n")
             }
             
             if ("CRISPRi_Mixscale" %in% names(de_results)) {
@@ -323,6 +325,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               mixscale_data <- de_results$CRISPRi_Mixscale
               values$de_data_mixscale <- process_mixscale_for_volcano(mixscale_data)
               cat("[DE Results] Processed MixScale data:", nrow(values$de_data_mixscale), "rows\n")
+            cat("[DE Results] Available MixScale genes:", paste(unique(values$de_data_mixscale$gene), collapse=", "), "\n")
             }
             
             de_loaded <- TRUE
@@ -462,12 +465,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         scale_size_identity() +
         theme_minimal() +
         theme(
-          legend.position = "none",
+          legend.position = if(is.null(input$cluster_selector) || input$cluster_selector == "") "right" else "none",
+          legend.title = element_text(size = 12, face = "bold"),
           panel.grid = element_blank(),
           axis.text = element_blank(),
           axis.title = element_text(size = 12),
           plot.background = element_rect(fill = "white", color = NA)
         ) +
+        guides(color = guide_legend(title = "Cluster", override.aes = list(size = 3, alpha = 1))) +
         labs(x = "UMAP 1", y = "UMAP 2")
       
       # Add cluster labels
@@ -483,13 +488,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             alpha = 0.8
           )
       } else if (n_clusters <= 20) {
-        # Show all labels if not too many clusters
+        # Show all labels with repel to avoid overlap
         p <- p + 
-          geom_text(
+          geom_label_repel(
             data = cluster_centers,
             aes(x = x, y = y, label = gsub("cluster_", "", label)),
             size = 4,
-            fontface = "bold"
+            fontface = "bold",
+            box.padding = 0.5,
+            point.padding = 0.5,
+            segment.color = "gray50",
+            max.overlaps = Inf,
+            fill = "white",
+            alpha = 0.8
           )
       }
       
@@ -570,6 +581,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       
       if (nrow(plot_data) == 0) {
         # No data for this cluster
+        cat("[DE Results] No data found for cluster:", selected_cluster, "\n")
+        cat("[DE Results] Available clusters in data:", paste(unique(de_data$cluster), collapse=", "), "\n")
+        
         p <- plot_ly() %>%
           layout(
             title = paste(analysis_type, title_suffix, "- No data"),
@@ -578,9 +592,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             annotations = list(
               x = 0,
               y = 5,
-              text = "No data for selected cluster",
+              text = paste("No data for", selected_cluster, "\nAvailable clusters:", 
+                          paste(unique(de_data$cluster), collapse=", ")),
               showarrow = FALSE,
-              font = list(size = 16, color = "gray")
+              font = list(size = 14, color = "gray")
             )
           )
         return(p)
@@ -716,7 +731,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
             )
         } else {
-          generate_volcano_plot(values$de_data_mast, "MAST", values$selected_cluster, input$color_by)
+          # Filter by global gene selection
+          current_gene <- global_selection()$gene
+          cat("[DE Results] Global gene selection:", current_gene, "\n")
+          
+          if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+            filtered_data <- values$de_data_mast[values$de_data_mast$gene == current_gene, ]
+            cat("[DE Results] Filtered MAST data for gene", current_gene, ":", nrow(filtered_data), "rows\n")
+          } else {
+            filtered_data <- values$de_data_mast
+            cat("[DE Results] Using all MAST data:", nrow(filtered_data), "rows\n")
+          }
+          
+          generate_volcano_plot(filtered_data, "MAST", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
         cat("[DE Results] Error rendering MAST volcano plot:", e$message, "\n")
@@ -763,7 +790,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
             )
         } else {
-          generate_volcano_plot(values$de_data_mixscale, "MixScale", values$selected_cluster, input$color_by)
+          # Filter by global gene selection
+          current_gene <- global_selection()$gene
+          cat("[DE Results] Global gene selection:", current_gene, "\n")
+          
+          if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+            filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == current_gene, ]
+            cat("[DE Results] Filtered MixScale data for gene", current_gene, ":", nrow(filtered_data), "rows\n")
+          } else {
+            filtered_data <- values$de_data_mixscale
+            cat("[DE Results] Using all MixScale data:", nrow(filtered_data), "rows\n")
+          }
+          
+          generate_volcano_plot(filtered_data, "MixScale", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
         cat("[DE Results] Error rendering MixScale volcano plot:", e$message, "\n")
