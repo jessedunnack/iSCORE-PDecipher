@@ -155,6 +155,102 @@ mod_heatmap_ui <- function(id) {
 mod_heatmap_server <- function(id, app_data, pval_threshold) {
   moduleServer(id, function(input, output, session) {
     
+    # Helper function to validate and create color vectors
+    create_validated_colors <- function() {
+      # Define complete color vectors with validation
+      type_colors <- c(
+        "GO_BP" = "#8DD3C7", 
+        "GO_CC" = "#FFFFB3", 
+        "GO_MF" = "#BEBADA",
+        "KEGG" = "#FB8072", 
+        "Reactome" = "#80B1D3", 
+        "WikiPathways" = "#FDB462", 
+        "STRING" = "#B3DE69",
+        "GSEA" = "#FCCDE5"
+      )
+      
+      dir_colors <- c(
+        "UP" = "#FF6B6B", 
+        "DOWN" = "#4ECDC4", 
+        "ALL" = "#95E1D3", 
+        "RANKED" = "#45B7D1"
+      )
+      
+      # Validate that all colors are proper hex codes
+      validate_hex <- function(color_vec) {
+        valid_colors <- sapply(color_vec, function(x) {
+          grepl("^#[0-9A-Fa-f]{6}$", x)
+        })
+        if (!all(valid_colors)) {
+          warning("Invalid hex colors found, using defaults")
+          # Replace invalid colors with gray
+          color_vec[!valid_colors] <- "#808080"
+        }
+        return(color_vec)
+      }
+      
+      return(list(
+        type = validate_hex(type_colors),
+        direction = validate_hex(dir_colors)
+      ))
+    }
+    
+    # Helper function to create safe row annotations
+    create_safe_row_annotations <- function(mat, annotation_data, show_annotations) {
+      if (!show_annotations || is.null(annotation_data) || nrow(annotation_data) == 0) {
+        return(list(colors = NULL, palette = NULL))
+      }
+      
+      # Get validated color vectors
+      color_vectors <- create_validated_colors()
+      
+      # Ensure annotation data matches matrix rows
+      if (nrow(annotation_data) != nrow(mat)) {
+        message("Row annotation data doesn't match matrix dimensions")
+        return(list(colors = NULL, palette = NULL))
+      }
+      
+      # Check required columns exist
+      if (!all(c("enrichment_type", "direction") %in% names(annotation_data))) {
+        message("Required annotation columns missing")
+        return(list(colors = NULL, palette = NULL))
+      }
+      
+      # Create annotation data frame with proper row names
+      row_colors <- data.frame(
+        Type = as.character(annotation_data$enrichment_type),
+        Direction = as.character(annotation_data$direction),
+        stringsAsFactors = FALSE
+      )
+      rownames(row_colors) <- rownames(mat)
+      
+      # Ensure all types and directions have colors
+      missing_types <- setdiff(unique(row_colors$Type), names(color_vectors$type))
+      missing_dirs <- setdiff(unique(row_colors$Direction), names(color_vectors$direction))
+      
+      if (length(missing_types) > 0) {
+        message("Adding default colors for missing types: ", paste(missing_types, collapse = ", "))
+        new_colors <- rainbow(length(missing_types))
+        names(new_colors) <- missing_types
+        color_vectors$type <- c(color_vectors$type, new_colors)
+      }
+      
+      if (length(missing_dirs) > 0) {
+        message("Adding default colors for missing directions: ", paste(missing_dirs, collapse = ", "))
+        new_colors <- rainbow(length(missing_dirs))
+        names(new_colors) <- missing_dirs
+        color_vectors$direction <- c(color_vectors$direction, new_colors)
+      }
+      
+      return(list(
+        colors = row_colors,
+        palette = list(
+          Type = color_vectors$type,
+          Direction = color_vectors$direction
+        )
+      ))
+    }
+    
     # Reactive values
     heatmap_data <- reactiveValues(
       data = NULL,
@@ -506,78 +602,104 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             }
             
             # Prepare row annotations if requested
-            row_side_colors <- NULL
-            row_side_palette <- NULL
+            annotation_result <- NULL
             if (input$show_annotations) {
               # Get annotation data for each row
               row_annotations <- df[!duplicated(df$Description), ] %>%
                 dplyr::filter(Description %in% full_descriptions) %>%
                 dplyr::arrange(match(Description, full_descriptions))
               
-              if (nrow(row_annotations) > 0 && nrow(row_annotations) == nrow(mat)) {
-                # Create color vectors for annotations
-                type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
-                                "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
-                                "WikiPathways" = "#FDB462", "STRING" = "#B3DE69",
-                                "GSEA" = "#FCCDE5")
-                dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple", "RANKED" = "darkgreen")
-                
-                # Keep the original categorical values for heatmaply
-                # heatmaply will handle the color mapping internally
-                row_side_colors <- data.frame(
-                  Type = as.character(row_annotations$enrichment_type),
-                  Direction = as.character(row_annotations$direction),
-                  stringsAsFactors = FALSE
-                )
-                rownames(row_side_colors) <- rownames(mat)
-                
-                # Create color lists for heatmaply
-                row_side_palette <- list(
-                  Type = type_colors,
-                  Direction = dir_colors
-                )
-              } else {
-                row_side_colors <- NULL
-                row_side_palette <- NULL
-              }
+              # Use the safe annotation creation function
+              annotation_result <- create_safe_row_annotations(mat, row_annotations, input$show_annotations)
             }
             
-            # Create heatmaply heatmap with dendrograms
-            if (!is.null(row_side_colors) && !is.null(row_side_palette)) {
-              p <- heatmaply::heatmaply(
-                mat,
-                dendrogram = dendrogram,
-                colors = colors,
-                xlab = "",
-                ylab = "",
-                main = paste("Interactive Enrichment Heatmap -", legend_title),
-                margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
-                custom_hovertext = custom_text,
-                label_names = c("Row", "Column", "Value"),
-                fontsize_row = 10,
-                fontsize_col = 10,
-                showticklabels = c(TRUE, TRUE),
-                plot_method = "plotly",
-                row_side_colors = row_side_colors,
-                row_side_palette = row_side_palette  # Use the color mapping we defined
-              )
-            } else {
-              p <- heatmaply::heatmaply(
-                mat,
-                dendrogram = dendrogram,
-                colors = colors,
-                xlab = "",
-                ylab = "",
-                main = paste("Interactive Enrichment Heatmap -", legend_title),
-                margins = c(150, 250, 50, 50),
-                custom_hovertext = custom_text,
-                label_names = c("Row", "Column", "Value"),
-                fontsize_row = 10,
-                fontsize_col = 10,
-                showticklabels = c(TRUE, TRUE),
-                plot_method = "plotly"
-              )
-            }
+            row_side_colors <- if (!is.null(annotation_result)) annotation_result$colors else NULL
+            row_side_palette <- if (!is.null(annotation_result)) annotation_result$palette else NULL
+            
+            # Create heatmaply heatmap with comprehensive error handling
+            p <- tryCatch({
+              if (!is.null(row_side_colors) && !is.null(row_side_palette)) {
+                message("Creating heatmaply with annotations...")
+                heatmaply::heatmaply(
+                  mat,
+                  dendrogram = dendrogram,
+                  colors = colors,
+                  xlab = "",
+                  ylab = "",
+                  main = paste("Interactive Enrichment Heatmap -", legend_title),
+                  margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
+                  custom_hovertext = custom_text,
+                  label_names = c("Row", "Column", "Value"),
+                  fontsize_row = 10,
+                  fontsize_col = 10,
+                  showticklabels = c(TRUE, TRUE),
+                  plot_method = "plotly",
+                  row_side_colors = row_side_colors,
+                  row_side_palette = row_side_palette
+                )
+              } else {
+                message("Creating heatmaply without annotations...")
+                heatmaply::heatmaply(
+                  mat,
+                  dendrogram = dendrogram,
+                  colors = colors,
+                  xlab = "",
+                  ylab = "",
+                  main = paste("Interactive Enrichment Heatmap -", legend_title),
+                  margins = c(150, 250, 50, 50),
+                  custom_hovertext = custom_text,
+                  label_names = c("Row", "Column", "Value"),
+                  fontsize_row = 10,
+                  fontsize_col = 10,
+                  showticklabels = c(TRUE, TRUE),
+                  plot_method = "plotly"
+                )
+              }
+            }, error = function(e) {
+              message("Heatmaply failed: ", e$message)
+              message("Falling back to simple plotly heatmap...")
+              
+              # Fallback to basic plotly heatmap without annotations
+              tryCatch({
+                # Create basic hover text
+                hover_text <- matrix(
+                  paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
+                         "Condition: ", rep(colnames(mat), each = nrow(mat)), "<br>",
+                         "Value: ", round(as.vector(mat), 3)),
+                  nrow = nrow(mat),
+                  ncol = ncol(mat),
+                  byrow = FALSE
+                )
+                
+                plot_ly(
+                  x = colnames(mat),
+                  y = rownames(mat),
+                  z = mat,
+                  type = "heatmap",
+                  colorscale = "Viridis",
+                  hovertext = hover_text,
+                  hovertemplate = "%{hovertext}<extra></extra>",
+                  colorbar = list(title = legend_title)
+                ) %>%
+                  layout(
+                    title = paste("Enrichment Heatmap -", legend_title),
+                    xaxis = list(title = "", tickangle = -45),
+                    yaxis = list(title = ""),
+                    margin = list(l = 250, b = 100, t = 50)
+                  )
+              }, error = function(e2) {
+                message("Plotly fallback also failed: ", e2$message)
+                # Return empty plot with error message
+                plot_ly() %>%
+                  add_annotations(
+                    text = paste("Error creating heatmap:<br>", e$message, "<br><br>Fallback error:<br>", e2$message),
+                    x = 0.5, y = 0.5,
+                    xref = "paper", yref = "paper",
+                    showarrow = FALSE,
+                    font = list(size = 12, color = "red")
+                  )
+              })
+            })
             
             # Store the plotly object for download
             heatmap_data$plotly_object <- p
@@ -822,23 +944,38 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         # Create row annotations if requested
         row_ha <- NULL
         if (input$show_annotations && nrow(df) > 0) {
-          # Get unique rows for annotations
-          row_ann_data <- df[match(rownames(mat), substr(df[[y_var]], 1, 100)), ]
-          
-          if (nrow(row_ann_data) > 0 && all(c("enrichment_type", "direction") %in% names(row_ann_data))) {
-            type_colors <- c("GO_BP" = "#8DD3C7", "GO_CC" = "#FFFFB3", "GO_MF" = "#BEBADA",
-                            "KEGG" = "#FB8072", "Reactome" = "#80B1D3", 
-                            "WikiPathways" = "#FDB462", "STRING" = "#B3DE69", "GSEA" = "#FCCDE5")
-            dir_colors <- c("UP" = "red", "DOWN" = "blue", "ALL" = "purple", "RANKED" = "darkgreen")
+          tryCatch({
+            # Get unique rows for annotations
+            row_ann_data <- df[match(rownames(mat), substr(df[[y_var]], 1, 100)), ]
             
-            row_ha <- ComplexHeatmap::rowAnnotation(
-              Type = row_ann_data$enrichment_type,
-              Direction = row_ann_data$direction,
-              col = list(Type = type_colors, Direction = dir_colors),
-              annotation_name_gp = grid::gpar(fontsize = 8),
-              simple_anno_size = grid::unit(0.3, "cm")
-            )
-          }
+            if (nrow(row_ann_data) > 0 && all(c("enrichment_type", "direction") %in% names(row_ann_data))) {
+              # Use validated colors
+              color_vectors <- create_validated_colors()
+              
+              # Ensure annotation data is complete
+              row_ann_data$enrichment_type[is.na(row_ann_data$enrichment_type)] <- "Unknown"
+              row_ann_data$direction[is.na(row_ann_data$direction)] <- "Unknown"
+              
+              # Add colors for unknown categories if needed
+              if (!"Unknown" %in% names(color_vectors$type)) {
+                color_vectors$type["Unknown"] <- "#808080"
+              }
+              if (!"Unknown" %in% names(color_vectors$direction)) {
+                color_vectors$direction["Unknown"] <- "#808080"
+              }
+              
+              row_ha <- ComplexHeatmap::rowAnnotation(
+                Type = row_ann_data$enrichment_type,
+                Direction = row_ann_data$direction,
+                col = list(Type = color_vectors$type, Direction = color_vectors$direction),
+                annotation_name_gp = grid::gpar(fontsize = 8),
+                simple_anno_size = grid::unit(0.3, "cm")
+              )
+            }
+          }, error = function(e) {
+            message("Error creating ComplexHeatmap annotations: ", e$message)
+            row_ha <<- NULL
+          })
         }
         
         # Create ComplexHeatmap
