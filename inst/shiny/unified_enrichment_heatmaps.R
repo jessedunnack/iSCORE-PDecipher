@@ -164,7 +164,14 @@ create_unified_enrichment_heatmap <- function(data_full,
   
   # Cluster filtering
   if (!is.null(cluster_val)) { 
-    heatmap_data_filtered <- heatmap_data_filtered %>% filter(cluster == cluster_val) 
+    # Check if data is already filtered to this cluster
+    clusters_present <- unique(heatmap_data_filtered$cluster)
+    if (length(clusters_present) == 1 && clusters_present == cluster_val) {
+      log_message_fn(paste("Data already filtered to cluster", cluster_val))
+    } else {
+      log_message_fn(paste("Filtering to cluster", cluster_val))
+      heatmap_data_filtered <- heatmap_data_filtered %>% filter(cluster == cluster_val) 
+    }
   }
   
   # Method filtering with enhanced intersection logic
@@ -218,6 +225,9 @@ create_unified_enrichment_heatmap <- function(data_full,
   
   if (nrow(heatmap_data_filtered) == 0) {
     log_message_fn("No data available after filtering", "WARNING")
+    log_message_fn(paste("Original data had", nrow(data_full), "rows"), "DEBUG")
+    log_message_fn(paste("Enrichment types available:", paste(unique(data_full$enrichment_type), collapse = ", ")), "DEBUG")
+    log_message_fn(paste("Columns in data:", paste(names(data_full), collapse = ", ")), "DEBUG")
     return(NULL)
   }
   
@@ -286,6 +296,8 @@ create_unified_enrichment_heatmap <- function(data_full,
   
   if (nrow(significant_terms_for_heatmap) < 1) {
     log_message_fn("Not enough data for heatmap after term selection", "WARNING")
+    log_message_fn(paste("Term selection strategy:", term_selection_strategy), "DEBUG")
+    log_message_fn(paste("Max terms requested:", max_terms_overall), "DEBUG")
     return(NULL)
   }
   
@@ -301,16 +313,26 @@ create_unified_enrichment_heatmap <- function(data_full,
   # MATRIX CREATION WITH DIRECTION TRACKING
   # =============================================================================
   
-  # Setup column order (all CONFIG genes)
+  # Setup column order - use genes present in data, not all CONFIG genes
+  # This prevents issues when data is pre-filtered to specific genes
+  genes_in_data <- unique(significant_terms_for_heatmap$mutation_perturbation)
+  clusters_in_data <- unique(significant_terms_for_heatmap$cluster)
+  
   all_heatmap_cols_ordered <- if (is.null(cluster_val)) {
-    interaction_df <- expand.grid(mutation_perturbation = CONFIG$HEATMAP_COLUMN_GENES, 
-                                cluster = sort(unique(data_full$cluster)), 
+    # Multi-cluster mode: create gene_cluster combinations
+    interaction_df <- expand.grid(mutation_perturbation = genes_in_data, 
+                                cluster = sort(clusters_in_data), 
                                 KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
     paste(interaction_df$mutation_perturbation, interaction_df$cluster, sep="_")
   } else {
-    CONFIG$HEATMAP_COLUMN_GENES
+    # Single cluster mode: just use genes
+    genes_in_data
   }
   all_heatmap_cols_ordered <- unique(all_heatmap_cols_ordered)
+  
+  log_message_fn(paste("Genes in data:", paste(genes_in_data, collapse = ", ")))
+  log_message_fn(paste("Clusters in data:", paste(clusters_in_data, collapse = ", ")))
+  log_message_fn(paste("Matrix columns will be:", paste(all_heatmap_cols_ordered, collapse = ", ")))
   
   # Transform values for plotting
   transform_value <- function(metric_val, metric_name) {
@@ -439,6 +461,8 @@ create_unified_enrichment_heatmap <- function(data_full,
   
   if (nrow(heatmap_matrix) < 2 || ncol(heatmap_matrix) < 1) {
     log_message_fn(sprintf("Matrix too small (R=%d,C=%d)", nrow(heatmap_matrix), ncol(heatmap_matrix)), "WARNING")
+    log_message_fn(paste("Matrix columns:", paste(colnames(heatmap_matrix), collapse = ", ")), "DEBUG")
+    log_message_fn(paste("Columns for matrix from df:", paste(cols_for_matrix, collapse = ", ")), "DEBUG")
     return(NULL)
   }
   

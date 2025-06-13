@@ -164,14 +164,25 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
     # Load required packages and functions
     # Try ComplexHeatmap first, fallback to pheatmap
     use_complex_heatmap <- FALSE
-    if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
-      if (!exists("create_unified_enrichment_heatmap")) {
-        source("unified_enrichment_heatmaps.R")
-        cat("[HEATMAP] Sourced unified heatmap functions (ComplexHeatmap)\n")
-      }
-      use_complex_heatmap <- TRUE
-    } else {
+    if (requireNamespace("ComplexHeatmap", quietly = TRUE) && 
+        requireNamespace("circlize", quietly = TRUE)) {
+      tryCatch({
+        if (!exists("create_unified_enrichment_heatmap")) {
+          source("unified_enrichment_heatmaps.R")
+          cat("[HEATMAP] Sourced unified heatmap functions (ComplexHeatmap)\n")
+        }
+        use_complex_heatmap <- TRUE
+      }, error = function(e) {
+        cat("[HEATMAP] Error loading ComplexHeatmap functions:", e$message, "\n")
+        use_complex_heatmap <<- FALSE
+      })
+    }
+    
+    if (!use_complex_heatmap) {
       cat("[HEATMAP] ComplexHeatmap not available, using pheatmap fallback\n")
+      if (!requireNamespace("pheatmap", quietly = TRUE)) {
+        install.packages("pheatmap")
+      }
       library(pheatmap)
       library(RColorBrewer)
     }
@@ -188,22 +199,22 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
       req(app_data$consolidated_data)
       selection <- global_selection()
       
-      # For heatmaps, we might want broader data than just one selection
-      # Depending on the comparison type
+      # For heatmaps, we want data across multiple genes to create a meaningful visualization
+      # The heatmap shows enrichment patterns across genes for the selected enrichment type
       if (input$method_comparison %in% c("intersection", "union", "all")) {
-        # Get data across methods - use correct column name
+        # Get data across methods for all genes in the selected cluster
         data <- app_data$consolidated_data %>%
           filter(
-            mutation_perturbation == selection$gene,
+            cluster == selection$cluster,
             enrichment_type == selection$enrichment_type,
             p.adjust <= selection$pval_threshold
           )
       } else {
-        # Single method - use correct column name
+        # Single method across multiple genes
         data <- app_data$consolidated_data %>%
           filter(
             method == input$method_comparison,
-            mutation_perturbation == selection$gene,
+            cluster == selection$cluster,
             enrichment_type == selection$enrichment_type,
             p.adjust <= selection$pval_threshold
           )
@@ -212,8 +223,9 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
       # Debug logging
       cat("[HEATMAP] Filtered data rows:", nrow(data), "\n")
       cat("[HEATMAP] Method comparison:", input$method_comparison, "\n")
-      cat("[HEATMAP] Selection gene:", selection$gene, "\n")
+      cat("[HEATMAP] Selection cluster:", selection$cluster, "\n")
       cat("[HEATMAP] Selection enrichment type:", selection$enrichment_type, "\n")
+      cat("[HEATMAP] Unique genes in filtered data:", n_distinct(data$mutation_perturbation), "\n")
       
       return(data)
     })
@@ -241,10 +253,20 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
           # Note: Since data is already filtered to one cluster, set cluster_val to NULL
           # to prevent double-filtering
           tryCatch({
+            cat("[HEATMAP] Creating heatmap with:\n")
+            cat("[HEATMAP] - Data rows:", nrow(data), "\n")
+            cat("[HEATMAP] - Unique terms:", n_distinct(data$Description), "\n")
+            cat("[HEATMAP] - Unique genes:", n_distinct(data$mutation_perturbation), "\n")
+            cat("[HEATMAP] - Required columns present:\n")
+            cat("[HEATMAP]   - p.adjust:", "p.adjust" %in% names(data), "\n")
+            cat("[HEATMAP]   - Description:", "Description" %in% names(data), "\n")
+            cat("[HEATMAP]   - mutation_perturbation:", "mutation_perturbation" %in% names(data), "\n")
+            
             if (input$heatmap_metric == "pvalue") {
+              cat("[HEATMAP] Calling create_pvalue_heatmap\n")
               ht <- create_pvalue_heatmap(
                 data,
-                cluster_val = NULL,  # Data already filtered to selected cluster
+                cluster_val = selection$cluster,  # Pass cluster for proper title generation
                 method_val = input$method_comparison,
                 enrichment_types_to_include = selection$enrichment_type,
                 max_terms_overall = input$max_terms,
@@ -253,10 +275,11 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
                 color_scaling_strategy = input$color_scheme,
                 custom_title = if (input$custom_title != "") input$custom_title else NULL
               )
+              cat("[HEATMAP] create_pvalue_heatmap returned:", class(ht)[1], "\n")
             } else if (input$heatmap_metric == "foldenrichment") {
               ht <- create_fold_enrichment_heatmap(
                 data,
-                cluster_val = NULL,  # Data already filtered to selected cluster
+                cluster_val = selection$cluster,  # Pass cluster for proper title generation
                 method_val = input$method_comparison,
                 enrichment_types_to_include = selection$enrichment_type,
                 max_terms_overall = input$max_terms,
@@ -267,7 +290,7 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
             } else if (input$heatmap_metric == "zscore") {
               ht <- create_zscore_heatmap(
                 data,
-                cluster_val = NULL,  # Data already filtered to selected cluster
+                cluster_val = selection$cluster,  # Pass cluster for proper title generation
                 method_val = input$method_comparison,
                 enrichment_types_to_include = selection$enrichment_type,
                 max_terms_overall = input$max_terms,
@@ -278,7 +301,7 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
             } else if (input$heatmap_metric == "gsea") {
               ht <- create_gsea_nes_heatmap(
                 data,
-                cluster_val = NULL,  # Data already filtered to selected cluster
+                cluster_val = selection$cluster,  # Pass cluster for proper title generation
                 method_val = input$method_comparison,
                 max_terms_overall = input$max_terms,
                 min_nes_magnitude = input$min_nes,
