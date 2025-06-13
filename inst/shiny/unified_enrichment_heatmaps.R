@@ -427,7 +427,7 @@ create_unified_enrichment_heatmap <- function(data_full,
     display_names <- matrix_values_df$term_label
   }
   
-  display_term_row_names <- make.unique(str_trunc(display_names, 80), sep = "_")
+  display_term_row_names <- make.unique(substr(display_names, 1, 80), sep = "_")
   
   # Defensive: exclude any annotation-related columns from matrix
   # This prevents issues where enrichment_type or other annotation data might accidentally get processed

@@ -423,7 +423,7 @@ mod_precomputed_reactive_server <- function(id, app_data, global_selection) {
         # Check if we need to load RDS data
         showNotification(
           "Loading full enrichment data for detailed visualization...",
-          type = "info",
+          type = "message",
           duration = 2
         )
         

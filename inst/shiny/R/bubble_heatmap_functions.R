@@ -1,11 +1,15 @@
 # Bubble Heatmap Functions for Shiny App
 # Adapted from main codebase implementation
 
-suppressPackageStartupMessages({
-  library(ComplexHeatmap)
-  library(circlize)
-  library(grid)
-})
+# Load packages conditionally
+if (requireNamespace("ComplexHeatmap", quietly = TRUE) && 
+    requireNamespace("circlize", quietly = TRUE)) {
+  suppressPackageStartupMessages({
+    library(ComplexHeatmap)
+    library(circlize)
+    library(grid)
+  })
+}
 
 #' Create a clustered bubble heatmap for enrichment analysis
 #'

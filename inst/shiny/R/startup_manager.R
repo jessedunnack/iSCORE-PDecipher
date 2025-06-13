@@ -112,7 +112,7 @@ process_uploaded_file <- function(file_info) {
     
     showNotification(
       paste("Successfully loaded", nrow(data), "enrichment results"),
-      type = "success"
+      type = "message"
     )
     
     return(data)

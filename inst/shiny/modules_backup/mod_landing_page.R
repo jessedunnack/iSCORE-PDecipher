@@ -547,7 +547,7 @@ landingPageServer <- function(id, app_data) {
         missing <- missing[1:1000, ]
         showNotification(
           "Showing first 1000 missing combinations only",
-          type = "info",
+          type = "message",
           duration = 5
         )
       }
@@ -646,7 +646,7 @@ landingPageServer <- function(id, app_data) {
         
         showNotification(
           paste("Navigate to:", selected_gene, "-", selected_method),
-          type = "info",
+          type = "message",
           duration = 3
         )
         

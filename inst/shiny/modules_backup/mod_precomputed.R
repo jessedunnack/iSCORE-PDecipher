@@ -246,7 +246,7 @@ mod_precomputed_server <- function(id, app_data, global_selection) {
       if (!is.null(significant_terms) && nrow(significant_terms) > 0) {
         message("Found ", nrow(significant_terms), " significant terms in consolidated data")
         showNotification(paste("Found", nrow(significant_terms), "significant terms"), 
-                        type = "success", duration = 3)
+                        type = "message", duration = 3)
       }
       
       # Only load the full enrichment result file if needed for enrichPlot visualization
@@ -254,7 +254,7 @@ mod_precomputed_server <- function(id, app_data, global_selection) {
       if (selection$enrichment_type == "GSEA") {
         # GSEA has special directory structure
         showNotification("GSEA results have nested structure - using consolidated data", 
-                        type = "info")
+                        type = "message")
         module_data$current_result <- NULL  # Will load on demand
         module_data$is_gsea <- TRUE
       } else {
@@ -629,7 +629,7 @@ mod_precomputed_server <- function(id, app_data, global_selection) {
         # Simple network-style plot
         if (requireNamespace("igraph", quietly = TRUE) && requireNamespace("ggraph", quietly = TRUE)) {
           # Network plot if packages available
-          showNotification("Network plot requires additional packages", type = "info")
+          showNotification("Network plot requires additional packages", type = "message")
           p <- ggplot(df, aes_string(x = input$x_axis, 
                                      y = paste0("reorder(Description, ", input$x_axis, ")"))) +
             geom_point(aes_string(size = "Count", color = input$color_by)) +

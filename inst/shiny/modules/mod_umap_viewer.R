@@ -93,7 +93,7 @@ mod_umap_viewer_server <- function(id, app_data) {
             umap_data$data_loaded <- TRUE
             data_loaded <- TRUE
             showNotification("UMAP data loaded successfully!", 
-                             type = "success", 
+                             type = "message", 
                              duration = 3)
             break
           }, error = function(e) {
@@ -185,7 +185,7 @@ mod_umap_viewer_server <- function(id, app_data) {
           if (n_perturbs > 50 && input$legend_show) {
             p <- p + theme(legend.position = "none")
             showNotification("Legend hidden due to large number of perturbations", 
-                             type = "info", duration = 3)
+                             type = "message", duration = 3)
           }
         }
         

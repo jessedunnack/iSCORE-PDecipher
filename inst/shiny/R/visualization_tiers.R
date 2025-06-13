@@ -3,7 +3,11 @@
 
 library(ggplot2)
 library(dplyr)
-library(ComplexHeatmap)
+
+# Load ComplexHeatmap conditionally
+if (requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+  library(ComplexHeatmap)
+}
 
 #' Create Tier 1 visualizations (instant from consolidated data)
 #' 
