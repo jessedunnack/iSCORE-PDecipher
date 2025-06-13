@@ -539,7 +539,7 @@ landingPageWithUmapServer <- function(id, data) {
               y = ~count,
               type = 'bar',
               width = 0.8,
-              marker = list(color = colors[summary_data$enrichment_type])) %>%
+              marker = list(color = unname(colors[summary_data$enrichment_type]))) %>%
         layout(title = NULL,
                xaxis = list(title = "", tickangle = -45, automargin = TRUE),
                yaxis = list(title = "Number of Results"),

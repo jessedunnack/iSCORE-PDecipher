@@ -167,6 +167,88 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     })
     outputOptions(output, "is_gsea", suspendWhenHidden = FALSE)
     
+    # Data preparation function (from working backup version)
+    prepare_dotplot_data <- function(data, n_terms) {
+      if (is.null(data) || nrow(data) == 0) {
+        message("prepare_dotplot_data: No data provided")
+        return(NULL)
+      }
+      
+      message("prepare_dotplot_data: Input data has ", nrow(data), " rows")
+      
+      # Ensure p.adjust column exists and is numeric
+      if (!"p.adjust" %in% names(data)) {
+        message("Error: p.adjust column missing from data")
+        return(NULL)
+      }
+      
+      # Convert p.adjust to numeric if it's not
+      data$p.adjust <- as.numeric(data$p.adjust)
+      data <- data[!is.na(data$p.adjust), ]  # Remove any rows with NA p-values
+      
+      message("After cleaning p.adjust: ", nrow(data), " rows")
+      
+      # Sort by p-value and take top terms
+      data <- data[order(data$p.adjust), ]
+      if (nrow(data) > n_terms) {
+        data <- data[1:n_terms, ]
+      }
+      
+      message("After filtering to top ", n_terms, " terms: ", nrow(data), " rows")
+      
+      # Add -log10 p-value with safety checks
+      pvals <- data$p.adjust
+      pvals[pvals <= 0] <- 1e-300  # Replace zero or negative values
+      data$neg_log10_pval <- -log10(pvals)
+      
+      # Ensure Count column is numeric
+      if ("Count" %in% names(data)) {
+        data$Count <- as.numeric(data$Count)
+        data$Count[is.na(data$Count)] <- 1  # Replace NA with 1
+      } else {
+        data$Count <- 1  # Default count
+      }
+      
+      # Ensure Description column exists
+      if (!"Description" %in% names(data)) {
+        if ("description" %in% names(data)) {
+          data$Description <- data$description
+        } else {
+          data$Description <- paste("Term", 1:nrow(data))
+        }
+      }
+      
+      # Calculate additional metrics for visualization options
+      if ("GeneRatio" %in% names(data) && is.character(data$GeneRatio)) {
+        # Parse GeneRatio if it's in "x/y" format
+        ratio_parts <- strsplit(data$GeneRatio, "/")
+        data$GeneRatio_numeric <- sapply(ratio_parts, function(x) {
+          if(length(x) == 2) as.numeric(x[1]) / as.numeric(x[2]) else NA
+        })
+      } else if (!("GeneRatio" %in% names(data))) {
+        data$GeneRatio_numeric <- data$Count / 100  # Rough estimate
+      }
+      
+      # Calculate Fold Enrichment if not present
+      if (!("FoldEnrichment" %in% names(data))) {
+        if ("RichFactor" %in% names(data)) {
+          data$FoldEnrichment <- data$RichFactor
+        } else if ("GeneRatio_numeric" %in% names(data)) {
+          data$FoldEnrichment <- data$GeneRatio_numeric * 10  # Rough approximation
+        } else {
+          data$FoldEnrichment <- 1
+        }
+      }
+      
+      # Ensure RichFactor exists
+      if (!("RichFactor" %in% names(data))) {
+        data$RichFactor <- data$FoldEnrichment
+      }
+      
+      message("Final data ready with columns: ", paste(names(data), collapse = ", "))
+      return(data)
+    }
+
     # Reactive data processing
     observe({
       req(global_selection(), enrichment_data())
@@ -179,7 +261,12 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       # Process the data
       if (nrow(data) > 0) {
-        plot_data$data <- data
+        # Apply data preparation for better plotting
+        if (!plot_data$is_gsea) {
+          plot_data$data <- prepare_dotplot_data(data, input$top_terms %||% 20)
+        } else {
+          plot_data$data <- data
+        }
         
         # Update GSEA term choices if GSEA
         if (plot_data$is_gsea) {
@@ -400,7 +487,28 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       p <- create_standard_plot(plot_data$data, input$plot_type)
       if (!is.null(p)) {
-        ggplotly(p, tooltip = c("x", "y", "color", "size"))
+        # Convert to plotly with explicit parameters to avoid warnings
+        plotly_obj <- ggplotly(p, tooltip = c("x", "y", "color", "size")) %>%
+          config(displayModeBar = TRUE, displaylogo = FALSE) %>%
+          layout(
+            # Ensure proper axis labeling
+            xaxis = list(title = p$labels$x),
+            yaxis = list(title = p$labels$y),
+            # Fix plotly warnings by ensuring proper trace configuration
+            margin = list(l = 200, r = 50, t = 50, b = 50)
+          )
+        
+        # Explicitly set trace mode for scatter plots to avoid warnings
+        for (i in seq_along(plotly_obj$x$data)) {
+          if (is.null(plotly_obj$x$data[[i]]$type)) {
+            plotly_obj$x$data[[i]]$type <- "scatter"
+          }
+          if (is.null(plotly_obj$x$data[[i]]$mode)) {
+            plotly_obj$x$data[[i]]$mode <- "markers"
+          }
+        }
+        
+        plotly_obj
       }
     })
     
