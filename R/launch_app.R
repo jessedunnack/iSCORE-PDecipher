@@ -155,6 +155,12 @@ select_dataset_directory <- function() {
   
   choice <- readline("Enter your choice: ")
   
+  # Handle empty input
+  if (choice == "" || is.null(choice)) {
+    message("Please enter a choice (1-", length(options), ", C for custom, or Q to quit)")
+    return(select_dataset_directory())
+  }
+  
   if (tolower(choice) == "q") {
     return(NULL)
   }
@@ -185,7 +191,7 @@ select_dataset_directory <- function() {
     return(options[[choice_num]])
   }
   
-  message("Invalid choice. Please try again.")
+  message("Invalid choice '", choice, "'. Please enter a number between 1 and ", length(options), ", C for custom, or Q to quit.")
   return(select_dataset_directory())
 }
 
