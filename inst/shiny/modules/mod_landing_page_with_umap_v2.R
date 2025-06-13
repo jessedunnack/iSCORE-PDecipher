@@ -28,62 +28,68 @@ landingPageWithUmapUI <- function(id) {
         font-size: 11px !important;
       }
     "))),
-    # Main content area with two columns
-    fluidRow(
-      # Left column - UMAP visualization only (expanded to use full space)
-      column(7,
-        div(class = "box box-primary", style = "margin-top: 0;",
+    # Main content area with two columns - MAXIMIZED FOR SCREEN SPACE
+    fluidRow(class = "landing-row-maximized", style = "min-height: 80vh;", # Use 80% of viewport height
+      # Left column - UMAP visualization (expanded and taller)
+      column(8, class = "umap-column-maximized",  # Increased from 7 to 8 for more width
+        div(class = "box box-primary", style = "margin-top: 0; height: calc(80vh - 40px);", # Full height minus margins
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("chart-line"),
                "Dataset UMAP Visualization")
           ),
-          div(class = "box-body", style = "padding: 15px;",
-            withSpinner(
-              plotOutput(ns("umap_plot"), height = "600px"),
-              type = 4,
-              color = "#3c8dbc"
+          div(class = "box-body umap-container", style = "padding: 15px; height: calc(100% - 60px);", # Simplified styling
+            div(class = "umap-maximized",
+              withSpinner(
+                plotOutput(ns("umap_plot"), 
+                          height = "100%",  # Fill available height
+                          width = "100%"),  # Fill available width
+                type = 4,
+                color = "#3c8dbc"
+              )
             )
           )
         )
       ),
       
-      # Right column - Summary statistics + Cluster Markers (40% width)
-      column(5,
-        # Summary statistics cards in a grid (top half)
-        fluidRow(
-          column(6,
-            uiOutput(ns("total_cells_box"))
+      # Right column - Summary statistics + Cluster Markers (reduced width but same height)
+      column(4, class = "markers-column-optimized",  # Reduced from 5 to 4 to give UMAP more space
+        # Summary statistics cards in a grid (top half) - Compact layout
+        div(class = "value-box-compact",
+          fluidRow(
+            column(6,
+              uiOutput(ns("total_cells_box"))
+            ),
+            column(6,
+              uiOutput(ns("total_clusters_box"))
+            )
           ),
-          column(6,
-            uiOutput(ns("total_clusters_box"))
-          )
-        ),
-        fluidRow(
-          column(6,
-            uiOutput(ns("total_results_box"))
+          fluidRow(
+            column(6,
+              uiOutput(ns("total_results_box"))
+            ),
+            column(6,
+              uiOutput(ns("total_genes_box"))
+            )
           ),
-          column(6,
-            uiOutput(ns("total_genes_box"))
-          )
-        ),
-        fluidRow(
-          column(6,
-            uiOutput(ns("total_experiments_box"))
-          ),
-          column(6,
-            uiOutput(ns("enrichment_types_box"))
+          fluidRow(
+            column(6,
+              uiOutput(ns("total_experiments_box"))
+            ),
+            column(6,
+              uiOutput(ns("enrichment_types_box"))
+            )
           )
         ),
         
-        # Cluster Markers section (bottom half)
-        div(class = "box box-info", style = "margin-top: 20px;",
+        # Cluster Markers section (fill remaining height)
+        div(class = "box box-info", style = "margin-top: 20px; height: calc(80vh - 260px);", # Fill remaining space after metrics boxes
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("dna"),
                "Cluster Marker Genes")
           ),
-          div(class = "box-body", style = "padding: 10px;",
+          div(class = "box-body", style = "padding: 10px; height: calc(100% - 60px); display: flex; flex-direction: column;",
             # Compact controls
             fluidRow(
               column(6,
@@ -102,10 +108,10 @@ landingPageWithUmapUI <- function(id) {
                             width = "100%")
               )
             ),
-            # Markers table
-            div(style = "height: 300px; overflow-y: auto; margin-top: 10px;",
+            # Markers table - use flex-grow to fill remaining space
+            div(class = "markers-table-optimized", style = "flex-grow: 1; overflow-y: auto; margin-top: 10px;",
               withSpinner(
-                DT::dataTableOutput(ns("markers_table"), height = "270px"),
+                DT::dataTableOutput(ns("markers_table"), height = "100%"),
                 type = 1,
                 color = "#3c8dbc"
               )
@@ -311,18 +317,43 @@ landingPageWithUmapServer <- function(id, data) {
       
       library(dittoSeq)
       
-      # Create UMAP plot colored by clusters
+      # Create UMAP plot colored by clusters - OPTIMIZED FOR LARGER DISPLAY
       tryCatch({
-        dittoDimPlot(
+        p <- dittoDimPlot(
           umap_data$sce,
           var = "seurat_clusters",
           reduction.use = "UMAP",
-          size = 0.3,
+          size = 0.7,  # Increased point size for better visibility
           do.label = TRUE,
-          labels.size = 3,
+          labels.size = 6,  # DOUBLED label size as requested
           legend.show = TRUE,
           main = ""  # No title to save space
         )
+        
+        # Additional customization to maximize plot area and improve readability
+        p <- p + 
+          theme(
+            # Maximize plot area by minimizing margins
+            plot.margin = margin(2, 2, 2, 2, "pt"),  # Minimal margins
+            # Larger legend text for better readability
+            legend.text = element_text(size = 14),
+            legend.title = element_text(size = 16),
+            legend.position = "right",
+            legend.margin = margin(0, 0, 0, 10, "pt"),
+            # Ensure axis text is readable but compact
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 14),
+            # Remove unnecessary background elements
+            panel.background = element_rect(fill = "white", color = NA),
+            plot.background = element_rect(fill = "white", color = NA),
+            # Optimize panel grid
+            panel.grid.major = element_line(color = "grey95", size = 0.2),
+            panel.grid.minor = element_blank()
+          ) +
+          # Use coord_fixed but allow some flexibility for the container
+          coord_fixed(ratio = 1, expand = FALSE)
+        
+        return(p)
       }, error = function(e) {
         plot.new()
         text(0.5, 0.5, paste("Error creating UMAP:\n", e$message), 

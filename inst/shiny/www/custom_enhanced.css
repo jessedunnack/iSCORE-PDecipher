@@ -577,3 +577,83 @@ details[open] summary {
   border-bottom-left-radius: 3px;
   padding: 10px;
 }
+
+/* UMAP Plot Optimization */
+.umap-maximized {
+  height: calc(80vh - 100px) !important;
+  width: 100% !important;
+}
+
+.umap-container {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.umap-container .shiny-plot-output {
+  height: 100% !important;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Optimize plot responsiveness */
+.shiny-plot-output img {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Landing page layout optimization */
+.landing-row-maximized {
+  min-height: 80vh !important;
+}
+
+.umap-column-maximized {
+  padding-right: 10px !important;
+}
+
+.markers-column-optimized {
+  padding-left: 10px !important;
+}
+
+/* Markers table optimization for smaller width */
+.markers-table-optimized .dataTables_wrapper {
+  font-size: 11px !important;
+}
+
+.markers-table-optimized table.dataTable {
+  font-size: 11px !important;
+  margin-top: 0 !important;
+}
+
+.markers-table-optimized table.dataTable th,
+.markers-table-optimized table.dataTable td {
+  padding: 4px 6px !important;
+}
+
+/* Value boxes responsive for smaller column */
+.value-box-compact {
+  margin-bottom: 10px !important;
+}
+
+.value-box-compact .small-box > .inner {
+  padding: 8px !important;
+}
+
+.value-box-compact .small-box > .inner h3 {
+  font-size: 28px !important;
+  margin: 0 0 5px 0 !important;
+}
+
+.value-box-compact .small-box > .inner p {
+  font-size: 13px !important;
+}
+
+.value-box-compact .small-box > .icon {
+  font-size: 60px !important;
+  top: -5px !important;
+  right: 8px !important;
+}

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>iSCORE-PDecipher Quick Start Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #7f8c8d;
+        }
+        .highlight-box {
+            background-color: #ecf0f1;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background-color: #fdf2e9;
+            border-left: 4px solid #e67e22;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background-color: #eafaf1;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+        }
+        .step-number {
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .contact-info {
+            background-color: #f1f2f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        li {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        li:before {
+            content: "▸";
+            color: #3498db;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        .file-list {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🧬 iSCORE-PDecipher Quick Start Guide</h1>
+
+<div class="highlight-box">
+    <strong>What you're getting:</strong> A powerful Shiny app to explore 767,337 enrichment terms across Parkinson's disease mutations, CRISPRi knockdowns, and CRISPRa activations. Interactive visualizations, UMAP plots, heatmaps, and publication-quality exports included!
+</div>
+
+<h2><span class="step-number">1</span>Download Required Files</h2>
+
+<p>Download these <strong>2 essential files</strong> from Jesse's Google Drive:</p>
+
+<div class="file-list">
+    <strong>📁 Required Downloads:</strong>
+    <ul>
+        <li><code>all_enrichment_padj005_complete_with_direction.rds</code> (266 MB)</li>
+        <li><code>all_umap_data_combined.rds</code> (14 MB)</li>
+    </ul>
+    <strong>Total download:</strong> ~280 MB
+</div>
+
+<div class="warning-box">
+    <strong>Important:</strong> Create a dedicated folder on your computer (e.g., <code>~/PD_Analysis/</code>) and save both files there. You'll need the folder path for step 4.
+</div>
+
+<h2><span class="step-number">2</span>Install the Package from GitHub</h2>
+
+<p>Open RStudio and run:</p>
+
+<pre><code># Install devtools if needed
+if (!require("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+# Install iSCORE-PDecipher
+devtools::install_github("jessedunnack/iSCORE-PDecipher")</code></pre>
+
+<h2><span class="step-number">3</span>Install Dependencies</h2>
+
+<div class="warning-box">
+    <strong>This step may take 5-10 minutes</strong> - perfect time for a coffee break!
+</div>
+
+<pre><code># Install BiocManager if needed
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+# Install Bioconductor packages
+BiocManager::install(c(
+    "clusterProfiler", "ReactomePA", "DOSE", "org.Hs.eg.db", 
+    "pathview", "SingleCellExperiment", "dittoSeq", 
+    "enrichplot", "ComplexHeatmap"
+))
+
+# Install CRAN packages
+install.packages(c(
+    "heatmaply", "colourpicker", "shinyWidgets", 
+    "shinycssloaders", "shinyjs", "ggridges"
+))</code></pre>
+
+<h2><span class="step-number">4</span>Launch the App</h2>
+
+<pre><code>library(iSCORE.PDecipher)
+
+# Replace with YOUR actual path to the enrichment file
+launch_iscore_app("~/PD_Analysis/all_enrichment_padj005_complete_with_direction.rds")</code></pre>
+
+<div class="success-box">
+    <strong>🎉 Success!</strong> The app will open in your web browser. The UMAP data will be automatically detected from the same folder.
+</div>
+
+<h2>🎯 What You Can Explore</h2>
+
+<h3>📊 Overview Tab</h3>
+<ul>
+    <li><strong>Interactive UMAP:</strong> 201,679 cells colored by clusters</li>
+    <li><strong>Dataset metrics:</strong> 767K terms, 13 mutations, 10 CRISPR genes</li>
+    <li><strong>Cluster markers:</strong> Click clusters to see defining genes</li>
+</ul>
+
+<h3>📈 Visualization Tabs</h3>
+<ul>
+    <li><strong>Dot plots:</strong> Size = gene count, color = significance</li>
+    <li><strong>Interactive heatmaps:</strong> Compare across conditions with clustering</li>
+    <li><strong>GSEA plots:</strong> Gene set enrichment visualization</li>
+    <li><strong>Export options:</strong> HTML (interactive) and PDF (publication)</li>
+</ul>
+
+<h3>🔍 Method Comparison</h3>
+<ul>
+    <li><strong>MAST vs CRISPRi:</strong> Compare mutations with knockdowns</li>
+    <li><strong>Convergent pathways:</strong> Find overlapping biology</li>
+</ul>
+
+<h2>🚀 Quick Things to Try</h2>
+
+<div class="highlight-box">
+    <ol>
+        <li><strong>Change genes:</strong> Use the sidebar to switch from LRRK2 to GBA, PINK1, etc.</li>
+        <li><strong>Explore clusters:</strong> Different cell types respond differently</li>
+        <li><strong>Compare directions:</strong> UP vs DOWN regulated genes</li>
+        <li><strong>Export results:</strong> Download figures and filtered data tables</li>
+    </ol>
+</div>
+
+<h2>🛠️ Troubleshooting</h2>
+
+<h3>App Won't Launch</h3>
+<pre><code># Check if packages installed correctly
+library(iSCORE.PDecipher)
+library(shiny)
+library(heatmaply)</code></pre>
+
+<h3>File Path Issues</h3>
+<pre><code># Check your file path (should return TRUE)
+file.exists("~/PD_Analysis/all_enrichment_padj005_complete_with_direction.rds")
+
+# If FALSE, find the correct path:
+file.choose()  # Opens file browser</code></pre>
+
+<h3>Memory Issues</h3>
+<pre><code># Increase memory if needed
+options(java.parameters = "-Xmx8g")
+gc()  # Garbage collection</code></pre>
+
+<h2>📊 Understanding Your Data</h2>
+
+<h3>Three Experimental Approaches</h3>
+<div class="file-list">
+    <strong>1. iSCORE-PD Mutations (211K terms)</strong>
+    <ul>
+        <li>13 mutations: LRRK2, GBA, PINK1, PRKN, SNCA variants, etc.</li>
+        <li>Mutant vs wild-type comparisons</li>
+        <li>14 cell clusters</li>
+    </ul>
+    
+    <strong>2. CRISPRi Knockdowns (549K terms)</strong>
+    <ul>
+        <li>10 genes knocked down with CRISPR</li>
+        <li>Perturbed vs non-targeting controls</li>
+        <li>10 cell clusters, 3 experiments</li>
+    </ul>
+    
+    <strong>3. CRISPRa Activations (7K terms)</strong>
+    <ul>
+        <li>10 genes activated with CRISPR</li>
+        <li>1 specialized cluster</li>
+    </ul>
+</div>
+
+<h3>Enrichment Databases</h3>
+<ul>
+    <li><strong>GO:</strong> Biological Process, Cellular Component, Molecular Function</li>
+    <li><strong>KEGG:</strong> Metabolic and signaling pathways</li>
+    <li><strong>Reactome:</strong> Curated biological pathways</li>
+    <li><strong>WikiPathways:</strong> Community-curated pathways</li>
+    <li><strong>STRING:</strong> Protein interaction networks</li>
+    <li><strong>GSEA:</strong> Gene set enrichment analysis</li>
+</ul>
+
+<h2>💡 Research Tips</h2>
+
+<div class="highlight-box">
+    <strong>Start Simple:</strong>
+    <ol>
+        <li>Pick one gene (e.g., LRRK2)</li>
+        <li>Look at one cluster (e.g., cluster_0)</li>
+        <li>Try GO_BP enrichment with UP-regulated genes</li>
+    </ol>
+</div>
+
+<div class="highlight-box">
+    <strong>Ask Biological Questions:</strong>
+    <ul>
+        <li>Which pathways are consistently affected across methods?</li>
+        <li>Do mutations and CRISPR perturbations show similar effects?</li>
+        <li>Are there cluster-specific responses?</li>
+    </ul>
+</div>
+
+<div class="contact-info">
+    <h2>📞 Getting Help</h2>
+    <p><strong>Jesse Dunnack</strong></p>
+    <p>📧 <strong>Email:</strong> jessedunnack@berkeley.edu | jessedunnack@gmail.com</p>
+    <p>💬 <strong>Quick questions:</strong> Slack Jesse for immediate help</p>
+    <p>🐛 <strong>Bug reports:</strong> <a href="https://github.com/jessedunnack/iSCORE-PDecipher/issues">GitHub Issues</a></p>
+</div>
+
+<div class="success-box">
+    <strong>🧬 Happy exploring!</strong> This tool contains 767,337 enrichment terms from comprehensive PD research - there's a lot to discover!
+</div>
+
+</body>
+</html>
