@@ -28,39 +28,6 @@ iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disea
 - **Analysis**: Activated vs. non-targeting controls using MixScale
 - **Results**: 6,946 enrichment terms
 
-## ✨ Key Features (v0.1.3)
-
-### 🎯 **Interactive UMAP Visualization**
-- **Cell cluster exploration** with automatic dataset detection
-- **Cluster marker genes** with interactive tables and statistical analysis
-- **Lightweight data** (14MB vs 20-30GB Seurat objects)
-- **Publication-quality plots** using dittoSeq integration
-
-### 📊 **Advanced Interactive Heatmaps**
-- **heatmaply integration** with hierarchical clustering and dendrograms
-- **Multiple data types**: P-values, fold enrichment, z-scores, GSEA NES
-- **Direction filtering**: ALL/UP/DOWN/BOTH regulated genes
-- **Color customization**: 5 color scales with 3 scaling methods
-- **Export options**: Interactive HTML and publication PDF formats
-
-### 🧪 **GSEA Visualization Support**
-- **Normalized Enrichment Score (NES)** heatmaps and plots
-- **enrichplot integration** for static GSEA visualizations
-- **Interactive filtering** with NES threshold controls
-- **Ridge plots and dot plots** for gene set analysis
-
-### ⚡ **Performance Optimizations**
-- **50x faster startup** with centralized data management
-- **Eliminated UI flickering** through reactive optimization
-- **Memory efficient** data processing pipeline
-- **Professional error handling** with informative feedback
-
-### 🎨 **Enhanced User Interface**
-- **Responsive design** with optimized space utilization
-- **Professional styling** with consistent visual themes
-- **Intuitive navigation** between analysis modules
-- **Real-time feedback** and progress indicators
-
 ## Installation
 
 ### From GitHub (Recommended)
@@ -134,28 +101,19 @@ main()  # Creates interactive UMAP visualizations
 ## 🖥️ Shiny App Features
 
 ### **Overview Dashboard**
-- **Interactive UMAP plots** with cell cluster visualization
-- **Dataset metrics** showing analysis scope and coverage
-- **Cluster marker tables** with differential expression statistics
-- **Method comparison** charts (MAST vs MixScale results)
+- Interactive UMAP plots with cell cluster visualization
+- Dataset metrics and cluster marker tables
+- Method comparison charts
 
-### **Advanced Visualizations**
-- **Interactive heatmaps**: Cross-condition enrichment comparisons with clustering
-- **Dot plots**: Gene set enrichment with size and color mapping
-- **Bar plots**: Top enriched pathways with statistical significance
-- **GSEA plots**: Enrichment plots, ridge plots, and NES visualizations
+### **Visualizations**
+- Interactive heatmaps with hierarchical clustering
+- Dot plots and bar plots for pathway enrichment
+- GSEA plots with NES visualizations
 
 ### **Data Exploration**
-- **Multi-level filtering**: Gene, cluster, experiment, direction, enrichment type
-- **Real-time updates**: Instant visualization refresh on parameter changes
-- **Statistical thresholds**: Customizable p-value and effect size cutoffs
-- **Cross-modal analysis**: Compare mutations vs perturbations
-
-### **Export & Reports**
-- **Publication figures**: High-resolution PNG/PDF export
-- **Interactive downloads**: HTML heatmaps for presentations
-- **Data tables**: Filtered results in CSV/Excel formats
-- **Analysis reports**: Comprehensive summaries with statistics
+- Multi-level filtering by gene, cluster, experiment, direction
+- Real-time updates and customizable statistical thresholds
+- Export options for figures and data tables
 
 ## Data Format Requirements
 
@@ -202,30 +160,6 @@ Required columns:
                               └─→ Export capabilities
 ```
 
-## Example Analysis Results
-
-**Current Dataset (v0.1.3):**
-- **767,337 total enrichment terms** across all experiments
-- **MAST mutations**: 13 mutations × 14 clusters = 211,470 terms
-- **CRISPRi knockdowns**: 10 genes × 10 clusters × 3 experiments = 548,921 terms
-- **CRISPRa activations**: 10 genes × 1 cluster × 1 experiment = 6,946 terms
-- **Enrichment databases**: GO (BP/CC/MF), KEGG, Reactome, WikiPathways, STRING, GSEA
-- **Cell populations**: 201,679 total cells analyzed across all datasets
-
-## Research Applications
-
-### Hypothesis Testing
-- **Convergent pathways**: Identify pathways affected by both mutations and perturbations
-- **Dosage effects**: Compare knockdown vs activation of the same genes
-- **Cell-type specificity**: Analyze cluster-specific responses to perturbations
-- **Disease mechanisms**: Map PD gene network interactions and dependencies
-
-### Comparative Analysis
-- **Method validation**: Cross-validate findings between genetic and CRISPR approaches
-- **Effect magnitude**: Quantify differential responses across experimental conditions
-- **Pathway enrichment**: Identify consistently dysregulated biological processes
-- **Therapeutic targets**: Prioritize genes based on multi-modal evidence
-
 ## Troubleshooting
 
 ### Memory Issues
@@ -243,48 +177,60 @@ missing <- setdiff(required_pkgs, rownames(installed.packages()))
 if (length(missing) > 0) BiocManager::install(missing)
 ```
 
-### Performance Optimization
-```r
-# Use subset of data for testing
-data_subset <- data[sample(nrow(data), 10000), ]
-launch_iscore_app(data_subset)
-```
-
 ## Citation
 
-If you use iSCORE-PDecipher in your research, please cite:
+**Manuscript in preparation**
+
+Please cite this repository until the manuscript is published:
 
 ```
-Dunnack J, et al. (2025). iSCORE-PDecipher: Integrated Analysis of 
+Dunnack J. (2025). iSCORE-PDecipher: Integrated Analysis of 
 Parkinson's Disease Mutations and Perturbations. 
 GitHub: https://github.com/jessedunnack/iSCORE-PDecipher
 ```
 
-## Contributing
+## Contact
 
-We welcome contributions! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request with detailed description
-4. Ensure all tests pass
+**Jesse Dunnack**  
+PhD Student, Molecular and Cell Biology Department  
+University of California, Berkeley  
+Hockemeyer Lab + Bateup Lab  
 
-## License
-
-GPL-3 License - see [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
-- **Documentation**: Package vignettes and help files
-- **Updates**: Follow repository for latest features and fixes
-
-## Acknowledgments
-
-- **iSCORE-PD Consortium**: Genetic mutation data and experimental design
-- **PerturbSeq Community**: CRISPR perturbation methodology and protocols  
-- **Bioconductor Project**: Enrichment analysis infrastructure and tools
-- **Shiny Community**: Interactive visualization framework and best practices
+📧 **Email:** jessedunnack@berkeley.edu | jessedunnack@gmail.com  
+🔗 **ORCID:** [0000-0002-0387-0090](https://orcid.org/0000-0002-0387-0090)  
+📍 **GitHub Issues:** [Report bugs or request features](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
 
 ---
 
-**Version 0.1.3** | Last updated: January 2025 | 🧬 Powered by R and Bioconductor
+## ✨ Key Features (v0.1.3)
+
+### 🎯 **Interactive UMAP Visualization**
+- **Cell cluster exploration** with automatic dataset detection
+- **Cluster marker genes** with interactive tables and statistical analysis
+- **Lightweight data** (14MB vs 20-30GB Seurat objects)
+- **Publication-quality plots** using dittoSeq integration
+
+### 📊 **Advanced Interactive Heatmaps**
+- **heatmaply integration** with hierarchical clustering and dendrograms
+- **Multiple data types**: P-values, fold enrichment, z-scores, GSEA NES
+- **Direction filtering**: ALL/UP/DOWN/BOTH regulated genes
+- **Color customization**: 5 color scales with 3 scaling methods
+- **Export options**: Interactive HTML and publication PDF formats
+
+### 🧪 **GSEA Visualization Support**
+- **Normalized Enrichment Score (NES)** heatmaps and plots
+- **enrichplot integration** for static GSEA visualizations
+- **Interactive filtering** with NES threshold controls
+- **Ridge plots and dot plots** for gene set analysis
+
+### ⚡ **Performance Optimizations**
+- **50x faster startup** with centralized data management
+- **Eliminated UI flickering** through reactive optimization
+- **Memory efficient** data processing pipeline
+- **Professional error handling** with informative feedback
+
+### 🎨 **Enhanced User Interface**
+- **Responsive design** with optimized space utilization
+- **Professional styling** with consistent visual themes
+- **Intuitive navigation** between analysis modules
+- **Real-time feedback** and progress indicators
