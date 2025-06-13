@@ -1,6 +1,10 @@
 # Module: Unified Heatmap Visualization
 # Integrates the unified heatmap system into Shiny
 
+# Required libraries
+library(dplyr)
+library(tidyr)
+
 # UI function
 mod_heatmap_unified_ui <- function(id) {
   ns <- NS(id)
@@ -245,96 +249,84 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
       selection <- global_selection()
       cat("[HEATMAP] Selected metric:", input$heatmap_metric, "\n")
       
-      # Capture console output for logging
-      log_output <- capture.output({
+      # Create simplified heatmap using backup approach
+      tryCatch({
+        df <- data
+        cat("[HEATMAP] Creating heatmap with ", nrow(df), " rows\n")
+        cat("[HEATMAP] Available columns: ", paste(names(df), collapse = ", "), "\n")
         
-        if (use_complex_heatmap) {
-          # Use ComplexHeatmap functions if available
-          # Note: Since data is already filtered to one cluster, set cluster_val to NULL
-          # to prevent double-filtering
-          tryCatch({
-            cat("[HEATMAP] Creating heatmap with:\n")
-            cat("[HEATMAP] - Data rows:", nrow(data), "\n")
-            cat("[HEATMAP] - Unique terms:", n_distinct(data$Description), "\n")
-            cat("[HEATMAP] - Unique genes:", n_distinct(data$mutation_perturbation), "\n")
-            cat("[HEATMAP] - Required columns present:\n")
-            cat("[HEATMAP]   - p.adjust:", "p.adjust" %in% names(data), "\n")
-            cat("[HEATMAP]   - Description:", "Description" %in% names(data), "\n")
-            cat("[HEATMAP]   - mutation_perturbation:", "mutation_perturbation" %in% names(data), "\n")
-            
-            if (input$heatmap_metric == "pvalue") {
-              cat("[HEATMAP] Calling create_pvalue_heatmap\n")
-              ht <- create_pvalue_heatmap(
-                data,
-                cluster_val = selection$cluster,  # Pass cluster for proper title generation
-                method_val = input$method_comparison,
-                enrichment_types_to_include = selection$enrichment_type,
-                max_terms_overall = input$max_terms,
-                show_direction_annotation = input$show_directions,
-                show_method_breakdown = TRUE,
-                color_scaling_strategy = input$color_scheme,
-                custom_title = if (input$custom_title != "") input$custom_title else NULL
-              )
-              cat("[HEATMAP] create_pvalue_heatmap returned:", class(ht)[1], "\n")
-            } else if (input$heatmap_metric == "foldenrichment") {
-              ht <- create_fold_enrichment_heatmap(
-                data,
-                cluster_val = selection$cluster,  # Pass cluster for proper title generation
-                method_val = input$method_comparison,
-                enrichment_types_to_include = selection$enrichment_type,
-                max_terms_overall = input$max_terms,
-                show_direction_annotation = input$show_directions,
-                color_scaling_strategy = input$color_scheme,
-                custom_title = if (input$custom_title != "") input$custom_title else NULL
-              )
-            } else if (input$heatmap_metric == "zscore") {
-              ht <- create_zscore_heatmap(
-                data,
-                cluster_val = selection$cluster,  # Pass cluster for proper title generation
-                method_val = input$method_comparison,
-                enrichment_types_to_include = selection$enrichment_type,
-                max_terms_overall = input$max_terms,
-                show_direction_annotation = input$show_directions,
-                color_scaling_strategy = input$color_scheme,
-                custom_title = if (input$custom_title != "") input$custom_title else NULL
-              )
-            } else if (input$heatmap_metric == "gsea") {
-              ht <- create_gsea_nes_heatmap(
-                data,
-                cluster_val = selection$cluster,  # Pass cluster for proper title generation
-                method_val = input$method_comparison,
-                max_terms_overall = input$max_terms,
-                min_nes_magnitude = input$min_nes,
-                custom_title = if (input$custom_title != "") input$custom_title else NULL
-              )
-            }
-          }, error = function(e) {
-            cat("[HEATMAP] Error creating heatmap:", e$message, "\n")
-            ht <<- NULL
-          })
+        # Determine what to use as columns (x-axis) - use backup logic
+        if ("mutation_perturbation" %in% names(df)) {
+          x_var <- "mutation_perturbation"
+        } else if ("gene" %in% names(df)) {
+          x_var <- "gene"
+        } else if ("cluster" %in% names(df)) {
+          x_var <- "cluster"
         } else {
-          # Fallback to pheatmap-based visualization
-          tryCatch({
-            ht <- create_simple_heatmap(
-              data,
-              metric = input$heatmap_metric,
-              max_terms = input$max_terms,
-              method_comparison = input$method_comparison,
-              custom_title = if (input$custom_title != "") input$custom_title else NULL
-            )
-          }, error = function(e) {
-            cat("[HEATMAP] Error creating simple heatmap:", e$message, "\n")
-            ht <<- NULL
-          })
+          # Create a composite identifier
+          df$condition <- paste(df$method, df$cluster, sep = "_")
+          x_var <- "condition"
         }
         
+        # Use Description or term_name for y-axis
+        if ("Description" %in% names(df)) {
+          y_var <- "Description"
+        } else if ("term_name" %in% names(df)) {
+          y_var <- "term_name"
+        } else {
+          # Create generic term names
+          df$term_id <- paste("Term", 1:nrow(df))
+          y_var <- "term_id"
+        }
+        
+        # Determine value column based on metric selection
+        if (input$heatmap_metric == "pvalue" && "p.adjust" %in% names(df)) {
+          df$heatmap_value <- -log10(pmax(df$p.adjust, 1e-300))
+          value_var <- "heatmap_value"
+          legend_title <- "-log10(p-value)"
+        } else if (input$heatmap_metric == "foldenrichment" && "FoldEnrichment" %in% names(df)) {
+          df$heatmap_value <- df$FoldEnrichment
+          value_var <- "heatmap_value"
+          legend_title <- "Fold Enrichment"
+        } else if (input$heatmap_metric == "zscore" && "zScore" %in% names(df)) {
+          df$heatmap_value <- df$zScore
+          value_var <- "heatmap_value"
+          legend_title <- "Z-Score"
+        } else if (input$heatmap_metric == "gsea" && "NES" %in% names(df)) {
+          df$heatmap_value <- df$NES
+          value_var <- "heatmap_value"
+          legend_title <- "NES"
+        } else {
+          # Default to a simple presence/absence
+          df$heatmap_value <- 1
+          value_var <- "heatmap_value"
+          legend_title <- "Presence"
+        }
+        
+        cat("[HEATMAP] Using x_var:", x_var, ", y_var:", y_var, ", value_var:", value_var, "\n")
+        cat("[HEATMAP] Unique x values:", length(unique(df[[x_var]])), "\n")
+        cat("[HEATMAP] Unique y values:", length(unique(df[[y_var]])), "\n")
+        
+        # Create the heatmap result
+        ht_result <- list(
+          type = "simple",
+          data = df,
+          x_var = x_var,
+          y_var = y_var,
+          value_var = value_var,
+          legend_title = legend_title,
+          custom_title = if (input$custom_title != "") input$custom_title else 
+                        paste(legend_title, "- Cluster", selection$cluster)
+        )
+        
+        cat("[HEATMAP] Successfully created simple heatmap data\n")
+        return(list(heatmap = ht_result, log = "Simple heatmap created successfully"))
+        
+      }, error = function(e) {
+        cat("[HEATMAP] Error creating heatmap:", e$message, "\n")
+        cat("[HEATMAP] Error details:", toString(e), "\n")
+        return(list(heatmap = NULL, log = paste("Error:", e$message)))
       })
-      
-      # Store in module data
-      module_data$current_heatmap <- ht
-      module_data$log_output <- log_output
-      
-      return(list(heatmap = ht, log = log_output))
     })
     
     # Simple heatmap creation function for pheatmap fallback
@@ -420,34 +412,101 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
       
       # Check if we have valid heatmap data
       if (!is.null(ht_data) && !is.null(ht_data$heatmap)) {
-        if (use_complex_heatmap) {
-          # Additional safety check for ComplexHeatmap objects
-          if (inherits(ht_data$heatmap, "Heatmap") || inherits(ht_data$heatmap, "HeatmapList")) {
-            ComplexHeatmap::draw(ht_data$heatmap)
-          } else {
+        ht <- ht_data$heatmap
+        
+        # Handle simplified heatmap from backup approach
+        if (is.list(ht) && !is.null(ht$type) && ht$type == "simple") {
+          tryCatch({
+            df <- ht$data
+            x_var <- ht$x_var
+            y_var <- ht$y_var
+            value_var <- ht$value_var
+            legend_title <- ht$legend_title
+            
+            cat("[RENDER] Creating heatmap plot with simple approach\n")
+            cat("[RENDER] Matrix dimensions: ", length(unique(df[[y_var]])), " x ", length(unique(df[[x_var]])), "\n")
+            
+            # Check if we have enough data for a proper heatmap
+            if (length(unique(df[[x_var]])) < 2) {
+              # Create bar plot instead
+              top_terms <- head(df[order(df[[value_var]], decreasing = TRUE), ], input$max_terms)
+              
+              barplot(top_terms[[value_var]], 
+                      names.arg = substr(top_terms[[y_var]], 1, 30),
+                      las = 2,
+                      main = ht$custom_title,
+                      ylab = legend_title,
+                      cex.names = 0.7,
+                      col = heat.colors(nrow(top_terms)))
+              
+            } else {
+              # Create proper heatmap matrix using backup logic
+              data_wide <- df %>%
+                dplyr::select(all_of(c(y_var, x_var, value_var))) %>%
+                tidyr::pivot_wider(names_from = all_of(x_var), 
+                                  values_from = all_of(value_var), 
+                                  values_fill = 0,
+                                  values_fn = mean)  # Handle duplicates by averaging
+              
+              # Convert to matrix
+              mat <- as.matrix(data_wide[,-1])
+              rownames(mat) <- substr(data_wide[[y_var]], 1, 50)  # Truncate long names
+              
+              # Limit to max terms
+              if (nrow(mat) > input$max_terms) {
+                # Keep most significant terms (highest values)
+                row_means <- rowMeans(mat, na.rm = TRUE)
+                mat <- mat[order(row_means, decreasing = TRUE)[1:input$max_terms], ]
+              }
+              
+              # Create color palette
+              if (input$heatmap_metric == "pvalue") {
+                col_fun <- colorRampPalette(c("white", "red"))(100)
+              } else if (input$heatmap_metric == "gsea") {
+                col_fun <- colorRampPalette(c("blue", "white", "red"))(100)
+              } else {
+                col_fun <- colorRampPalette(c("white", "blue"))(100)
+              }
+              
+              # Basic heatmap using base R
+              heatmap(mat,
+                      col = col_fun,
+                      scale = "none",
+                      Rowv = if(input$cluster_rows) TRUE else NA,
+                      Colv = if(input$cluster_columns) TRUE else NA,
+                      margins = c(10, 15),
+                      cexRow = 0.7,
+                      cexCol = 0.8,
+                      main = ht$custom_title)
+            }
+            
+          }, error = function(e) {
+            cat("[RENDER] Error in simple heatmap rendering:", e$message, "\n")
             plot.new()
-            text(0.5, 0.5, "Invalid heatmap object generated", 
-                 cex = 1.5, col = "red")
-          }
+            text(0.5, 0.5, paste("Error creating heatmap:\n", e$message), cex = 1.2, col = "red")
+          })
+          
+        } else if (use_complex_heatmap && (inherits(ht, "Heatmap") || inherits(ht, "HeatmapList"))) {
+          # ComplexHeatmap objects
+          ComplexHeatmap::draw(ht)
+          
+        } else if (!use_complex_heatmap && is.list(ht) && !is.null(ht$type) && ht$type == "pheatmap") {
+          # pheatmap objects
+          pheatmap(ht$matrix,
+                  color = ht$colors,
+                  breaks = ht$breaks,
+                  main = ht$title,
+                  cluster_rows = input$cluster_rows,
+                  cluster_cols = input$cluster_columns,
+                  show_rownames = input$show_row_names,
+                  show_colnames = input$show_column_names,
+                  fontsize_row = 8,
+                  fontsize_col = 10)
+          
         } else {
-          # Render pheatmap
-          ht <- ht_data$heatmap
-          if (!is.null(ht) && is.list(ht) && !is.null(ht$type) && ht$type == "pheatmap") {
-            pheatmap(ht$matrix,
-                    color = ht$colors,
-                    breaks = ht$breaks,
-                    main = ht$title,
-                    cluster_rows = input$cluster_rows,
-                    cluster_cols = input$cluster_columns,
-                    show_rownames = input$show_row_names,
-                    show_colnames = input$show_column_names,
-                    fontsize_row = 8,
-                    fontsize_col = 10)
-          } else {
-            plot.new()
-            text(0.5, 0.5, "Invalid pheatmap object generated", 
-                 cex = 1.5, col = "red")
-          }
+          plot.new()
+          text(0.5, 0.5, "Invalid heatmap object generated", 
+               cex = 1.5, col = "red")
         }
       } else {
         plot.new()
