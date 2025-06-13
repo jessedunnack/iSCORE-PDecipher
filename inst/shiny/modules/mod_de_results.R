@@ -1,6 +1,14 @@
 # Module for DE Results page with interactive UMAP and volcano plots
 # Allows clicking on UMAP clusters to update volcano plots
 
+# Load required packages conditionally
+if (requireNamespace("SingleCellExperiment", quietly = TRUE)) {
+  library(SingleCellExperiment)
+}
+if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
+  library(SummarizedExperiment)
+}
+
 # Helper functions to process DE data for volcano plots
 process_mast_for_volcano <- function(mast_data) {
   # Convert MAST data structure to volcano plot format
@@ -8,17 +16,17 @@ process_mast_for_volcano <- function(mast_data) {
   
   for (gene in names(mast_data)) {
     for (cluster in names(mast_data[[gene]])) {
-      if (!is.null(mast_data[[gene]][[cluster]])) {
-        de_results <- mast_data[[gene]][[cluster]]
+      if (!is.null(mast_data[[gene]][[cluster]]$results)) {
+        de_results <- mast_data[[gene]][[cluster]]$results
         
-        # Extract log2FC and p-values
-        if ("log2FC" %in% colnames(de_results) && "pvalue" %in% colnames(de_results)) {
+        # Extract log2FC and p-values from MAST results
+        if ("avg_log2FC" %in% colnames(de_results) && "p_val_adj" %in% colnames(de_results)) {
           cluster_data <- data.frame(
             gene = gene,
             cluster = cluster,
             gene_name = rownames(de_results),
-            log2FC = de_results$log2FC,
-            pvalue = de_results$pvalue,
+            log2FC = de_results$avg_log2FC,
+            pvalue = de_results$p_val_adj,
             experiment = "default",
             stringsAsFactors = FALSE
           )
@@ -37,15 +45,20 @@ process_mixscale_for_volcano <- function(mixscale_data) {
   
   for (gene in names(mixscale_data)) {
     for (cluster in names(mixscale_data[[gene]])) {
-      if (!is.null(mixscale_data[[gene]][[cluster]])) {
-        for (exp in names(mixscale_data[[gene]][[cluster]])) {
-          de_results <- mixscale_data[[gene]][[cluster]][[exp]]
-          
-          # Extract log2FC column (e.g., log2FC_C12_FPD-23)
-          log2fc_col <- paste0("log2FC_", exp)
+      if (!is.null(mixscale_data[[gene]][[cluster]]$results)) {
+        de_results <- mixscale_data[[gene]][[cluster]]$results
+        
+        # Find log2FC and p-value columns
+        log2fc_cols <- grep("^log2FC_", names(de_results), value = TRUE)
+        
+        if (length(log2fc_cols) > 0) {
+          # Use the first log2FC column and corresponding p-value
+          log2fc_col <- log2fc_cols[1]
+          # Extract experiment name from column
+          exp <- gsub("^log2FC_", "", log2fc_col)
           pval_col <- paste0("p_cell_type", exp, ":weight")
           
-          if (log2fc_col %in% colnames(de_results) && pval_col %in% colnames(de_results)) {
+          if (pval_col %in% colnames(de_results)) {
             cluster_data <- data.frame(
               gene = gene,
               cluster = cluster,
@@ -200,13 +213,27 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             
             # Extract UMAP coordinates
             if (!is.null(sce)) {
-              umap_coords <- reducedDim(sce, "UMAP")
+              # Check if SingleCellExperiment functions are available
+              if (exists("reducedDim") && exists("colData")) {
+                umap_coords <- reducedDim(sce, "UMAP")
+                cluster_data <- colData(sce)$seurat_clusters
+              } else {
+                # Try direct access as a fallback
+                cat("[DE Results] SingleCellExperiment functions not available, trying direct access\n")
+                # For SCE objects, try accessing slots directly
+                if (!is.null(sce@int_colData@listData$reducedDims$UMAP)) {
+                  umap_coords <- sce@int_colData@listData$reducedDims$UMAP
+                  cluster_data <- sce@colData$seurat_clusters
+                } else {
+                  stop("Cannot access UMAP data without SingleCellExperiment package")
+                }
+              }
               
               # Create data frame for plotting
               values$umap_data <- data.frame(
                 UMAP1 = umap_coords[, 1],
                 UMAP2 = umap_coords[, 2],
-                cluster = as.character(colData(sce)$seurat_clusters),
+                cluster = as.character(cluster_data),
                 stringsAsFactors = FALSE
               )
               
@@ -235,13 +262,18 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       req(app_data$data_loaded)
       cat("[DE Results] Loading DE results data...\n")
       
-      # Try to find full_DE_results.rds file
+      # Get the dataset directory from environment
+      data_dir <- dirname(Sys.getenv("ISCORE_DATA_FILE", ""))
+      
+      # Look for full_DE_results.rds in the dataset directory
       possible_de_paths <- c(
-        file.path(dirname(Sys.getenv("ISCORE_DATA_FILE", "")), "full_DE_results.rds"),
-        file.path(getwd(), "full_DE_results.rds"),
-        file.path(dirname(getwd()), "full_DE_results.rds"),
-        "../../full_DE_results.rds"
+        file.path(data_dir, "full_DE_results.rds"),
+        Sys.getenv("ISCORE_DE_FILE", ""),
+        file.path(dirname(Sys.getenv("ISCORE_ENRICHMENT_DIR", "")), "full_DE_results.rds")
       )
+      
+      # Remove empty paths
+      possible_de_paths <- possible_de_paths[possible_de_paths != ""]
       
       de_loaded <- FALSE
       for (path in possible_de_paths) {
