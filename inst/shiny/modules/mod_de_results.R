@@ -231,6 +231,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         )
       
       p
+    }, error = function(e) {
+      cat("[DE Results] Error rendering UMAP plot:", e$message, "\n")
+      showNotification("Error rendering UMAP plot", type = "error")
+      plotly::plotly_empty()
     })
     
     # Handle UMAP click events
@@ -426,6 +430,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       } else {
         generate_volcano_plot(values$de_data_mast, "MAST", values$selected_cluster, input$color_by)
       }
+    }, error = function(e) {
+      cat("[DE Results] Error rendering MAST volcano plot:", e$message, "\n")
+      showNotification("Error rendering MAST volcano plot", type = "error")
+      plotly::plotly_empty()
     })
     
     # Render MixScale volcano plot
@@ -456,6 +464,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       } else {
         generate_volcano_plot(values$de_data_mixscale, "MixScale", values$selected_cluster, input$color_by)
       }
+    }, error = function(e) {
+      cat("[DE Results] Error rendering MixScale volcano plot:", e$message, "\n")
+      showNotification("Error rendering MixScale volcano plot", type = "error")
+      plotly::plotly_empty()
     })
     
     # Render summary statistics

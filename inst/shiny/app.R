@@ -367,7 +367,16 @@ ui <- fluidPage(
           border-bottom: 1px solid #dee2e6;
         }
         
-        .main-content {
+        .sidebar-fixed.collapsed {
+          width: 100%;
+        }
+        
+        .sidebar-toggle {
+          display: none;
+        }
+        
+        .main-content,
+        .main-content.expanded {
           margin-left: 0;
         }
       }
