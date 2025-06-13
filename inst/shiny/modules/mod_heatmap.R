@@ -242,11 +242,23 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         color_vectors$direction <- c(color_vectors$direction, new_colors)
       }
       
+      # For heatmaply, ensure palette is a simple named vector, not a list
+      # Extract just the colors that are actually used
+      used_types <- unique(row_colors$Type)
+      used_dirs <- unique(row_colors$Direction)
+      
+      type_palette <- color_vectors$type[used_types]
+      dir_palette <- color_vectors$direction[used_dirs]
+      
+      # Ensure no NA values
+      type_palette <- type_palette[!is.na(names(type_palette))]
+      dir_palette <- dir_palette[!is.na(names(dir_palette))]
+      
       return(list(
         colors = row_colors,
         palette = list(
-          Type = color_vectors$type,
-          Direction = color_vectors$direction
+          Type = type_palette,
+          Direction = dir_palette
         )
       ))
     }
@@ -603,6 +615,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             
             # Prepare row annotations if requested
             annotation_result <- NULL
+            row_side_colors <- NULL
+            row_side_palette <- NULL
+            
             if (input$show_annotations) {
               # Get annotation data for each row
               row_annotations <- df[!duplicated(df$Description), ] %>%
@@ -611,32 +626,73 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               
               # Use the safe annotation creation function
               annotation_result <- create_safe_row_annotations(mat, row_annotations, input$show_annotations)
+              
+              if (!is.null(annotation_result)) {
+                row_side_colors <- annotation_result$colors
+                row_side_palette <- annotation_result$palette
+                
+                # Debug the structure
+                message("Annotation result structure:")
+                message("  row_side_colors class: ", class(row_side_colors))
+                message("  row_side_palette class: ", class(row_side_palette))
+                if (is.list(row_side_palette)) {
+                  message("  row_side_palette names: ", paste(names(row_side_palette), collapse = ", "))
+                }
+              }
             }
-            
-            row_side_colors <- if (!is.null(annotation_result)) annotation_result$colors else NULL
-            row_side_palette <- if (!is.null(annotation_result)) annotation_result$palette else NULL
             
             # Create heatmaply heatmap with comprehensive error handling
             p <- tryCatch({
-              if (!is.null(row_side_colors) && !is.null(row_side_palette)) {
+              if (!is.null(row_side_colors) && !is.null(row_side_palette) && input$show_annotations) {
                 message("Creating heatmaply with annotations...")
-                heatmaply::heatmaply(
-                  mat,
-                  dendrogram = dendrogram,
-                  colors = colors,
-                  xlab = "",
-                  ylab = "",
-                  main = paste("Interactive Enrichment Heatmap -", legend_title),
-                  margins = c(150, 250 + ifelse(input$show_annotations, 50, 0), 50, 50),
-                  custom_hovertext = custom_text,
-                  label_names = c("Row", "Column", "Value"),
-                  fontsize_row = 10,
-                  fontsize_col = 10,
-                  showticklabels = c(TRUE, TRUE),
-                  plot_method = "plotly",
-                  row_side_colors = row_side_colors,
-                  row_side_palette = row_side_palette
-                )
+                message("Row side colors dimensions: ", nrow(row_side_colors), " x ", ncol(row_side_colors))
+                message("Row side palette Type colors: ", length(row_side_palette$Type))
+                message("Row side palette Direction colors: ", length(row_side_palette$Direction))
+                
+                # Try with annotations first
+                tryCatch({
+                  # Debug palette structure
+                  message("Attempting heatmaply with row_side_palette structure:")
+                  message("  Type palette: ", paste(names(row_side_palette$Type), "=", row_side_palette$Type, collapse=", "))
+                  message("  Direction palette: ", paste(names(row_side_palette$Direction), "=", row_side_palette$Direction, collapse=", "))
+                  
+                  heatmaply::heatmaply(
+                    mat,
+                    dendrogram = dendrogram,
+                    colors = colors,
+                    xlab = "",
+                    ylab = "",
+                    main = paste("Interactive Enrichment Heatmap -", legend_title),
+                    margins = c(150, 300, 50, 50),
+                    custom_hovertext = custom_text,
+                    label_names = c("Row", "Column", "Value"),
+                    fontsize_row = 10,
+                    fontsize_col = 10,
+                    showticklabels = c(TRUE, TRUE),
+                    plot_method = "plotly",
+                    row_side_colors = row_side_colors,
+                    row_side_palette = row_side_palette
+                  )
+                }, error = function(e_ann) {
+                  message("Heatmaply with annotations failed: ", e_ann$message)
+                  message("Trying without annotations...")
+                  # Fallback to heatmaply without annotations
+                  heatmaply::heatmaply(
+                    mat,
+                    dendrogram = dendrogram,
+                    colors = colors,
+                    xlab = "",
+                    ylab = "",
+                    main = paste("Interactive Enrichment Heatmap -", legend_title),
+                    margins = c(150, 250, 50, 50),
+                    custom_hovertext = custom_text,
+                    label_names = c("Row", "Column", "Value"),
+                    fontsize_row = 10,
+                    fontsize_col = 10,
+                    showticklabels = c(TRUE, TRUE),
+                    plot_method = "plotly"
+                  )
+                })
               } else {
                 message("Creating heatmaply without annotations...")
                 heatmaply::heatmaply(
