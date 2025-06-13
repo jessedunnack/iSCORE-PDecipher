@@ -8,6 +8,8 @@ if (requireNamespace("SingleCellExperiment", quietly = TRUE)) {
 if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
   library(SummarizedExperiment)
 }
+library(ggplot2)
+library(dplyr)
 
 # Helper functions to process DE data for volcano plots
 process_mast_for_volcano <- function(mast_data) {
@@ -84,23 +86,47 @@ mod_de_results_ui <- function(id) {
   
   tagList(
     fluidRow(
-      # Left panel: Interactive UMAP
+      # Left panel: UMAP with cluster selection
       column(6,
         wellPanel(
-          h3("Interactive UMAP", icon("map")),
-          p("Click on a cluster to view its differential expression results"),
+          h3("Cell Cluster Analysis", icon("object-group")),
+          
+          # Visual invitation to select cluster
+          div(class = "alert alert-info", style = "margin-bottom: 20px;",
+            icon("hand-pointer"),
+            strong(" Select a cluster to explore its differential expression"),
+            br(),
+            span("Choose from ", textOutput(ns("n_clusters_text"), inline = TRUE), 
+                 " clusters containing ", textOutput(ns("n_cells_text"), inline = TRUE), 
+                 " cells", style = "font-size: 0.9em;")
+          ),
+          
+          # Cluster selector dropdown
+          div(style = "margin-bottom: 15px;",
+            selectInput(ns("cluster_selector"),
+                       label = NULL,
+                       choices = c("Choose a cluster to analyze..." = ""),
+                       selected = "",
+                       width = "100%")
+          ),
           
           # UMAP plot output
           shinycssloaders::withSpinner(
-            plotlyOutput(ns("umap_plot"), height = "700px"),
+            plotOutput(ns("umap_plot"), height = "600px"),
             type = 6,
             color = "#3c8dbc"
           ),
           
-          # Selected cluster info
-          div(style = "margin-top: 15px;",
-            h5("Selected Cluster:"),
-            textOutput(ns("selected_cluster_text"), inline = TRUE)
+          # Selected cluster info box
+          conditionalPanel(
+            condition = "input.cluster_selector != ''",
+            ns = ns,
+            div(class = "well well-sm", style = "margin-top: 15px; background-color: #f8f9fa;",
+              h5("Cluster Information", style = "margin-top: 0;"),
+              div(id = ns("cluster_stats"),
+                uiOutput(ns("cluster_info"))
+              )
+            )
           )
         )
       ),
@@ -324,79 +350,193 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
 
-    # Render UMAP plot
-    output$umap_plot <- renderPlotly({
-      tryCatch({
-        cat("[DE Results] Attempting to render UMAP plot...\n")
-        cat("[DE Results] values$umap_data is", ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
+    # Get dittoSeq colors for consistency
+    get_ditto_colors <- function(n_colors) {
+      if (requireNamespace("dittoSeq", quietly = TRUE)) {
+        # Use dittoSeq's color palette
+        colors <- dittoSeq::dittoColors()[1:n_colors]
+      } else {
+        # Fallback to a similar colorblind-friendly palette
+        colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", 
+                   "#D55E00", "#CC79A7", "#999999", "#000000", "#E7298A",
+                   "#66A61E", "#E6AB02", "#A6761D", "#666666", "#7570B3")
+        colors <- colors[1:n_colors]
+      }
+      return(colors)
+    }
+    
+    # Update cluster choices when data is loaded
+    observe({
+      req(values$umap_data)
+      
+      clusters <- sort(unique(values$umap_data$cluster))
+      cluster_choices <- setNames(clusters, paste("Cluster", gsub("cluster_", "", clusters)))
+      
+      updateSelectInput(session, "cluster_selector",
+                       choices = c("Choose a cluster to analyze..." = "", cluster_choices))
+      
+      # Update info text
+      output$n_clusters_text <- renderText({ length(clusters) })
+      output$n_cells_text <- renderText({ format(nrow(values$umap_data), big.mark = ",") })
+    })
+    
+    # Update selected cluster when dropdown changes
+    observeEvent(input$cluster_selector, {
+      if (input$cluster_selector != "") {
+        values$selected_cluster <- input$cluster_selector
+      } else {
+        values$selected_cluster <- NULL
+      }
+    })
+    
+    # Render UMAP plot with ggplot2
+    output$umap_plot <- renderPlot({
+      req(values$umap_data)
+      
+      # Get cluster colors
+      clusters <- sort(unique(values$umap_data$cluster))
+      n_clusters <- length(clusters)
+      ditto_colors <- get_ditto_colors(n_clusters)
+      names(ditto_colors) <- clusters
+      
+      # Create display data with highlighting
+      plot_data <- values$umap_data
+      
+      if (!is.null(input$cluster_selector) && input$cluster_selector != "") {
+        # Create display categories
+        plot_data$display_group <- ifelse(
+          plot_data$cluster == input$cluster_selector,
+          plot_data$cluster,
+          "Background"
+        )
         
-        req(values$umap_data)
-        cat("[DE Results] req(values$umap_data) satisfied, proceeding with plot...\n")
+        # Set colors - selected cluster keeps its color, others gray
+        color_values <- c(ditto_colors[input$cluster_selector], "Background" = "#E8E8E8")
         
-        # Create color palette
-        clusters <- unique(values$umap_data$cluster)
-        n_clusters <- length(clusters)
-        colors <- viridis::viridis(n_clusters)
-        names(colors) <- clusters
+        # Set alpha values
+        plot_data$alpha_value <- ifelse(
+          plot_data$cluster == input$cluster_selector,
+          0.8,
+          0.15
+        )
         
-        # Highlight selected cluster
-        if (!is.null(values$selected_cluster) && values$selected_cluster != "All") {
-          colors[values$selected_cluster] <- "#FF0000"  # Red for selected
-          colors[names(colors) != values$selected_cluster] <- "#CCCCCC"  # Gray for others
-        }
+        # Set point sizes
+        plot_data$size_value <- ifelse(
+          plot_data$cluster == input$cluster_selector,
+          0.5,
+          0.3
+        )
         
-        p <- plot_ly(
-          data = values$umap_data,
-          x = ~UMAP1,
-          y = ~UMAP2,
-          color = ~cluster,
-          colors = colors,
-          type = 'scatter',
-          mode = 'markers',
-          marker = list(size = 5, opacity = 0.7),
-          text = ~paste("Cluster:", cluster),
-          hoverinfo = "text",
-          source = "umap_click"
-        ) %>%
-          layout(
-            title = list(text = "UMAP - Cell Clusters", font = list(size = 16)),
-            xaxis = list(title = "UMAP 1", zeroline = FALSE),
-            yaxis = list(title = "UMAP 2", zeroline = FALSE),
-            showlegend = TRUE,
-            legend = list(orientation = "v", x = 1.02, y = 0.5)
+        # Calculate cluster centers for labels
+        cluster_centers <- plot_data %>%
+          filter(cluster == input$cluster_selector) %>%
+          summarise(
+            x = median(UMAP1),
+            y = median(UMAP2),
+            label = unique(cluster)
           )
         
-        p
-      }, error = function(e) {
-        cat("[DE Results] Error rendering UMAP plot:", e$message, "\n")
-        showNotification("Error rendering UMAP plot", type = "error")
-        plotly::plotly_empty()
-      })
-    })
-    
-    # Handle UMAP click events
-    observeEvent(event_data("plotly_click", source = "umap_click"), {
-      click_data <- event_data("plotly_click", source = "umap_click")
-      if (!is.null(click_data)) {
-        # Extract cluster from click
-        clicked_cluster <- values$umap_data$cluster[click_data$pointNumber + 1]
-        values$selected_cluster <- clicked_cluster
-        
-        showNotification(
-          paste("Selected cluster:", clicked_cluster),
-          type = "message",
-          duration = 2
-        )
-      }
-    })
-    
-    # Update selected cluster text
-    output$selected_cluster_text <- renderText({
-      if (is.null(values$selected_cluster) || values$selected_cluster == "All") {
-        "All clusters (global results)"
       } else {
-        values$selected_cluster
+        # Show all clusters in full color
+        plot_data$display_group <- plot_data$cluster
+        color_values <- ditto_colors
+        plot_data$alpha_value <- 0.6
+        plot_data$size_value <- 0.4
+        
+        # Calculate all cluster centers
+        cluster_centers <- plot_data %>%
+          group_by(cluster) %>%
+          summarise(
+            x = median(UMAP1),
+            y = median(UMAP2),
+            label = unique(cluster),
+            .groups = 'drop'
+          )
       }
+      
+      # Create the plot
+      p <- ggplot(plot_data, aes(x = UMAP1, y = UMAP2)) +
+        geom_point(aes(color = display_group, alpha = alpha_value, size = size_value)) +
+        scale_color_manual(values = color_values) +
+        scale_alpha_identity() +
+        scale_size_identity() +
+        theme_minimal() +
+        theme(
+          legend.position = "none",
+          panel.grid = element_blank(),
+          axis.text = element_blank(),
+          axis.title = element_text(size = 12),
+          plot.background = element_rect(fill = "white", color = NA)
+        ) +
+        labs(x = "UMAP 1", y = "UMAP 2")
+      
+      # Add cluster labels
+      if (!is.null(input$cluster_selector) && input$cluster_selector != "") {
+        # Only label the selected cluster
+        p <- p + 
+          geom_label(
+            data = cluster_centers,
+            aes(x = x, y = y, label = label),
+            size = 5,
+            fontface = "bold",
+            fill = "white",
+            alpha = 0.8
+          )
+      } else if (n_clusters <= 20) {
+        # Show all labels if not too many clusters
+        p <- p + 
+          geom_text(
+            data = cluster_centers,
+            aes(x = x, y = y, label = gsub("cluster_", "", label)),
+            size = 4,
+            fontface = "bold"
+          )
+      }
+      
+      p
+    }, height = 600, width = 600)
+    
+    # Render cluster information
+    output$cluster_info <- renderUI({
+      req(input$cluster_selector)
+      req(values$umap_data)
+      
+      cluster_cells <- values$umap_data %>%
+        filter(cluster == input$cluster_selector)
+      
+      n_cells <- nrow(cluster_cells)
+      pct_cells <- round(100 * n_cells / nrow(values$umap_data), 1)
+      
+      # Get DE summary if available
+      de_summary <- "Calculating..."
+      if (!is.null(values$de_data_mast) || !is.null(values$de_data_mixscale)) {
+        mast_de <- if (!is.null(values$de_data_mast)) {
+          sum(values$de_data_mast$cluster == input$cluster_selector & 
+              values$de_data_mast$pvalue < 0.05)
+        } else 0
+        
+        mixscale_de <- if (!is.null(values$de_data_mixscale)) {
+          sum(values$de_data_mixscale$cluster == input$cluster_selector & 
+              values$de_data_mixscale$pvalue < 0.05)
+        } else 0
+        
+        de_summary <- paste(mast_de + mixscale_de, "DE genes")
+      }
+      
+      tagList(
+        tags$div(style = "display: flex; justify-content: space-between;",
+          tags$div(
+            tags$strong("Cells: "),
+            tags$span(format(n_cells, big.mark = ","), 
+                     paste0(" (", pct_cells, "%)")
+            )
+          ),
+          tags$div(
+            tags$strong("DE genes: "),
+            tags$span(de_summary)
+          )
+        )
+      )
     })
     
     # Generate volcano plot function
@@ -545,7 +685,22 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
         cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
         
-        if (is.null(values$de_data_mast)) {
+        # Check if cluster is selected
+        if (is.null(values$selected_cluster) || values$selected_cluster == "") {
+          plot_ly() %>%
+            layout(
+              title = "MAST Volcano Plot",
+              xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+              yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+              annotations = list(
+                x = 0,
+                y = 5,
+                text = "Please select a cluster to view differential expression results",
+                showarrow = FALSE,
+                font = list(size = 16, color = "#3c8dbc")
+              )
+            )
+        } else if (is.null(values$de_data_mast)) {
           # No data available - show empty plot with message
           plot_ly() %>%
             layout(
@@ -577,7 +732,22 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
         cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
         
-        if (is.null(values$de_data_mixscale)) {
+        # Check if cluster is selected
+        if (is.null(values$selected_cluster) || values$selected_cluster == "") {
+          plot_ly() %>%
+            layout(
+              title = "MixScale Volcano Plot",
+              xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+              yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+              annotations = list(
+                x = 0,
+                y = 5,
+                text = "Please select a cluster to view differential expression results",
+                showarrow = FALSE,
+                font = list(size = 16, color = "#3c8dbc")
+              )
+            )
+        } else if (is.null(values$de_data_mixscale)) {
           # No data available - show empty plot with message
           plot_ly() %>%
             layout(
