@@ -256,6 +256,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       selection <- global_selection()
       data <- enrichment_data()
       
+      
       # Check if this is GSEA data
       plot_data$is_gsea <- selection$enrichment_type == "GSEA"
       
@@ -275,6 +276,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
                           choices = gsea_terms,
                           selected = gsea_terms[1])
         }
+      } else {
+        # Clear plot data when no data available
+        plot_data$data <- NULL
       }
     })
     

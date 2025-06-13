@@ -142,57 +142,66 @@ select_dataset_directory <- function() {
   # Get pre-configured options
   options <- get_dataset_options()
   
-  message("\n=== Select Dataset ===")
-  message("Available datasets:")
-  
-  for (i in seq_along(options)) {
-    message(sprintf("[%d] %s", i, names(options)[i]))
-    message(sprintf("    %s", options[[i]]))
-  }
-  
-  message("[C] Choose custom directory")
-  message("[Q] Quit")
-  
-  choice <- readline("Enter your choice: ")
-  
-  # Handle empty input
-  if (choice == "" || is.null(choice)) {
-    message("Please enter a choice (1-", length(options), ", C for custom, or Q to quit)")
-    return(select_dataset_directory())
-  }
-  
-  if (tolower(choice) == "q") {
-    return(NULL)
-  }
-  
-  if (tolower(choice) == "c") {
-    # Use directory chooser if available
-    if (requireNamespace("rstudioapi", quietly = TRUE) && 
-        rstudioapi::isAvailable()) {
-      data_dir <- rstudioapi::selectDirectory(
-        caption = "Select dataset directory",
-        label = "Select",
-        path = dirname(options[[1]])
-      )
-    } else {
-      data_dir <- readline("Enter the full path to your dataset directory: ")
+  # Main input loop to avoid recursive calls and buffering issues
+  while (TRUE) {
+    message("\n=== Select Dataset ===")
+    message("Available datasets:")
+    
+    for (i in seq_along(options)) {
+      message(sprintf("[%d] %s", i, names(options)[i]))
+      message(sprintf("    %s", options[[i]]))
     }
     
-    if (data_dir == "" || is.null(data_dir)) {
+    message("[C] Choose custom directory")
+    message("[Q] Quit")
+    
+    # Clear any input buffer issues by ensuring we get a fresh prompt
+    flush.console()
+    
+    choice <- readline("Enter your choice: ")
+    
+    # Handle empty input - don't recurse, just continue loop
+    if (choice == "" || is.null(choice)) {
+      message("Please enter a choice (1-", length(options), ", C for custom, or Q to quit)")
+      next
+    }
+    
+    # Handle quit
+    if (tolower(choice) == "q") {
       return(NULL)
     }
     
-    return(normalizePath(data_dir, mustWork = FALSE))
+    # Handle custom directory
+    if (tolower(choice) == "c") {
+      # Use directory chooser if available
+      if (requireNamespace("rstudioapi", quietly = TRUE) && 
+          rstudioapi::isAvailable()) {
+        data_dir <- rstudioapi::selectDirectory(
+          caption = "Select dataset directory",
+          label = "Select",
+          path = dirname(options[[1]])
+        )
+      } else {
+        data_dir <- readline("Enter the full path to your dataset directory: ")
+      }
+      
+      if (data_dir == "" || is.null(data_dir)) {
+        message("No directory selected. Please try again.")
+        next
+      }
+      
+      return(normalizePath(data_dir, mustWork = FALSE))
+    }
+    
+    # Check if numeric choice
+    choice_num <- suppressWarnings(as.integer(choice))
+    if (!is.na(choice_num) && choice_num >= 1 && choice_num <= length(options)) {
+      return(options[[choice_num]])
+    }
+    
+    # Invalid choice - continue loop instead of recursing
+    message("Invalid choice '", choice, "'. Please enter a number between 1 and ", length(options), ", C for custom, or Q to quit.")
   }
-  
-  # Check if numeric choice
-  choice_num <- suppressWarnings(as.integer(choice))
-  if (!is.na(choice_num) && choice_num >= 1 && choice_num <= length(options)) {
-    return(options[[choice_num]])
-  }
-  
-  message("Invalid choice '", choice, "'. Please enter a number between 1 and ", length(options), ", C for custom, or Q to quit.")
-  return(select_dataset_directory())
 }
 
 # Create alias for backward compatibility (not exported)

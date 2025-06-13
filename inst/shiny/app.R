@@ -634,7 +634,7 @@ server <- function(input, output, session) {
   visualization_results <- mod_visualization_server(
     "visualization_module",
     global_selection = global_data_selection,
-    enrichment_data = reactive({ app_data$consolidated_data })
+    enrichment_data = filtered_data
   )
   
   comparison_results <- mod_comparison_server(
