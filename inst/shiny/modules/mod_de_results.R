@@ -191,50 +191,52 @@ mod_de_results_server <- function(id, global_selection, app_data) {
 
     # Render UMAP plot
     output$umap_plot <- renderPlotly({
-      cat("[DE Results] Attempting to render UMAP plot...\n")
-      cat("[DE Results] values$umap_data is", ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
-      
-      req(values$umap_data)
-      cat("[DE Results] req(values$umap_data) satisfied, proceeding with plot...\n")
-      
-      # Create color palette
-      clusters <- unique(values$umap_data$cluster)
-      n_clusters <- length(clusters)
-      colors <- viridis::viridis(n_clusters)
-      names(colors) <- clusters
-      
-      # Highlight selected cluster
-      if (!is.null(values$selected_cluster) && values$selected_cluster != "All") {
-        colors[values$selected_cluster] <- "#FF0000"  # Red for selected
-        colors[names(colors) != values$selected_cluster] <- "#CCCCCC"  # Gray for others
-      }
-      
-      p <- plot_ly(
-        data = values$umap_data,
-        x = ~UMAP1,
-        y = ~UMAP2,
-        color = ~cluster,
-        colors = colors,
-        type = 'scatter',
-        mode = 'markers',
-        marker = list(size = 5, opacity = 0.7),
-        text = ~paste("Cluster:", cluster),
-        hoverinfo = "text",
-        source = "umap_click"
-      ) %>%
-        layout(
-          title = list(text = "UMAP - Cell Clusters", font = list(size = 16)),
-          xaxis = list(title = "UMAP 1", zeroline = FALSE),
-          yaxis = list(title = "UMAP 2", zeroline = FALSE),
-          showlegend = TRUE,
-          legend = list(orientation = "v", x = 1.02, y = 0.5)
-        )
-      
-      p
-    }, error = function(e) {
-      cat("[DE Results] Error rendering UMAP plot:", e$message, "\n")
-      showNotification("Error rendering UMAP plot", type = "error")
-      plotly::plotly_empty()
+      tryCatch({
+        cat("[DE Results] Attempting to render UMAP plot...\n")
+        cat("[DE Results] values$umap_data is", ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
+        
+        req(values$umap_data)
+        cat("[DE Results] req(values$umap_data) satisfied, proceeding with plot...\n")
+        
+        # Create color palette
+        clusters <- unique(values$umap_data$cluster)
+        n_clusters <- length(clusters)
+        colors <- viridis::viridis(n_clusters)
+        names(colors) <- clusters
+        
+        # Highlight selected cluster
+        if (!is.null(values$selected_cluster) && values$selected_cluster != "All") {
+          colors[values$selected_cluster] <- "#FF0000"  # Red for selected
+          colors[names(colors) != values$selected_cluster] <- "#CCCCCC"  # Gray for others
+        }
+        
+        p <- plot_ly(
+          data = values$umap_data,
+          x = ~UMAP1,
+          y = ~UMAP2,
+          color = ~cluster,
+          colors = colors,
+          type = 'scatter',
+          mode = 'markers',
+          marker = list(size = 5, opacity = 0.7),
+          text = ~paste("Cluster:", cluster),
+          hoverinfo = "text",
+          source = "umap_click"
+        ) %>%
+          layout(
+            title = list(text = "UMAP - Cell Clusters", font = list(size = 16)),
+            xaxis = list(title = "UMAP 1", zeroline = FALSE),
+            yaxis = list(title = "UMAP 2", zeroline = FALSE),
+            showlegend = TRUE,
+            legend = list(orientation = "v", x = 1.02, y = 0.5)
+          )
+        
+        p
+      }, error = function(e) {
+        cat("[DE Results] Error rendering UMAP plot:", e$message, "\n")
+        showNotification("Error rendering UMAP plot", type = "error")
+        plotly::plotly_empty()
+      })
     })
     
     # Handle UMAP click events
@@ -406,68 +408,72 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # Render MAST volcano plot
     output$mast_volcano <- renderPlotly({
-      cat("[DE Results] Attempting to render MAST volcano plot...\n")
-      cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
-      cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
-      
-      # Use mock data if no real DE data available
-      if (is.null(values$de_data_mast)) {
-        # Generate mock DE data from enrichment results
-        set.seed(123)
-        genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
-        mock_data <- expand.grid(
-          gene = rep(genes, each = 20),
-          cluster = paste0("cluster_", 0:9),
-          stringsAsFactors = FALSE
-        ) %>%
-          mutate(
-            log2FC = rnorm(n(), mean = 0, sd = 1.5),
-            pvalue = 10^(-rexp(n(), rate = 0.5)),
-            experiment = "MAST_analysis"
-          )
+      tryCatch({
+        cat("[DE Results] Attempting to render MAST volcano plot...\n")
+        cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
+        cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
         
-        generate_volcano_plot(mock_data, "MAST", values$selected_cluster, input$color_by)
-      } else {
-        generate_volcano_plot(values$de_data_mast, "MAST", values$selected_cluster, input$color_by)
-      }
-    }, error = function(e) {
-      cat("[DE Results] Error rendering MAST volcano plot:", e$message, "\n")
-      showNotification("Error rendering MAST volcano plot", type = "error")
-      plotly::plotly_empty()
+        # Use mock data if no real DE data available
+        if (is.null(values$de_data_mast)) {
+          # Generate mock DE data from enrichment results
+          set.seed(123)
+          genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
+          mock_data <- expand.grid(
+            gene = rep(genes, each = 20),
+            cluster = paste0("cluster_", 0:9),
+            stringsAsFactors = FALSE
+          ) %>%
+            mutate(
+              log2FC = rnorm(n(), mean = 0, sd = 1.5),
+              pvalue = 10^(-rexp(n(), rate = 0.5)),
+              experiment = "MAST_analysis"
+            )
+          
+          generate_volcano_plot(mock_data, "MAST", values$selected_cluster, input$color_by)
+        } else {
+          generate_volcano_plot(values$de_data_mast, "MAST", values$selected_cluster, input$color_by)
+        }
+      }, error = function(e) {
+        cat("[DE Results] Error rendering MAST volcano plot:", e$message, "\n")
+        showNotification("Error rendering MAST volcano plot", type = "error")
+        plotly::plotly_empty()
+      })
     })
     
     # Render MixScale volcano plot
     output$mixscale_volcano <- renderPlotly({
-      cat("[DE Results] Attempting to render MixScale volcano plot...\n")
-      cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
-      cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
-      
-      # Use mock data if no real DE data available
-      if (is.null(values$de_data_mixscale)) {
-        # Generate mock DE data
-        set.seed(456)
-        genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
-        experiments <- c("C12_FPD-23", "C12_FPD-24", "C18_FPD-23")
+      tryCatch({
+        cat("[DE Results] Attempting to render MixScale volcano plot...\n")
+        cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
+        cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
         
-        mock_data <- expand.grid(
-          gene = rep(genes, each = 15),
-          cluster = paste0("cluster_", 0:9),
-          experiment = sample(experiments, 10, replace = TRUE),
-          stringsAsFactors = FALSE
-        ) %>%
-          mutate(
-            log2FC = rnorm(n(), mean = 0, sd = 1.2),
-            pvalue = 10^(-rexp(n(), rate = 0.6))
-          )
-        
-        generate_volcano_plot(mock_data, "MixScale", values$selected_cluster, input$color_by)
-      } else {
-        generate_volcano_plot(values$de_data_mixscale, "MixScale", values$selected_cluster, input$color_by)
-      }
-    }, error = function(e) {
-      cat("[DE Results] Error rendering MixScale volcano plot:", e$message, "\n")
-      showNotification("Error rendering MixScale volcano plot", type = "error")
-      plotly::plotly_empty()
+        # Use mock data if no real DE data available
+        if (is.null(values$de_data_mixscale)) {
+          # Generate mock DE data
+          set.seed(456)
+          genes <- c("LRRK2", "PINK1", "PARK7", "SNCA", "GBA", "ATP13A2", "VPS13C")
+          experiments <- c("C12_FPD-23", "C12_FPD-24", "C18_FPD-23")
+          
+          mock_data <- expand.grid(
+            gene = rep(genes, each = 15),
+            cluster = paste0("cluster_", 0:9),
+            experiment = sample(experiments, 10, replace = TRUE),
+            stringsAsFactors = FALSE
+          ) %>%
+            mutate(
+              log2FC = rnorm(n(), mean = 0, sd = 1.2),
+              pvalue = 10^(-rexp(n(), rate = 0.6))
+            )
+          
+          generate_volcano_plot(mock_data, "MixScale", values$selected_cluster, input$color_by)
+        } else {
+          generate_volcano_plot(values$de_data_mixscale, "MixScale", values$selected_cluster, input$color_by)
+        }
+      }, error = function(e) {
+        cat("[DE Results] Error rendering MixScale volcano plot:", e$message, "\n")
+        showNotification("Error rendering MixScale volcano plot", type = "error")
+        plotly::plotly_empty()
+      })
     })
     
     # Render summary statistics
