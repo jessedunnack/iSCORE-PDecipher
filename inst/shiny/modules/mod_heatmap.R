@@ -82,8 +82,8 @@ mod_heatmap_ui <- function(id) {
                   selected = "linear"),
       
       checkboxInput(ns("show_annotations"),
-                    "Show Row Annotations",
-                    value = TRUE),
+                    "Show Row Annotations (Type & Direction)",
+                    value = FALSE),
       
       checkboxInput(ns("cluster_rows"),
                     "Cluster Rows",
