@@ -85,13 +85,10 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-header with-border",
             h3(class = "box-title", 
                icon("dna"),
-               "Cluster Marker Genes",
-               tags$small(style = "display: block; font-size: 12px; color: #444; font-weight: normal; margin-top: 4px; line-height: 1.3;",
-                         "MAST test: LFC≥0.25, min.pct=0.1", tags$br(),
-                         "padj<0.05, positive markers only"))
+               "Cluster Marker Genes")
           ),
           div(class = "box-body", style = "padding: 10px;",
-            # Compact controls
+            # Controls and methodology info
             fluidRow(
               column(6,
                 selectInput(ns("selected_cluster"),
@@ -100,13 +97,9 @@ landingPageWithUmapUI <- function(id) {
                            width = "100%")
               ),
               column(6,
-                numericInput(ns("max_markers"),
-                            "Max Markers:",
-                            value = 15,
-                            min = 5,
-                            max = 50,
-                            step = 5,
-                            width = "100%")
+                div(style = "margin-top: 5px; font-size: 12px; color: #555; line-height: 1.4;",
+                    strong("MAST test:"), " LFC≥0.25, min.pct=0.1", br(),
+                    strong("Filters:"), " padj<0.05, top 25 markers")
               )
             ),
             # Markers table - explicit height
@@ -386,7 +379,7 @@ landingPageWithUmapServer <- function(id, data) {
       cluster_markers <- umap_data$markers %>%
         filter(cluster == input$selected_cluster) %>%
         arrange(desc(avg_log2FC)) %>%
-        head(input$max_markers) %>%
+        head(25) %>%  # Fixed to top 25 markers
         select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
         mutate(
           avg_log2FC = round(avg_log2FC, 3),
