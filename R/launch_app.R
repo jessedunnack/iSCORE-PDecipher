@@ -24,25 +24,47 @@
 launch_iscore_app <- function(data_dir = NULL, port = getOption("shiny.port"), 
                               launch.browser = getOption("shiny.launch.browser", TRUE), ...) {
   
-  # Load required functions - handle both installed and development scenarios
-  validator_path <- system.file("R", "dataset_validator.R", package = "iSCORE.PDecipher")
-  if (validator_path == "") {
-    # Development mode - use relative paths
-    pkg_root <- if (basename(getwd()) == "iSCORE-PDecipher") {
-      getwd()
-    } else if (file.exists("iSCORE-PDecipher/R/dataset_validator.R")) {
-      "iSCORE-PDecipher"
-    } else {
-      dirname(getwd())
-    }
-    validator_path <- file.path(pkg_root, "R", "dataset_validator.R")
-    generator_path <- file.path(pkg_root, "R", "data_generator.R")
+  # Source required functions from the R directory
+  # These are helper functions not exported from the package
+  
+  # Find the package root directory
+  if (basename(getwd()) == "iSCORE-PDecipher") {
+    pkg_root <- getwd()
+  } else if (file.exists("R/dataset_validator.R")) {
+    pkg_root <- "."
+  } else if (file.exists("iSCORE-PDecipher/R/dataset_validator.R")) {
+    pkg_root <- "iSCORE-PDecipher"
   } else {
-    generator_path <- system.file("R", "data_generator.R", package = "iSCORE.PDecipher")
+    # Try to find the package installation directory
+    pkg_path <- find.package("iSCORE.PDecipher", quiet = TRUE)
+    if (length(pkg_path) > 0) {
+      # Package is installed, but we need the source files
+      # Check if we're in a development environment
+      if (file.exists("../../R/dataset_validator.R")) {
+        pkg_root <- "../.."
+      } else {
+        stop("Cannot locate package source files. Please run from the package root directory or ensure package is properly installed.")
+      }
+    } else {
+      stop("Cannot find iSCORE.PDecipher package or source files")
+    }
   }
   
-  source(validator_path)
-  source(generator_path)
+  # Source the required files
+  validator_path <- file.path(pkg_root, "R", "dataset_validator.R")
+  generator_path <- file.path(pkg_root, "R", "data_generator.R")
+  
+  if (file.exists(validator_path)) {
+    source(validator_path)
+  } else {
+    stop("Cannot find dataset_validator.R at: ", validator_path)
+  }
+  
+  if (file.exists(generator_path)) {
+    source(generator_path) 
+  } else {
+    stop("Cannot find data_generator.R at: ", generator_path)
+  }
   
   # If no data_dir provided, show dataset selector
   if (is.null(data_dir)) {
