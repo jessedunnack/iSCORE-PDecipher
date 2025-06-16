@@ -41,8 +41,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-body", style = "padding: 5px; text-align: center;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
-                        height = "700px",     # Keep the working height
-                        width = "950px"),     # Explicit width for 1.36:1 ratio (950/700)
+                        height = "720px",     # Increased to align with right column
+                        width = "950px"),     # Explicit width for 1.36:1 ratio (950/720)
               type = 4,
               color = "#3c8dbc"
             )
@@ -109,7 +109,7 @@ landingPageWithUmapUI <- function(id) {
             # Markers table - explicit height
             div(style = "height: 400px; overflow-y: auto; margin-top: 10px;",
               withSpinner(
-                DT::dataTableOutput(ns("markers_table"), height = "350px"),
+                DT::dataTableOutput(ns("markers_table"), height = "385px"),
                 type = 1,
                 color = "#3c8dbc"
               )
@@ -397,7 +397,7 @@ landingPageWithUmapServer <- function(id, data) {
         cluster_markers,
         options = list(
           pageLength = 12,  # Show fewer rows to fit in compact space
-          scrollY = "240px",  # Fit in smaller container height
+          scrollY = "360px",  # Increased to match new table height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
           autoWidth = FALSE,  # Control column widths
@@ -411,7 +411,7 @@ landingPageWithUmapServer <- function(id, data) {
           )
         ),
         rownames = FALSE,
-        colnames = c('Gene', 'Log2FC', 'P-val', '% in', '% out')  # Short names for compact space
+        colnames = c('Gene', 'Log2FC', 'P-adj', '% this clust', '% in others')  # Clear, descriptive names
       ) %>%
         DT::formatStyle(
           'avg_log2FC',
