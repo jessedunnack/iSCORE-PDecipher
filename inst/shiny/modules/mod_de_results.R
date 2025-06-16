@@ -11,6 +11,7 @@ if (requireNamespace("SummarizedExperiment", quietly = TRUE)) {
 library(ggplot2)
 library(dplyr)
 library(ggrepel)
+library(plotly)  # CRITICAL: Ensure plotly is loaded for volcano plots
 
 # Helper functions to process DE data for volcano plots
 process_mast_for_volcano <- function(mast_data) {
@@ -160,27 +161,23 @@ mod_de_results_ui <- function(id) {
                         inline = TRUE)
           ),
           
-          # MAST volcano plot - FIXED: Dynamic height based on available data
-          div(
+          # MAST volcano plot - REVERTED: Back to simple static approach
+          div(style = "margin-bottom: 20px;",
             h4("MAST Results"),
             shinycssloaders::withSpinner(
-              uiOutput(ns("mast_volcano_ui")),
+              plotlyOutput(ns("mast_volcano"), height = "350px"),
               type = 6,
               color = "#3c8dbc"
             )
           ),
           
-          # MixScale volcano plot - FIXED: Conditional display
-          conditionalPanel(
-            condition = "output.has_mixscale_data == true",
-            ns = ns,
-            div(style = "margin-top: 20px;",
-              h4("MixScale Results"),
-              shinycssloaders::withSpinner(
-                plotlyOutput(ns("mixscale_volcano"), height = "350px"),
-                type = 6,
-                color = "#3c8dbc"
-              )
+          # MixScale volcano plot - REVERTED: Back to simple static approach
+          div(
+            h4("MixScale Results"),
+            shinycssloaders::withSpinner(
+              plotlyOutput(ns("mixscale_volcano"), height = "350px"),
+              type = 6,
+              color = "#3c8dbc"
             )
           )
         )
@@ -414,23 +411,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # FIXED: Detect whether MixScale data is available for dynamic layout
-    output$has_mixscale_data <- reactive({
-      !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
-    })
-    outputOptions(output, "has_mixscale_data", suspendWhenHidden = FALSE)
-    
-    # FIXED: Dynamic MAST volcano plot UI with height based on available data
-    output$mast_volcano_ui <- renderUI({
-      ns <- session$ns  # FIX: Get namespace function from session
-      has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
-      
-      # If no MixScale data, expand MAST plot to full height (700px)
-      # If MixScale data available, use standard height (350px)
-      plot_height <- if (has_mixscale) "350px" else "700px"
-      
-      plotlyOutput(ns("mast_volcano"), height = plot_height)
-    })
+    # REMOVED: Dynamic UI approach that was causing issues
 
     # Get dittoSeq colors for consistency
     get_ditto_colors <- function(n_colors) {
@@ -630,25 +611,28 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       )
     })
     
-    # Generate volcano plot function
+    # Generate volcano plot function - BULLETPROOF: Always returns valid plotly object
     generate_volcano_plot <- function(de_data, analysis_type, selected_cluster, color_by) {
-      if (is.null(de_data) || nrow(de_data) == 0) {
-        # Create empty plot with message
-        p <- plot_ly() %>%
-          layout(
-            title = paste(analysis_type, "- No DE data available"),
-            xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
-            yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
-            annotations = list(
-              x = 0,
-              y = 5,
-              text = "No differential expression data loaded",
-              showarrow = FALSE,
-              font = list(size = 16, color = "gray")
+      # Wrap entire function in tryCatch to ensure we always return a plotly object
+      tryCatch({
+        
+        if (is.null(de_data) || nrow(de_data) == 0) {
+          # Create empty plot with message
+          p <- plot_ly() %>%
+            layout(
+              title = paste(analysis_type, "- No DE data available"),
+              xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+              yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+              annotations = list(
+                x = 0,
+                y = 5,
+                text = "No differential expression data loaded",
+                showarrow = FALSE,
+                font = list(size = 16, color = "gray")
+              )
             )
-          )
-        return(p)
-      }
+          return(p)
+        }
       
       # Filter by cluster if selected - CLEANED: Removed interfering cat() statements
       if (!is.null(selected_cluster) && selected_cluster != "All") {
@@ -768,7 +752,24 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           hoverinfo = "skip"
         )
       
-      p
+      return(p)
+      
+      }, error = function(e) {
+        # BULLETPROOF: If any error occurs, return a simple error plot
+        plot_ly() %>%
+          layout(
+            title = paste(analysis_type, "- Error occurred"),
+            xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+            yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+            annotations = list(
+              x = 0,
+              y = 5,
+              text = paste("Error in plot generation:", e$message),
+              showarrow = FALSE,
+              font = list(size = 14, color = "red")
+            )
+          )
+      })
     }
     
     # Render MAST volcano plot - CLEANED: Removed interfering cat() statements
@@ -818,9 +819,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           generate_volcano_plot(filtered_data, "MAST", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
-        # CLEANED: Removed cat() statement that interferes with renderPlotly
+        # BULLETPROOF: Return a simple error plot instead of plotly_empty()
         showNotification("Error rendering MAST volcano plot", type = "error")
-        plotly::plotly_empty()
+        plot_ly() %>%
+          layout(
+            title = "MAST Volcano Plot - Error",
+            xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+            yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+            annotations = list(
+              x = 0,
+              y = 5,
+              text = paste("Error:", e$message),
+              showarrow = FALSE,
+              font = list(size = 14, color = "red")
+            )
+          )
       })
     })
     
@@ -871,9 +884,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           generate_volcano_plot(filtered_data, "MixScale", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
-        # CLEANED: Removed cat() statement that interferes with renderPlotly  
+        # BULLETPROOF: Return a simple error plot instead of plotly_empty()
         showNotification("Error rendering MixScale volcano plot", type = "error")
-        plotly::plotly_empty()
+        plot_ly() %>%
+          layout(
+            title = "MixScale Volcano Plot - Error",
+            xaxis = list(title = "Log2 Fold Change", range = c(-5, 5)),
+            yaxis = list(title = "-Log10 P-value", range = c(0, 10)),
+            annotations = list(
+              x = 0,
+              y = 5,
+              text = paste("Error:", e$message),
+              showarrow = FALSE,
+              font = list(size = 14, color = "red")
+            )
+          )
       })
     })
     
