@@ -160,10 +160,10 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       is_gsea = FALSE
     )
     
-    # Check if current selection is GSEA
+    # Check if current selection is GSEA - FIXED: Use processed_data()
     output$is_gsea <- reactive({
-      selection <- global_selection()
-      isTRUE(selection$enrichment_type == "GSEA")
+      result <- processed_data()
+      isTRUE(result$is_gsea)
     })
     outputOptions(output, "is_gsea", suspendWhenHidden = FALSE)
     
@@ -249,36 +249,47 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       return(data)
     }
 
-    # Reactive data processing
-    observe({
+    # Reactive data processing - FIXED: Convert observe() to reactive() to prevent loops
+    processed_data <- reactive({
       req(global_selection(), enrichment_data())
       
       selection <- global_selection()
       data <- enrichment_data()
       
-      
       # Check if this is GSEA data
-      plot_data$is_gsea <- selection$enrichment_type == "GSEA"
+      is_gsea <- selection$enrichment_type == "GSEA"
       
-      # Process the data
+      # Process the data and return result
       if (nrow(data) > 0) {
         # Apply data preparation for better plotting
-        if (!plot_data$is_gsea) {
-          plot_data$data <- prepare_dotplot_data(data, input$top_terms %||% 20)
+        if (!is_gsea) {
+          prepared_data <- prepare_dotplot_data(data, input$top_terms %||% 20)
         } else {
-          plot_data$data <- data
+          prepared_data <- data
         }
         
-        # Update GSEA term choices if GSEA
-        if (plot_data$is_gsea) {
-          gsea_terms <- unique(data$Description)
-          updateSelectInput(session, "gsea_term_select",
-                          choices = gsea_terms,
-                          selected = gsea_terms[1])
-        }
+        return(list(
+          data = prepared_data,
+          is_gsea = is_gsea
+        ))
       } else {
-        # Clear plot data when no data available
-        plot_data$data <- NULL
+        return(list(
+          data = NULL,
+          is_gsea = is_gsea
+        ))
+      }
+    })
+    
+    # Update GSEA term choices separately to avoid reactive loops
+    observe({
+      req(processed_data())
+      
+      result <- processed_data()
+      if (result$is_gsea && !is.null(result$data)) {
+        gsea_terms <- unique(result$data$Description)
+        updateSelectInput(session, "gsea_term_select",
+                        choices = gsea_terms,
+                        selected = gsea_terms[1])
       }
     })
     
@@ -498,12 +509,13 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     }
     
-    # Render plots based on data type
+    # Render plots based on data type - FIXED: Use processed_data()
     output$interactive_plot <- renderPlotly({
-      req(plot_data$data)
-      req(!plot_data$is_gsea)
+      result <- processed_data()
+      req(result$data)
+      req(!result$is_gsea)
       
-      p <- create_standard_plot(plot_data$data, input$plot_type)
+      p <- create_standard_plot(result$data, input$plot_type)
       if (!is.null(p)) {
         # Convert to plotly with explicit parameters to avoid warnings
         plotly_obj <- ggplotly(p, tooltip = c("x", "y", "color", "size")) %>%
@@ -531,45 +543,48 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     })
     
     output$gsea_plot <- renderPlot({
-      req(plot_data$data)
-      req(plot_data$is_gsea)
+      result <- processed_data()
+      req(result$data)
+      req(result$is_gsea)
       
-      create_gsea_plot(plot_data$data, input$gsea_plot_type)
+      create_gsea_plot(result$data, input$gsea_plot_type)
     })
     
     
-    # Plot information
+    # Plot information - FIXED: Use processed_data()
     output$plot_info <- renderPrint({
-      req(plot_data$data)
+      result <- processed_data()
+      req(result$data)
       
       cat("Plot Information:\n")
       cat("================\n")
-      cat("Data rows:", nrow(plot_data$data), "\n")
-      cat("Enrichment type:", unique(plot_data$data$enrichment_type), "\n")
+      cat("Data rows:", nrow(result$data), "\n")
+      cat("Enrichment type:", unique(result$data$enrichment_type), "\n")
       
-      if (plot_data$is_gsea) {
+      if (result$is_gsea) {
         cat("\nGSEA Statistics:\n")
-        cat("NES range:", range(plot_data$data$NES), "\n")
-        cat("Significant (|NES| > 1):", sum(abs(plot_data$data$NES) > 1), "\n")
+        cat("NES range:", range(result$data$NES), "\n")
+        cat("Significant (|NES| > 1):", sum(abs(result$data$NES) > 1), "\n")
       } else {
         cat("\nEnrichment Statistics:\n")
-        cat("P-value range:", range(plot_data$data$p.adjust), "\n")
-        cat("Significant (p < 0.05):", sum(plot_data$data$p.adjust < 0.05), "\n")
+        cat("P-value range:", range(result$data$p.adjust), "\n")
+        cat("Significant (p < 0.05):", sum(result$data$p.adjust < 0.05), "\n")
       }
     })
     
-    # Data table
+    # Data table - FIXED: Use processed_data()
     output$plot_data <- DT::renderDataTable({
-      req(plot_data$data)
+      result <- processed_data()
+      req(result$data)
       
-      if (plot_data$is_gsea) {
+      if (result$is_gsea) {
         # GSEA-specific columns
-        display_data <- plot_data$data %>%
+        display_data <- result$data %>%
           select(Description, NES, p.adjust, setSize, any_of(c("enrichmentScore", "rank"))) %>%
           arrange(desc(abs(NES)))
       } else {
         # Standard enrichment columns
-        display_data <- plot_data$data %>%
+        display_data <- result$data %>%
           select(Description, p.adjust, Count, any_of(c("FoldEnrichment", "GeneRatio"))) %>%
           arrange(p.adjust)
       }
@@ -580,17 +595,18 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         DT::formatSignif(columns = "p.adjust", digits = 3)
     })
     
-    # Download handler
+    # Download handler - FIXED: Use processed_data()
     output$download_plot <- downloadHandler(
       filename = function() {
         paste0("enrichment_plot_", Sys.Date(), ".pdf")
       },
       content = function(file) {
-        if (plot_data$is_gsea) {
-          p <- create_gsea_plot(plot_data$data, 
+        result <- processed_data()
+        if (result$is_gsea) {
+          p <- create_gsea_plot(result$data, 
                                ifelse(input$gsea_plot_type == "table", "dotplot", input$gsea_plot_type))
         } else {
-          p <- create_standard_plot(plot_data$data, input$plot_type)
+          p <- create_standard_plot(result$data, input$plot_type)
         }
         
         if (!is.null(p)) {
@@ -599,6 +615,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     )
     
-    return(plot_data)
+    # Return the reactive for potential use by other modules
+    return(processed_data)
   })
 }

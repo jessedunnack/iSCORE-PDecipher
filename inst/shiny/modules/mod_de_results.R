@@ -90,7 +90,19 @@ mod_de_results_ui <- function(id) {
       # Left panel: UMAP with cluster selection
       column(6,
         wellPanel(
-          h3("Cell Cluster Analysis", icon("object-group")),
+          # Header with PC selector
+          fluidRow(
+            column(9,
+              h3("Cell Cluster Analysis", icon("object-group"), style = "margin: 0;")
+            ),
+            column(3, style = "padding-top: 8px; text-align: right;",
+              selectInput(ns("pc_selection"), 
+                         label = NULL,
+                         choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
+                         selected = "30",  # Default to 30 PCs as requested
+                         width = "100px")
+            )
+          ),
           
           # Visual invitation to select cluster
           div(class = "alert alert-info", style = "margin-bottom: 20px;",
@@ -148,23 +160,27 @@ mod_de_results_ui <- function(id) {
                         inline = TRUE)
           ),
           
-          # MAST volcano plot
-          div(style = "margin-bottom: 20px;",
+          # MAST volcano plot - FIXED: Dynamic height based on available data
+          div(
             h4("MAST Results"),
             shinycssloaders::withSpinner(
-              plotlyOutput(ns("mast_volcano"), height = "350px"),
+              uiOutput(ns("mast_volcano_ui")),
               type = 6,
               color = "#3c8dbc"
             )
           ),
           
-          # MixScale volcano plot
-          div(
-            h4("MixScale Results"),
-            shinycssloaders::withSpinner(
-              plotlyOutput(ns("mixscale_volcano"), height = "350px"),
-              type = 6,
-              color = "#3c8dbc"
+          # MixScale volcano plot - FIXED: Conditional display
+          conditionalPanel(
+            condition = "output.has_mixscale_data == true",
+            ns = ns,
+            div(style = "margin-top: 20px;",
+              h4("MixScale Results"),
+              shinycssloaders::withSpinner(
+                plotlyOutput(ns("mixscale_volcano"), height = "350px"),
+                type = 6,
+                color = "#3c8dbc"
+              )
             )
           )
         )
@@ -200,43 +216,36 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       sce_list = NULL
     )
     
-    # Load UMAP data using the same approach as the landing page
-    observe({
-      cat("[DE Results] UMAP data observe block triggered\n")
-      cat("[DE Results] app_data$data_loaded =", app_data$data_loaded, "\n")
+    # Store dataset name for PC switching
+    dataset_name <- reactiveVal(NULL)
+    
+    # Function to load UMAP data for specific PC count (from Overview page)
+    load_umap_data <- function(dataset_name, pc_count) {
+      # Construct filename with PC suffix
+      filename <- paste0(dataset_name, "_umap_data_", pc_count, "pc.rds")
       
-      req(app_data$data_loaded)
-      cat("[DE Results] app_data is loaded, attempting to load UMAP data...\n")
-      
-      # Determine which dataset to load based on app data
-      has_crispri <- any(grepl("MixScale", app_data$consolidated_data$method))
-      has_mutations <- any(grepl("MAST", app_data$consolidated_data$method))
-      
-      if (has_crispri && has_mutations) {
-        dataset_to_load <- "Full_Dataset"
-      } else if (has_crispri) {
-        dataset_to_load <- "iSCORE_PD_CRISPRi"
-      } else {
-        dataset_to_load <- "iSCORE_PD"
-      }
-      
-      cat("[DE Results] Determined dataset to load:", dataset_to_load, "\n")
-      
-      # Try to load the appropriate UMAP data
+      # Try multiple possible paths
       possible_paths <- c(
-        system.file("extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds"), 
-                    package = "iSCORE.PDecipher"),
-        file.path(getwd(), "inst", "extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds")),
-        paste0("../../inst/extdata/umap_data/", dataset_to_load, "_umap_data.rds")
+        system.file("extdata", "umap_data", filename, package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data", filename),
+        paste0("../../inst/extdata/umap_data/", filename)
       )
       
-      data_loaded <- FALSE
+      # Also check for legacy filename (without pc suffix) for 100 PC
+      if (pc_count == "100") {
+        legacy_filename <- paste0(dataset_name, "_umap_data.rds")
+        possible_paths <- c(possible_paths,
+          system.file("extdata", "umap_data", legacy_filename, package = "iSCORE.PDecipher"),
+          file.path(getwd(), "inst", "extdata", "umap_data", legacy_filename),
+          paste0("../../inst/extdata/umap_data/", legacy_filename)
+        )
+      }
+      
       for (path in possible_paths) {
-        cat("[DE Results] Checking path:", path, "\n")
         if (file.exists(path)) {
           tryCatch({
             sce <- readRDS(path)
-            cat("[DE Results] Successfully loaded UMAP SCE data from:", path, "\n")
+            cat("[DE Results] Successfully loaded UMAP (", pc_count, " PCs) from:", path, "\n")
             
             # Extract UMAP coordinates
             if (!is.null(sce)) {
@@ -265,23 +274,77 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
               
               cat("[DE Results] UMAP data extracted:", nrow(values$umap_data), "cells\n")
-              data_loaded <- TRUE
+              return(TRUE)
             }
-            break
           }, error = function(e) {
             cat("[DE Results] Failed to load from", path, ":", e$message, "\n")
           })
         }
       }
       
-      if (!data_loaded) {
-        showNotification("UMAP data not found. Please run extract_umap_data.R first.", 
-                       type = "error",
-                       duration = NULL)
+      # If we couldn't load the requested PC count
+      showNotification(
+        paste0("UMAP with ", pc_count, " PCs not available. Please run generate_multipc_umaps.R"),
+        type = "warning",
+        duration = 5
+      )
+      return(FALSE)
+    }
+    
+    # Load initial UMAP data
+    observe({
+      cat("[DE Results] UMAP data observe block triggered\n")
+      cat("[DE Results] app_data$data_loaded =", app_data$data_loaded, "\n")
+      
+      req(app_data$data_loaded)
+      cat("[DE Results] app_data is loaded, attempting to load UMAP data...\n")
+      
+      # Determine which dataset to load based on app data
+      has_crispri <- any(grepl("MixScale", app_data$consolidated_data$method))
+      has_mutations <- any(grepl("MAST", app_data$consolidated_data$method))
+      
+      if (has_crispri && has_mutations) {
+        dataset_to_load <- "Full_Dataset"
+      } else if (has_crispri) {
+        dataset_to_load <- "iSCORE_PD_CRISPRi"
+      } else {
+        dataset_to_load <- "iSCORE_PD"
+      }
+      
+      cat("[DE Results] Determined dataset to load:", dataset_to_load, "\n")
+      dataset_name(dataset_to_load)
+      
+      # Load default 30 PC UMAP first (as requested by user)
+      if (!load_umap_data(dataset_to_load, "30")) {
+        # If 30 PC not available, try 100 PC
+        if (!load_umap_data(dataset_to_load, "100")) {
+          showNotification("UMAP data not found. Please run extract_umap_data.R first.", 
+                         type = "error",
+                         duration = NULL)
+        }
       }
       
       cat("[DE Results] UMAP data population complete. values$umap_data is", 
           ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
+    })
+    
+    # React to PC selection changes
+    observeEvent(input$pc_selection, {
+      req(dataset_name())
+      
+      cat("[DE Results] PC selection changed to:", input$pc_selection, "\n")
+      
+      # Load new UMAP data
+      if (load_umap_data(dataset_name(), input$pc_selection)) {
+        # Force plot redraw by updating cluster choices
+        if (!is.null(values$umap_data)) {
+          clusters <- sort(unique(values$umap_data$cluster))
+          cluster_choices <- setNames(clusters, paste("Cluster", gsub("cluster_", "", clusters)))
+          
+          updateSelectInput(session, "cluster_selector",
+                           choices = c("Choose a cluster to analyze..." = "", cluster_choices))
+        }
+      }
     })
     
     # Load DE results data from full_DE_results.rds
@@ -352,6 +415,23 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
       }
     })
+    
+    # FIXED: Detect whether MixScale data is available for dynamic layout
+    output$has_mixscale_data <- reactive({
+      !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
+    })
+    outputOptions(output, "has_mixscale_data", suspendWhenHidden = FALSE)
+    
+    # FIXED: Dynamic MAST volcano plot UI with height based on available data
+    output$mast_volcano_ui <- renderUI({
+      has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
+      
+      # If no MixScale data, expand MAST plot to full height (700px)
+      # If MixScale data available, use standard height (350px)
+      plot_height <- if (has_mixscale) "350px" else "700px"
+      
+      plotlyOutput(ns("mast_volcano"), height = plot_height)
+    })
 
     # Get dittoSeq colors for consistency
     get_ditto_colors <- function(n_colors) {
@@ -383,12 +463,17 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       output$n_cells_text <- renderText({ format(nrow(values$umap_data), big.mark = ",") })
     })
     
-    # Update selected cluster when dropdown changes
+    # Update selected cluster when dropdown changes - FIXED: Add debugging and ensure proper value mapping
     observeEvent(input$cluster_selector, {
+      cat("[DE Results] Cluster selector changed to:", input$cluster_selector, "\n")
+      
       if (input$cluster_selector != "") {
+        # Ensure we're using the actual cluster value (e.g., "cluster_1") not the display label
         values$selected_cluster <- input$cluster_selector
+        cat("[DE Results] Selected cluster set to:", values$selected_cluster, "\n")
       } else {
         values$selected_cluster <- NULL
+        cat("[DE Results] Selected cluster cleared\n")
       }
     })
     
@@ -570,19 +655,28 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         return(p)
       }
       
-      # Filter by cluster if selected
+      # Filter by cluster if selected - FIXED: Add extensive debugging
+      cat("[DE Results] Filtering volcano plot data for cluster:", selected_cluster, "\n")
+      cat("[DE Results] Total input data rows:", nrow(de_data), "\n")
+      cat("[DE Results] Available clusters in de_data:", paste(unique(de_data$cluster), collapse=", "), "\n")
+      
       if (!is.null(selected_cluster) && selected_cluster != "All") {
         plot_data <- de_data[de_data$cluster == selected_cluster, ]
         title_suffix <- paste("- Cluster", gsub("cluster_", "", selected_cluster))
+        cat("[DE Results] After filtering for cluster", selected_cluster, ": ", nrow(plot_data), "rows\n")
       } else {
         plot_data <- de_data
         title_suffix <- "- All Clusters"
+        cat("[DE Results] Using all clusters (no filtering)\n")
       }
       
       if (nrow(plot_data) == 0) {
-        # No data for this cluster
-        cat("[DE Results] No data found for cluster:", selected_cluster, "\n")
+        # No data for this cluster - ENHANCED DEBUGGING
+        cat("[DE Results] ERROR: No data found for cluster:", selected_cluster, "\n")
         cat("[DE Results] Available clusters in data:", paste(unique(de_data$cluster), collapse=", "), "\n")
+        cat("[DE Results] Class of selected_cluster:", class(selected_cluster), "\n")
+        cat("[DE Results] Class of data clusters:", class(de_data$cluster), "\n")
+        cat("[DE Results] Exact match test:", selected_cluster %in% unique(de_data$cluster), "\n")
         
         p <- plot_ly() %>%
           layout(
