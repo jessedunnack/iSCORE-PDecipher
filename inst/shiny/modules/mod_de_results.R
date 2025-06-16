@@ -328,11 +328,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           ifelse(is.null(values$umap_data), "NULL", "populated"), "\n")
     })
     
-    # React to PC selection changes
+    # React to PC selection changes - CLEANED: Removed cat() that could interfere
     observeEvent(input$pc_selection, {
       req(dataset_name())
-      
-      cat("[DE Results] PC selection changed to:", input$pc_selection, "\n")
       
       # Load new UMAP data
       if (load_umap_data(dataset_name(), input$pc_selection)) {
@@ -464,17 +462,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       output$n_cells_text <- renderText({ format(nrow(values$umap_data), big.mark = ",") })
     })
     
-    # Update selected cluster when dropdown changes - FIXED: Add debugging and ensure proper value mapping
+    # Update selected cluster when dropdown changes - CLEANED: Removed debugging cat() statements
     observeEvent(input$cluster_selector, {
-      cat("[DE Results] Cluster selector changed to:", input$cluster_selector, "\n")
-      
       if (input$cluster_selector != "") {
         # Ensure we're using the actual cluster value (e.g., "cluster_1") not the display label
         values$selected_cluster <- input$cluster_selector
-        cat("[DE Results] Selected cluster set to:", values$selected_cluster, "\n")
       } else {
         values$selected_cluster <- NULL
-        cat("[DE Results] Selected cluster cleared\n")
       }
     })
     
@@ -656,28 +650,17 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         return(p)
       }
       
-      # Filter by cluster if selected - FIXED: Add extensive debugging
-      cat("[DE Results] Filtering volcano plot data for cluster:", selected_cluster, "\n")
-      cat("[DE Results] Total input data rows:", nrow(de_data), "\n")
-      cat("[DE Results] Available clusters in de_data:", paste(unique(de_data$cluster), collapse=", "), "\n")
-      
+      # Filter by cluster if selected - CLEANED: Removed interfering cat() statements
       if (!is.null(selected_cluster) && selected_cluster != "All") {
         plot_data <- de_data[de_data$cluster == selected_cluster, ]
         title_suffix <- paste("- Cluster", gsub("cluster_", "", selected_cluster))
-        cat("[DE Results] After filtering for cluster", selected_cluster, ": ", nrow(plot_data), "rows\n")
       } else {
         plot_data <- de_data
         title_suffix <- "- All Clusters"
-        cat("[DE Results] Using all clusters (no filtering)\n")
       }
       
       if (nrow(plot_data) == 0) {
-        # No data for this cluster - ENHANCED DEBUGGING
-        cat("[DE Results] ERROR: No data found for cluster:", selected_cluster, "\n")
-        cat("[DE Results] Available clusters in data:", paste(unique(de_data$cluster), collapse=", "), "\n")
-        cat("[DE Results] Class of selected_cluster:", class(selected_cluster), "\n")
-        cat("[DE Results] Class of data clusters:", class(de_data$cluster), "\n")
-        cat("[DE Results] Exact match test:", selected_cluster %in% unique(de_data$cluster), "\n")
+        # No data for this cluster - create informative plot
         
         p <- plot_ly() %>%
           layout(
@@ -788,12 +771,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       p
     }
     
-    # Render MAST volcano plot
+    # Render MAST volcano plot - CLEANED: Removed interfering cat() statements
     output$mast_volcano <- renderPlotly({
       tryCatch({
-        cat("[DE Results] Attempting to render MAST volcano plot...\n")
-        cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
-        cat("[DE Results] values$de_data_mast is", ifelse(is.null(values$de_data_mast), "NULL", "populated"), "\n")
         
         # Check if cluster is selected
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
@@ -826,33 +806,27 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
             )
         } else {
-          # Filter by global gene selection
+          # Filter by global gene selection - CLEANED: Removed cat() statements
           current_gene <- global_selection()$gene
-          cat("[DE Results] Global gene selection:", current_gene, "\n")
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             filtered_data <- values$de_data_mast[values$de_data_mast$gene == current_gene, ]
-            cat("[DE Results] Filtered MAST data for gene", current_gene, ":", nrow(filtered_data), "rows\n")
           } else {
             filtered_data <- values$de_data_mast
-            cat("[DE Results] Using all MAST data:", nrow(filtered_data), "rows\n")
           }
           
           generate_volcano_plot(filtered_data, "MAST", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
-        cat("[DE Results] Error rendering MAST volcano plot:", e$message, "\n")
+        # CLEANED: Removed cat() statement that interferes with renderPlotly
         showNotification("Error rendering MAST volcano plot", type = "error")
         plotly::plotly_empty()
       })
     })
     
-    # Render MixScale volcano plot
+    # Render MixScale volcano plot - CLEANED: Removed interfering cat() statements
     output$mixscale_volcano <- renderPlotly({
       tryCatch({
-        cat("[DE Results] Attempting to render MixScale volcano plot...\n")
-        cat("[DE Results] values$selected_cluster =", values$selected_cluster, "\n")
-        cat("[DE Results] values$de_data_mixscale is", ifelse(is.null(values$de_data_mixscale), "NULL", "populated"), "\n")
         
         # Check if cluster is selected
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
@@ -885,22 +859,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
             )
         } else {
-          # Filter by global gene selection
+          # Filter by global gene selection - CLEANED: Removed cat() statements
           current_gene <- global_selection()$gene
-          cat("[DE Results] Global gene selection:", current_gene, "\n")
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == current_gene, ]
-            cat("[DE Results] Filtered MixScale data for gene", current_gene, ":", nrow(filtered_data), "rows\n")
           } else {
             filtered_data <- values$de_data_mixscale
-            cat("[DE Results] Using all MixScale data:", nrow(filtered_data), "rows\n")
           }
           
           generate_volcano_plot(filtered_data, "MixScale", values$selected_cluster, input$color_by)
         }
       }, error = function(e) {
-        cat("[DE Results] Error rendering MixScale volcano plot:", e$message, "\n")
+        # CLEANED: Removed cat() statement that interferes with renderPlotly  
         showNotification("Error rendering MixScale volcano plot", type = "error")
         plotly::plotly_empty()
       })
