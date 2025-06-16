@@ -288,15 +288,14 @@ landingPageWithUmapServer <- function(id, data) {
         paste0("../../inst/extdata/umap_data/", filename)
       )
       
-      # Also check for legacy filename (without pc suffix) for 100 PC
-      if (pc_count == "100") {
-        legacy_filename <- paste0(dataset_name, "_umap_data.rds")
-        possible_paths <- c(possible_paths,
-          system.file("extdata", "umap_data", legacy_filename, package = "iSCORE.PDecipher"),
-          file.path(getwd(), "inst", "extdata", "umap_data", legacy_filename),
-          paste0("../../inst/extdata/umap_data/", legacy_filename)
-        )
-      }
+      # Also check for legacy filename (without pc suffix) for any PC count
+      # This ensures compatibility with older UMAP files that don't have PC suffixes
+      legacy_filename <- paste0(dataset_name, "_umap_data.rds")
+      possible_paths <- c(possible_paths,
+        system.file("extdata", "umap_data", legacy_filename, package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data", legacy_filename),
+        paste0("../../inst/extdata/umap_data/", legacy_filename)
+      )
       
       for (path in possible_paths) {
         if (file.exists(path)) {
