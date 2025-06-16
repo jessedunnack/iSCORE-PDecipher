@@ -171,19 +171,8 @@ mod_de_results_ui <- function(id) {
             )
           ),
           
-          # MixScale volcano plot - CONDITIONAL: Only show if MixScale data available
-          conditionalPanel(
-            condition = "output.has_mixscale_data == true",
-            ns = ns,
-            div(
-              h4("MixScale Results"),
-              shinycssloaders::withSpinner(
-                plotlyOutput(ns("mixscale_volcano"), height = "350px"),
-                type = 6,
-                color = "#3c8dbc"
-              )
-            )
-          )
+          # MixScale volcano plot - CONDITIONAL: Server-side rendering for reliable hiding
+          uiOutput(ns("mixscale_volcano_container"))
         )
       )
     ),
@@ -431,6 +420,27 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       plot_height <- if (has_mixscale) "350px" else "700px"
       
       plotlyOutput(ns("mast_volcano"), height = plot_height)
+    })
+    
+    # Dynamic MixScale volcano plot container - ONLY renders if data available
+    output$mixscale_volcano_container <- renderUI({
+      ns <- session$ns
+      has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
+      
+      # Only render MixScale plot if data is available
+      if (has_mixscale) {
+        div(
+          h4("MixScale Results"),
+          shinycssloaders::withSpinner(
+            plotlyOutput(ns("mixscale_volcano"), height = "350px"),
+            type = 6,
+            color = "#3c8dbc"
+          )
+        )
+      } else {
+        # Return NULL to hide the entire section
+        NULL
+      }
     })
 
     # Get dittoSeq colors for consistency
