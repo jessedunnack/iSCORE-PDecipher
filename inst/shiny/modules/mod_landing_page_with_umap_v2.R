@@ -34,9 +34,20 @@ landingPageWithUmapUI <- function(id) {
       column(8,  # Increased from 7 to 8 for more width
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
-            h3(class = "box-title", 
-               icon("chart-line"),
-               "Dataset UMAP Visualization")
+            fluidRow(
+              column(9,
+                h3(class = "box-title", style = "margin: 0;",
+                   icon("chart-line"),
+                   "Dataset UMAP Visualization")
+              ),
+              column(3, style = "padding-top: 8px; text-align: right;",
+                selectInput(ns("pc_selection"), 
+                           label = NULL,
+                           choices = c("100 PCs" = "100", "50 PCs" = "50", "30 PCs" = "30"),
+                           selected = "100",
+                           width = "100px")
+              )
+            )
           ),
           div(class = "box-body", style = "padding: 5px; text-align: center;",
             withSpinner(
@@ -259,35 +270,75 @@ landingPageWithUmapServer <- function(id, data) {
         dataset_to_load <- "iSCORE_PD"
       }
       
-      # Try to load the appropriate UMAP data
+      umap_data$dataset_name <- dataset_to_load
+      
+      # Load default 100 PC UMAP first
+      load_umap_data(dataset_to_load, "100")
+    })
+    
+    # Function to load UMAP data for specific PC count
+    load_umap_data <- function(dataset_name, pc_count) {
+      # Construct filename with PC suffix
+      filename <- paste0(dataset_name, "_umap_data_", pc_count, "pc.rds")
+      
+      # Try multiple possible paths
       possible_paths <- c(
-        system.file("extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds"), 
-                    package = "iSCORE.PDecipher"),
-        file.path(getwd(), "inst", "extdata", "umap_data", paste0(dataset_to_load, "_umap_data.rds")),
-        paste0("../../inst/extdata/umap_data/", dataset_to_load, "_umap_data.rds")
+        system.file("extdata", "umap_data", filename, package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data", filename),
+        paste0("../../inst/extdata/umap_data/", filename)
       )
+      
+      # Also check for legacy filename (without pc suffix) for 100 PC
+      if (pc_count == "100") {
+        legacy_filename <- paste0(dataset_name, "_umap_data.rds")
+        possible_paths <- c(possible_paths,
+          system.file("extdata", "umap_data", legacy_filename, package = "iSCORE.PDecipher"),
+          file.path(getwd(), "inst", "extdata", "umap_data", legacy_filename),
+          paste0("../../inst/extdata/umap_data/", legacy_filename)
+        )
+      }
       
       for (path in possible_paths) {
         if (file.exists(path)) {
           tryCatch({
             umap_data$sce <- readRDS(path)
-            umap_data$dataset_name <- dataset_to_load
             umap_data$loaded <- TRUE
+            message("Loaded UMAP (", pc_count, " PCs) for ", dataset_name)
             
-            # Try to load corresponding markers
-            markers_path <- file.path(dirname(path), paste0(dataset_to_load, "_cluster_markers.rds"))
-            if (file.exists(markers_path)) {
-              umap_data$markers <- readRDS(markers_path)
-              message("Loaded markers for ", dataset_to_load)
-            } else {
-              message("No markers found for ", dataset_to_load, " at ", markers_path)
+            # Load markers if this is the first load
+            if (is.null(umap_data$markers)) {
+              markers_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers.rds"))
+              if (file.exists(markers_path)) {
+                umap_data$markers <- readRDS(markers_path)
+                message("Loaded markers for ", dataset_name)
+              }
             }
             
-            break
+            return(TRUE)
           }, error = function(e) {
             message("Failed to load UMAP from ", path, ": ", e$message)
           })
         }
+      }
+      
+      # If we couldn't load the requested PC count
+      showNotification(
+        paste0("UMAP with ", pc_count, " PCs not available. Please run generate_multipc_umaps.R"),
+        type = "warning",
+        duration = 5
+      )
+      return(FALSE)
+    }
+    
+    # React to PC selection changes
+    observeEvent(input$pc_selection, {
+      req(umap_data$dataset_name)
+      
+      # Load new UMAP data
+      if (load_umap_data(umap_data$dataset_name, input$pc_selection)) {
+        # Trigger plot redraw
+        umap_data$loaded <- isolate(!umap_data$loaded)
+        umap_data$loaded <- isolate(!umap_data$loaded)
       }
     })
     
