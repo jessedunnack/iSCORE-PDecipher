@@ -43,8 +43,8 @@ landingPageWithUmapUI <- function(id) {
               column(3, style = "padding-top: 8px; text-align: right;",
                 selectInput(ns("pc_selection"), 
                            label = NULL,
-                           choices = c("100 PCs" = "100", "50 PCs" = "50", "30 PCs" = "30"),
-                           selected = "100",
+                           choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
+                           selected = "30",  # Changed default to 30 PCs
                            width = "100px")
               )
             )
@@ -272,8 +272,8 @@ landingPageWithUmapServer <- function(id, data) {
       
       umap_data$dataset_name <- dataset_to_load
       
-      # Load default 100 PC UMAP first
-      load_umap_data(dataset_to_load, "100")
+      # Load default 30 PC UMAP first (changed from 100)
+      load_umap_data(dataset_to_load, "30")
     })
     
     # Function to load UMAP data for specific PC count

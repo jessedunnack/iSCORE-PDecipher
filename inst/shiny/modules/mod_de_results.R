@@ -424,6 +424,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # FIXED: Dynamic MAST volcano plot UI with height based on available data
     output$mast_volcano_ui <- renderUI({
+      ns <- session$ns  # FIX: Get namespace function from session
       has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
       
       # If no MixScale data, expand MAST plot to full height (700px)
