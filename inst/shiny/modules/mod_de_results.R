@@ -161,23 +161,27 @@ mod_de_results_ui <- function(id) {
                         inline = TRUE)
           ),
           
-          # MAST volcano plot - REVERTED: Back to simple static approach
+          # MAST volcano plot - DYNAMIC: Height adapts based on MixScale availability
           div(style = "margin-bottom: 20px;",
             h4("MAST Results"),
             shinycssloaders::withSpinner(
-              plotlyOutput(ns("mast_volcano"), height = "350px"),
+              uiOutput(ns("mast_volcano_container")),
               type = 6,
               color = "#3c8dbc"
             )
           ),
           
-          # MixScale volcano plot - REVERTED: Back to simple static approach
-          div(
-            h4("MixScale Results"),
-            shinycssloaders::withSpinner(
-              plotlyOutput(ns("mixscale_volcano"), height = "350px"),
-              type = 6,
-              color = "#3c8dbc"
+          # MixScale volcano plot - CONDITIONAL: Only show if MixScale data available
+          conditionalPanel(
+            condition = "output.has_mixscale_data == true",
+            ns = ns,
+            div(
+              h4("MixScale Results"),
+              shinycssloaders::withSpinner(
+                plotlyOutput(ns("mixscale_volcano"), height = "350px"),
+                type = 6,
+                color = "#3c8dbc"
+              )
             )
           )
         )
@@ -411,7 +415,23 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # REMOVED: Dynamic UI approach that was causing issues
+    # DYNAMIC LAYOUT: Detect MixScale availability and adjust MAST plot height
+    output$has_mixscale_data <- reactive({
+      !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
+    })
+    outputOptions(output, "has_mixscale_data", suspendWhenHidden = FALSE)
+    
+    # Dynamic MAST volcano plot container with adaptive height
+    output$mast_volcano_container <- renderUI({
+      ns <- session$ns
+      has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
+      
+      # If no MixScale data, expand MAST plot to full height (700px)
+      # If MixScale data available, use standard height (350px)
+      plot_height <- if (has_mixscale) "350px" else "700px"
+      
+      plotlyOutput(ns("mast_volcano"), height = plot_height)
+    })
 
     # Get dittoSeq colors for consistency
     get_ditto_colors <- function(n_colors) {
