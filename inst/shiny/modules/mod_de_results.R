@@ -722,34 +722,35 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           yaxis = list(title = "-Log10 P-value", zeroline = FALSE),
           showlegend = TRUE,
           legend = list(orientation = "v", x = 1.02, y = 0.5)
-        ) %>%
-        # Add threshold lines
-        add_trace(
-          x = c(-1, -1),
-          y = c(0, max(plot_data$negLog10p, na.rm = TRUE)),
-          type = "scatter",
-          mode = "lines",
-          line = list(color = "gray", dash = "dash", width = 1),
-          showlegend = FALSE,
-          hoverinfo = "skip"
-        ) %>%
-        add_trace(
-          x = c(1, 1),
-          y = c(0, max(plot_data$negLog10p, na.rm = TRUE)),
-          type = "scatter",
-          mode = "lines",
-          line = list(color = "gray", dash = "dash", width = 1),
-          showlegend = FALSE,
-          hoverinfo = "skip"
-        ) %>%
-        add_trace(
-          x = c(min(plot_data$log2FC, na.rm = TRUE), max(plot_data$log2FC, na.rm = TRUE)),
-          y = c(-log10(0.05), -log10(0.05)),
-          type = "scatter",
-          mode = "lines",
-          line = list(color = "gray", dash = "dash", width = 1),
-          showlegend = FALSE,
-          hoverinfo = "skip"
+        )
+      
+      # Add threshold lines using layout shapes instead of add_trace to avoid vector length issues
+      p <- p %>%
+        layout(
+          shapes = list(
+            # Vertical line at log2FC = -1
+            list(
+              type = "line",
+              x0 = -1, x1 = -1,
+              y0 = 0, y1 = max(plot_data$negLog10p, na.rm = TRUE),
+              line = list(color = "gray", dash = "dash", width = 1)
+            ),
+            # Vertical line at log2FC = 1
+            list(
+              type = "line", 
+              x0 = 1, x1 = 1,
+              y0 = 0, y1 = max(plot_data$negLog10p, na.rm = TRUE),
+              line = list(color = "gray", dash = "dash", width = 1)
+            ),
+            # Horizontal line at p = 0.05
+            list(
+              type = "line",
+              x0 = min(plot_data$log2FC, na.rm = TRUE), 
+              x1 = max(plot_data$log2FC, na.rm = TRUE),
+              y0 = -log10(0.05), y1 = -log10(0.05),
+              line = list(color = "gray", dash = "dash", width = 1)
+            )
+          )
         )
       
       return(p)
