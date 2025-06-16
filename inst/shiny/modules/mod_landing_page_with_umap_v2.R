@@ -86,8 +86,9 @@ landingPageWithUmapUI <- function(id) {
             h3(class = "box-title", 
                icon("dna"),
                "Cluster Marker Genes",
-               tags$small(style = "display: block; font-size: 10px; color: #666; font-weight: normal; margin-top: 3px;",
-                         "MAST test: LFC≥0.25, min.pct=0.1, padj<0.05, positive only"))
+               tags$small(style = "display: block; font-size: 12px; color: #444; font-weight: normal; margin-top: 4px; line-height: 1.3;",
+                         "MAST test: LFC≥0.25, min.pct=0.1", tags$br(),
+                         "padj<0.05, positive markers only"))
           ),
           div(class = "box-body", style = "padding: 10px;",
             # Compact controls
