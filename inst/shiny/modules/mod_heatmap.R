@@ -1,6 +1,9 @@
 # Module: Advanced Heatmaps
 # Provides heatmap visualizations using the unified heatmap system
 
+# Load source labeling functions
+source("modules/shared/source_labeling.R")
+
 mod_heatmap_ui <- function(id) {
   ns <- NS(id)
   
@@ -397,6 +400,10 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           x_var <- "gene"
         } else if ("mutation" %in% names(df)) {
           x_var <- "mutation"
+        } else if ("mutation_perturbation" %in% names(df)) {
+          x_var <- "mutation_perturbation"
+          # Add gene column for compatibility
+          df$gene <- df$mutation_perturbation
         } else if ("cluster" %in% names(df)) {
           x_var <- "cluster"
         } else {
@@ -409,6 +416,25 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             df$condition <- df$cluster
           }
           x_var <- "condition"
+        }
+        
+        # Add source labels for gene columns
+        if (x_var %in% c("gene", "mutation", "mutation_perturbation")) {
+          # Add source labels to distinguish iSCORE-PD vs PerturbSeq
+          df <- add_source_labels(df, 
+                                 gene_col = x_var,
+                                 method_col = if("method" %in% names(df)) "method" else "analysis_type",
+                                 modality_col = if("modality" %in% names(df)) "modality" else NULL)
+          
+          # Use source labels for display
+          if ("source_label" %in% names(df)) {
+            df$display_label <- df$source_label
+            x_var_display <- "display_label"
+          } else {
+            x_var_display <- x_var
+          }
+        } else {
+          x_var_display <- x_var
         }
         
         # Use Description or term_name for y-axis
@@ -533,8 +559,8 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         } else {
           # Create proper heatmap matrix
           data_wide <- df %>%
-            dplyr::select(all_of(c(y_var, x_var, value_var))) %>%
-            tidyr::pivot_wider(names_from = all_of(x_var), 
+            dplyr::select(all_of(c(y_var, x_var_display, value_var))) %>%
+            tidyr::pivot_wider(names_from = all_of(x_var_display), 
                               values_from = all_of(value_var), 
                               values_fill = 0,
                               values_fn = mean)  # Handle duplicates by averaging
@@ -911,6 +937,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           x_var <- "gene"
         } else if ("mutation" %in% names(df)) {
           x_var <- "mutation"
+        } else if ("mutation_perturbation" %in% names(df)) {
+          x_var <- "mutation_perturbation"
+          df$gene <- df$mutation_perturbation
         } else if ("cluster" %in% names(df)) {
           x_var <- "cluster"
         } else {
@@ -920,6 +949,23 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             df$condition <- df$cluster
           }
           x_var <- "condition"
+        }
+        
+        # Add source labels for PDF as well
+        if (x_var %in% c("gene", "mutation", "mutation_perturbation")) {
+          df <- add_source_labels(df, 
+                                 gene_col = x_var,
+                                 method_col = if("method" %in% names(df)) "method" else "analysis_type",
+                                 modality_col = if("modality" %in% names(df)) "modality" else NULL)
+          
+          if ("source_label" %in% names(df)) {
+            df$display_label <- df$source_label
+            x_var_display <- "display_label"
+          } else {
+            x_var_display <- x_var
+          }
+        } else {
+          x_var_display <- x_var
         }
         
         y_var <- if ("Description" %in% names(df)) "Description" else "term_id"
@@ -959,8 +1005,8 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         
         # Create matrix
         data_wide <- df %>%
-          dplyr::select(all_of(c(y_var, x_var, value_var))) %>%
-          tidyr::pivot_wider(names_from = all_of(x_var), 
+          dplyr::select(all_of(c(y_var, x_var_display, value_var))) %>%
+          tidyr::pivot_wider(names_from = all_of(x_var_display), 
                             values_from = all_of(value_var), 
                             values_fill = 0,
                             values_fn = mean)

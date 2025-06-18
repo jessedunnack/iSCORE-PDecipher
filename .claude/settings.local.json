@@ -29,7 +29,10 @@
       "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\")",
       "Bash(mkdir:*)",
       "Bash(git mv:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git -C /mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts add CLAUDE.md)",
+      "Bash(git -C /mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts commit -m \"DOCUMENT: Major cross-platform compatibility section added to CLAUDE.md\n\nComprehensive documentation of the cross-platform implementation for iSCORE-PDecipher:\n- Complete technical details of Mac/Windows/Linux compatibility solution  \n- Implementation details for config management, path handling, and package exports\n- Platform-agnostic development guidelines and rules with DO/DON''T examples\n- Testing protocols and verification procedures for all platforms\n- User experience improvements and data transfer workflow\n- Emergency troubleshooting and maintenance procedures\n\nThis major update ensures the cross-platform work is fully documented and \nfuture development maintains compatibility across all platforms.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(git -C /mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts push origin main)"
     ],
     "deny": []
   }

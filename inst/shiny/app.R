@@ -128,6 +128,9 @@ source("modules/mod_de_results.R")  # NEW: DE Results with volcano plots
 source("modules/mod_heatmap.R")
 source("modules/mod_pathview.R")
 source("modules/mod_export.R")
+# NEW DE Gene Analysis modules
+source("modules/mod_de_analysis.R")  # Cross-condition DE gene analysis
+source("modules/mod_de_heatmap.R")  # Interactive DE gene heatmaps
 
 # Ensure UI functions are available (fallback assignments)
 ui_functions <- list(
@@ -550,6 +553,28 @@ ui <- fluidPage(
           mod_heatmap_ui("heatmap_module")
         ),
         
+        # NEW: DE Gene Analysis
+        tabPanel(
+          "DE Gene Analysis",
+          icon = icon("project-diagram"),
+          value = "de_analysis",
+          br(),
+          h2("DE Gene Analysis"),
+          p("Cross-condition comparisons, overlaps, and correlations of differentially expressed genes"),
+          mod_de_analysis_ui("de_analysis_module")
+        ),
+        
+        # NEW: DE Gene Heatmaps
+        tabPanel(
+          "DE Gene Heatmaps", 
+          icon = icon("fire"),
+          value = "de_heatmap",
+          br(),
+          h2("DE Gene Heatmaps"),
+          p("Interactive heatmap builder for differential expression patterns with source distinction"),
+          mod_de_heatmap_ui("de_heatmap_module")
+        ),
+        
         # KEGG Pathview
         tabPanel(
           "KEGG Pathview",
@@ -827,6 +852,17 @@ server <- function(input, output, session) {
     "heatmap_module",
     app_data = app_data,
     pval_threshold = global_pval
+  )
+  
+  # NEW: DE Gene Analysis modules
+  de_analysis_results <- mod_de_analysis_server(
+    "de_analysis_module",
+    app_data = app_data
+  )
+  
+  de_heatmap_results <- mod_de_heatmap_server(
+    "de_heatmap_module",
+    app_data = app_data
   )
   
   pathview_results <- mod_pathview_server(
