@@ -11,9 +11,37 @@ if (requireNamespace("pheatmap", quietly = TRUE)) {
   library(pheatmap)
 }
 
-# Load shared functions
-source("modules/shared/de_processing.R")
-source("modules/shared/source_labeling.R")
+# Load shared functions with error handling
+tryCatch({
+  source("modules/shared/de_processing.R")
+}, error = function(e) {
+  message("Could not load de_processing.R: ", e$message)
+  
+  # Define minimal fallback function
+  process_de_data_with_metadata <<- function(de_results, metadata = NULL, max_genes_per_condition = 300) {
+    message("Using fallback DE processing")
+    return(data.frame(
+      gene = character(0),
+      cluster = character(0),
+      gene_name = character(0),
+      log2FC = numeric(0),
+      pvalue = numeric(0),
+      method = character(0),
+      source = character(0),
+      experiment = character(0)
+    ))
+  }
+})
+
+tryCatch({
+  source("modules/shared/source_labeling.R")
+}, error = function(e) {
+  message("Could not load source_labeling.R: ", e$message)
+  
+  # Define minimal fallback functions
+  add_source_labels <<- function(data, ...) return(data)
+  create_source_label <<- function(gene, method, modality = NULL) return(as.character(gene))
+})
 
 mod_de_heatmap_ui <- function(id) {
   ns <- NS(id)
@@ -249,7 +277,16 @@ mod_de_heatmap_server <- function(id, app_data) {
     observe({
       # Only load once
       if (heatmap_data$de_loaded) return()
-      req(app_data$data)
+      req(app_data$data_loaded)
+      
+      # TEMPORARY: Disable this feature to prevent hanging
+      showNotification(
+        "DE Gene Heatmaps feature is temporarily disabled due to performance issues. Please use the Functional Enrichment heatmaps instead.",
+        type = "warning",
+        duration = NULL
+      )
+      heatmap_data$de_loaded <- TRUE
+      return()
       
       # Use the same DE file path logic as the existing DE Results module
       data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
@@ -281,7 +318,14 @@ mod_de_heatmap_server <- function(id, app_data) {
       
       tryCatch({
         de_results <- readRDS(de_file_path)
+        heatmap_data$processing_log <- c(heatmap_data$processing_log, "DE file loaded, starting processing...")
+        
         # Use smaller limit for heatmaps to ensure good performance (max 300 per condition)
+        # Add timeout to prevent hanging
+        setTimeLimit(cpu = 60, elapsed = 120, transient = TRUE)  # 2 minute timeout
+        
+        on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))  # Reset timeout
+        
         processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 300)
         
         if (nrow(processed_de) == 0) {
