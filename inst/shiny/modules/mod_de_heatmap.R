@@ -186,6 +186,22 @@ mod_de_heatmap_ui <- function(id) {
                     step = 50)
       ),
       
+      # Data loading controls
+      wellPanel(
+        h5("Data Management"),
+        actionButton(ns("load_data_btn"),
+                     "Load DE Data",
+                     class = "btn-info",
+                     width = "100%"),
+        br(), br(),
+        actionButton(ns("refresh_data_btn"),
+                     "Refresh Data",
+                     class = "btn-warning",
+                     width = "100%"),
+        br(), br(),
+        helpText("Click 'Load DE Data' first to load differential expression results. This may take 1-2 minutes for large datasets.")
+      ),
+      
       br(),
       actionButton(ns("generate_heatmap"),
                    "Generate Heatmap",
@@ -273,20 +289,15 @@ mod_de_heatmap_server <- function(id, app_data) {
       de_loaded = FALSE  # Flag to prevent repeated loading
     )
     
-    # Load real DE data using same path as existing DE module
-    observe({
-      # Only load once
-      if (heatmap_data$de_loaded) return()
-      req(app_data$data_loaded)
+    # Load DE data ONLY when user clicks "Load Data" button
+    observeEvent(input$load_data_btn, {
+      # Prevent multiple loading
+      if (heatmap_data$de_loaded) {
+        showNotification("Data already loaded. Use 'Refresh Data' if needed.", type = "message", duration = 3)
+        return()
+      }
       
-      # TEMPORARY: Disable this feature to prevent hanging
-      showNotification(
-        "DE Gene Heatmaps feature is temporarily disabled due to performance issues. Please use the Functional Enrichment heatmaps instead.",
-        type = "warning",
-        duration = NULL
-      )
-      heatmap_data$de_loaded <- TRUE
-      return()
+      req(app_data$data_loaded)
       
       # Use the same DE file path logic as the existing DE Results module
       data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
@@ -314,7 +325,7 @@ mod_de_heatmap_server <- function(id, app_data) {
       
       # Load and process actual DE results with performance optimization
       heatmap_data$processing_log <- c(heatmap_data$processing_log, "Starting DE data loading...")
-      showNotification("Loading DE results for heatmaps (this may take a moment)...", type = "message", duration = 5)
+      showNotification("Loading DE results for heatmaps (this may take 1-2 minutes)...", type = "message", duration = 10)
       
       tryCatch({
         de_results <- readRDS(de_file_path)
@@ -326,7 +337,7 @@ mod_de_heatmap_server <- function(id, app_data) {
         
         on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))  # Reset timeout
         
-        processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 300)
+        processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 100)
         
         if (nrow(processed_de) == 0) {
           heatmap_data$processing_log <- c(heatmap_data$processing_log,
@@ -363,6 +374,22 @@ mod_de_heatmap_server <- function(id, app_data) {
           duration = 10
         )
       })
+    })
+    
+    # Refresh data button - allows reloading
+    observeEvent(input$refresh_data_btn, {
+      # Reset the loaded flag and clear data
+      heatmap_data$de_loaded <- FALSE
+      heatmap_data$de_data <- NULL
+      heatmap_data$processed_data <- NULL
+      heatmap_data$heatmap_matrix <- NULL
+      heatmap_data$plot <- NULL
+      heatmap_data$processing_log <- character()
+      
+      showNotification("Data cleared. Click 'Load DE Data' to reload.", type = "message", duration = 5)
+      
+      # Clear gene filter choices
+      updateSelectizeInput(session, "gene_filter", choices = NULL, selected = NULL)
     })
     
     # Process data for heatmap
@@ -556,10 +583,29 @@ mod_de_heatmap_server <- function(id, app_data) {
     
     # Status output
     output$heatmap_status <- renderPrint({
+      if (!heatmap_data$de_loaded) {
+        cat("Status: Ready to load data\n")
+        cat("=========================\n")
+        cat("Click 'Load DE Data' to begin.\n")
+        cat("This will load differential expression results from your dataset.\n")
+        cat("Expected loading time: 1-2 minutes for large datasets.\n")
+        return()
+      }
+      
+      if (is.null(heatmap_data$de_data)) {
+        cat("Status: Data loading in progress...\n")
+        cat("===================================\n")
+        cat("Please wait while DE results are processed.\n")
+        return()
+      }
+      
       data <- processed_heatmap_data()
       
       if (is.null(data)) {
-        cat("No data loaded yet.")
+        cat("Status: Data loaded, waiting for settings\n")
+        cat("=========================================\n")
+        cat("DE data loaded successfully!\n")
+        cat("Configure your settings and click 'Generate Heatmap'.\n")
         return()
       }
       
