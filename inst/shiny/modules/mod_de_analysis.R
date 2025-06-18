@@ -220,13 +220,16 @@ mod_de_analysis_server <- function(id, app_data) {
         return()
       }
       
-      # Load and process actual DE results
+      # Load and process actual DE results with performance optimization
+      showNotification("Loading DE results (this may take a moment)...", type = "message", duration = 5)
+      
       tryCatch({
         de_results <- readRDS(de_file_path)
-        processed_de <- process_de_data_with_metadata(de_results)
+        # Only process significant genes to reduce memory usage (max 500 per condition)
+        processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 500)
         
         if (nrow(processed_de) == 0) {
-          showNotification("No DE results found in the data file", type = "warning")
+          showNotification("No significant DE results found in the data file", type = "warning")
           return()
         }
         
@@ -239,15 +242,16 @@ mod_de_analysis_server <- function(id, app_data) {
                             selected = head(available_genes, 3))
         
         showNotification(
-          paste("Loaded", nrow(processed_de), "DE gene records from", length(available_genes), "genes"),
-          type = "message"
+          paste("Loaded", nrow(processed_de), "significant DE genes from", length(available_genes), "genes/conditions"),
+          type = "message",
+          duration = 3
         )
         
       }, error = function(e) {
         showNotification(
           paste("Error loading DE results:", e$message),
           type = "error",
-          duration = NULL
+          duration = 10
         )
       })
     })

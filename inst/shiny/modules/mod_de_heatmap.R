@@ -272,21 +272,25 @@ mod_de_heatmap_server <- function(id, app_data) {
         return()
       }
       
-      # Load and process actual DE results
+      # Load and process actual DE results with performance optimization
+      heatmap_data$processing_log <- c(heatmap_data$processing_log, "Starting DE data loading...")
+      showNotification("Loading DE results for heatmaps (this may take a moment)...", type = "message", duration = 5)
+      
       tryCatch({
         de_results <- readRDS(de_file_path)
-        processed_de <- process_de_data_with_metadata(de_results)
+        # Use smaller limit for heatmaps to ensure good performance (max 300 per condition)
+        processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 300)
         
         if (nrow(processed_de) == 0) {
           heatmap_data$processing_log <- c(heatmap_data$processing_log,
-                                          "WARNING: No DE results found in data file")
-          showNotification("No DE results found in the data file", type = "warning")
+                                          "WARNING: No significant DE results found")
+          showNotification("No significant DE results found in the data file", type = "warning")
           return()
         }
         
         heatmap_data$de_data <- processed_de
         heatmap_data$processing_log <- c(heatmap_data$processing_log, 
-                                        paste("Loaded", nrow(processed_de), "real DE gene records"))
+                                        paste("Loaded", nrow(processed_de), "significant DE gene records"))
         
         # Update gene filter choices
         available_genes <- unique(processed_de$gene)
@@ -295,8 +299,9 @@ mod_de_heatmap_server <- function(id, app_data) {
                             selected = head(available_genes, 5))
         
         showNotification(
-          paste("Loaded", nrow(processed_de), "DE gene records from", length(available_genes), "genes"),
-          type = "message"
+          paste("Loaded", nrow(processed_de), "significant DE genes from", length(available_genes), "genes/conditions"),
+          type = "message",
+          duration = 3
         )
         
       }, error = function(e) {
@@ -305,7 +310,7 @@ mod_de_heatmap_server <- function(id, app_data) {
         showNotification(
           paste("Error loading DE results:", e$message),
           type = "error",
-          duration = NULL
+          duration = 10
         )
       })
     })

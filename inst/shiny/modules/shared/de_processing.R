@@ -6,11 +6,11 @@
 #' @param de_results DE results from full_DE_results.rds
 #' @param metadata Cell metadata from final_dataset_metadata.rds
 #' @return Processed data frame with DE statistics and metadata
-process_de_data_with_metadata <- function(de_results, metadata = NULL) {
+process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes_per_condition = 1000) {
   
   processed_data <- data.frame()
   
-  # Process MAST results
+  # Process MAST results with filtering
   if ("iSCORE_PD_MAST" %in% names(de_results)) {
     mast_data <- de_results$iSCORE_PD_MAST
     
@@ -20,25 +20,36 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL) {
           results <- mast_data[[gene]][[cluster]]$results
           
           if (nrow(results) > 0) {
-            cluster_data <- data.frame(
-              gene = gene,
-              cluster = cluster,
-              gene_name = rownames(results),
-              log2FC = results$avg_log2FC,
-              pvalue = results$p_val_adj,
-              method = "MAST",
-              source = "iSCORE-PD",
-              experiment = "default",
-              stringsAsFactors = FALSE
-            )
-            processed_data <- rbind(processed_data, cluster_data)
+            # Filter to significant genes only to reduce data size
+            sig_results <- results[!is.na(results$p_val_adj) & results$p_val_adj < 0.05, ]
+            
+            # Further limit to top genes by significance if still too many
+            if (nrow(sig_results) > max_genes_per_condition) {
+              sig_results <- sig_results[order(sig_results$p_val_adj), ]
+              sig_results <- sig_results[1:max_genes_per_condition, ]
+            }
+            
+            if (nrow(sig_results) > 0) {
+              cluster_data <- data.frame(
+                gene = gene,
+                cluster = cluster,
+                gene_name = rownames(sig_results),
+                log2FC = sig_results$avg_log2FC,
+                pvalue = sig_results$p_val_adj,
+                method = "MAST",
+                source = "iSCORE-PD",
+                experiment = "default",
+                stringsAsFactors = FALSE
+              )
+              processed_data <- rbind(processed_data, cluster_data)
+            }
           }
         }
       }
     }
   }
   
-  # Process CRISPRi MixScale results
+  # Process CRISPRi MixScale results with filtering
   if ("CRISPRi_Mixscale" %in% names(de_results)) {
     crispi_data <- de_results$CRISPRi_Mixscale
     
@@ -55,18 +66,30 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL) {
             pval_col <- paste0("p_cell_type", exp, ":weight")
             
             if (pval_col %in% names(results) && nrow(results) > 0) {
-              cluster_data <- data.frame(
-                gene = gene,
-                cluster = cluster,
-                gene_name = rownames(results),
-                log2FC = results[[log2fc_col]],
-                pvalue = results[[pval_col]],
-                method = "MixScale",
-                source = "CRISPRi", 
-                experiment = exp,
-                stringsAsFactors = FALSE
-              )
-              processed_data <- rbind(processed_data, cluster_data)
+              # Filter to significant genes only
+              valid_rows <- !is.na(results[[pval_col]]) & results[[pval_col]] < 0.05
+              sig_results <- results[valid_rows, ]
+              
+              # Limit to top genes if still too many
+              if (nrow(sig_results) > max_genes_per_condition) {
+                sig_results <- sig_results[order(sig_results[[pval_col]]), ]
+                sig_results <- sig_results[1:max_genes_per_condition, ]
+              }
+              
+              if (nrow(sig_results) > 0) {
+                cluster_data <- data.frame(
+                  gene = gene,
+                  cluster = cluster,
+                  gene_name = rownames(sig_results),
+                  log2FC = sig_results[[log2fc_col]],
+                  pvalue = sig_results[[pval_col]],
+                  method = "MixScale",
+                  source = "CRISPRi", 
+                  experiment = exp,
+                  stringsAsFactors = FALSE
+                )
+                processed_data <- rbind(processed_data, cluster_data)
+              }
             }
           }
         }
