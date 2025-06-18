@@ -505,10 +505,10 @@ ui <- fluidPage(
         )
       ),
       
-      tabsetPanel(
-        id = "main_sections",
-        type = "pills",
-        class = "main-sections",
+      div(class = "main-sections",
+        tabsetPanel(
+          id = "main_sections",
+          type = "pills",
         
         # Landing Page / Overview
         tabPanel(
@@ -530,10 +530,10 @@ ui <- fluidPage(
             p("Analyze gene-level changes across mutations and perturbations. Explore expression patterns, compare conditions, and identify key drivers.")
           ),
           
-          tabsetPanel(
-            id = "de_genes_tabs",
-            type = "tabs",
-            class = "subsection-tabs",
+          div(class = "subsection-tabs",
+            tabsetPanel(
+              id = "de_genes_tabs",
+              type = "tabs",
             
             tabPanel(
               "UMAP & Volcano Plots",
@@ -558,7 +558,8 @@ ui <- fluidPage(
               br(),
               mod_de_heatmap_ui("de_heatmap_module")
             )
-          ),
+          ) # End tabsetPanel
+          ), # End div.subsection-tabs
           
           # Export section for DE Genes
           div(class = "export-section",
@@ -579,10 +580,10 @@ ui <- fluidPage(
             p("Explore pathway and gene set enrichment results. Identify biological processes, molecular functions, and pathways associated with your genes of interest.")
           ),
           
-          tabsetPanel(
-            id = "enrichment_tabs",
-            type = "tabs",
-            class = "subsection-tabs",
+          div(class = "subsection-tabs",
+            tabsetPanel(
+              id = "enrichment_tabs",
+              type = "tabs",
             
             tabPanel(
               "Basic Visualization",
@@ -615,7 +616,8 @@ ui <- fluidPage(
               br(),
               mod_pathview_ui("pathview_module")
             )
-          ),
+          ) # End tabsetPanel
+          ), # End div.subsection-tabs
           
           # Export section for Enrichment
           div(class = "export-section",
@@ -635,7 +637,8 @@ ui <- fluidPage(
           p("Download all your analysis results, figures, and data in various formats."),
           mod_export_ui("export_module")
         )
-      )
+      ) # End tabsetPanel
+      ) # End div.main-sections
     )
   )
 )
