@@ -196,33 +196,26 @@ mod_de_analysis_server <- function(id, app_data) {
       correlations = NULL
     )
     
-    # Load and process real DE data
+    # Load and process real DE data using same path as existing DE module
     observe({
       req(app_data$data)
       
-      # Check if we have access to the actual DE results file
-      de_file_path <- file.path(dirname(dirname(getwd())), "full_DE_results.rds")
-      if (!file.exists(de_file_path)) {
-        # Try alternative paths
-        alt_paths <- c(
-          "full_DE_results.rds",
-          "../full_DE_results.rds", 
-          "../../full_DE_results.rds"
+      # Use the same DE file path logic as the existing DE Results module
+      data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+      if (data_dir == "") {
+        showNotification(
+          "No data directory configured. DE analysis not available.",
+          type = "warning"
         )
-        de_file_path <- NULL
-        for (path in alt_paths) {
-          if (file.exists(path)) {
-            de_file_path <- path
-            break
-          }
-        }
+        return()
       }
       
-      if (is.null(de_file_path) || !file.exists(de_file_path)) {
+      de_file_path <- file.path(data_dir, "full_DE_results.rds")
+      
+      if (!file.exists(de_file_path)) {
         showNotification(
-          "DE results file (full_DE_results.rds) not found. Please ensure the file is available.",
-          type = "error",
-          duration = NULL
+          "DE results file not found in the configured data directory. DE analysis not available.",
+          type = "warning"
         )
         return()
       }

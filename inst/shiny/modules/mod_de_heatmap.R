@@ -244,35 +244,30 @@ mod_de_heatmap_server <- function(id, app_data) {
       processing_log = character()
     )
     
-    # Load real DE data
+    # Load real DE data using same path as existing DE module
     observe({
       req(app_data$data)
       
-      # Check if we have access to the actual DE results file
-      de_file_path <- file.path(dirname(dirname(getwd())), "full_DE_results.rds")
-      if (!file.exists(de_file_path)) {
-        # Try alternative paths
-        alt_paths <- c(
-          "full_DE_results.rds",
-          "../full_DE_results.rds", 
-          "../../full_DE_results.rds"
+      # Use the same DE file path logic as the existing DE Results module
+      data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+      if (data_dir == "") {
+        heatmap_data$processing_log <- c(heatmap_data$processing_log,
+                                        "WARNING: No data directory configured")
+        showNotification(
+          "No data directory configured. DE heatmaps not available.",
+          type = "warning"
         )
-        de_file_path <- NULL
-        for (path in alt_paths) {
-          if (file.exists(path)) {
-            de_file_path <- path
-            break
-          }
-        }
+        return()
       }
       
-      if (is.null(de_file_path) || !file.exists(de_file_path)) {
+      de_file_path <- file.path(data_dir, "full_DE_results.rds")
+      
+      if (!file.exists(de_file_path)) {
         heatmap_data$processing_log <- c(heatmap_data$processing_log,
-                                        "ERROR: DE results file (full_DE_results.rds) not found")
+                                        "WARNING: DE results file not found")
         showNotification(
-          "DE results file (full_DE_results.rds) not found. Please ensure the file is available.",
-          type = "error",
-          duration = NULL
+          "DE results file not found in the configured data directory. DE heatmaps not available.",
+          type = "warning"
         )
         return()
       }
