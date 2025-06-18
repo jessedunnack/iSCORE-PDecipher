@@ -193,11 +193,14 @@ mod_de_analysis_server <- function(id, app_data) {
       de_data = NULL,
       processed_data = NULL,
       overlaps = NULL,
-      correlations = NULL
+      correlations = NULL,
+      de_loaded = FALSE  # Flag to prevent repeated loading
     )
     
     # Load and process real DE data using same path as existing DE module
-    observe({
+    observeEvent(app_data$data, {
+      # Only load once
+      if (analysis_data$de_loaded) return()
       req(app_data$data)
       
       # Use the same DE file path logic as the existing DE Results module
@@ -246,6 +249,9 @@ mod_de_analysis_server <- function(id, app_data) {
           type = "message",
           duration = 3
         )
+        
+        # Set flag to prevent repeated loading
+        analysis_data$de_loaded <- TRUE
         
       }, error = function(e) {
         showNotification(

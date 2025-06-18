@@ -241,11 +241,14 @@ mod_de_heatmap_server <- function(id, app_data) {
       processed_data = NULL,
       heatmap_matrix = NULL,
       plot = NULL,
-      processing_log = character()
+      processing_log = character(),
+      de_loaded = FALSE  # Flag to prevent repeated loading
     )
     
     # Load real DE data using same path as existing DE module
     observe({
+      # Only load once
+      if (heatmap_data$de_loaded) return()
       req(app_data$data)
       
       # Use the same DE file path logic as the existing DE Results module
@@ -303,6 +306,9 @@ mod_de_heatmap_server <- function(id, app_data) {
           type = "message",
           duration = 3
         )
+        
+        # Set flag to prevent repeated loading
+        heatmap_data$de_loaded <- TRUE
         
       }, error = function(e) {
         heatmap_data$processing_log <- c(heatmap_data$processing_log,
