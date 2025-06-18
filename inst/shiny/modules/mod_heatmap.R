@@ -1,8 +1,23 @@
 # Module: Advanced Heatmaps
 # Provides heatmap visualizations using the unified heatmap system
 
-# Load source labeling functions
-source("modules/shared/source_labeling.R")
+# Load source labeling functions (with error handling)
+tryCatch({
+  source("modules/shared/source_labeling.R")
+}, error = function(e) {
+  message("Could not load source_labeling.R: ", e$message)
+  
+  # Define basic fallback functions
+  add_source_labels <- function(data, gene_col = "mutation_perturbation", 
+                               method_col = "method", modality_col = "modality") {
+    # Simple fallback - just return the data without source labels
+    return(data)
+  }
+  
+  create_source_label <- function(gene, method, modality = NULL) {
+    return(as.character(gene))
+  }
+})
 
 mod_heatmap_ui <- function(id) {
   ns <- NS(id)
@@ -421,18 +436,24 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         # Add source labels for gene columns
         if (x_var %in% c("gene", "mutation", "mutation_perturbation")) {
           # Add source labels to distinguish iSCORE-PD vs PerturbSeq
-          df <- add_source_labels(df, 
-                                 gene_col = x_var,
-                                 method_col = if("method" %in% names(df)) "method" else "analysis_type",
-                                 modality_col = if("modality" %in% names(df)) "modality" else NULL)
-          
-          # Use source labels for display
-          if ("source_label" %in% names(df)) {
-            df$display_label <- df$source_label
-            x_var_display <- "display_label"
-          } else {
+          tryCatch({
+            df <- add_source_labels(df, 
+                                   gene_col = x_var,
+                                   method_col = if("method" %in% names(df)) "method" else "analysis_type",
+                                   modality_col = if("modality" %in% names(df)) "modality" else NULL)
+            
+            # Use source labels for display
+            if ("source_label" %in% names(df)) {
+              df$display_label <- df$source_label
+              x_var_display <- "display_label"
+            } else {
+              x_var_display <- x_var
+            }
+          }, error = function(e) {
+            message("Error adding source labels: ", e$message)
+            # Fallback to original column
             x_var_display <- x_var
-          }
+          })
         } else {
           x_var_display <- x_var
         }
@@ -533,8 +554,35 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           }
         }
         
+        # Validate variables before matrix creation
+        if (!x_var_display %in% names(df)) {
+          message("Heatmap error: x_var_display '", x_var_display, "' not found in data")
+          stop("Display column not found")
+        }
+        
+        if (!y_var %in% names(df)) {
+          message("Heatmap error: y_var '", y_var, "' not found in data")
+          stop("Y-axis variable not found")
+        }
+        
+        if (!value_var %in% names(df)) {
+          message("Heatmap error: value_var '", value_var, "' not found in data")
+          stop("Value variable not found")
+        }
+        
+        # Check for empty variables
+        if (length(unique(df[[x_var_display]])) == 0) {
+          message("Heatmap error: no unique values in x_var_display")
+          stop("No unique x-axis values")
+        }
+        
+        if (length(unique(df[[y_var]])) == 0) {
+          message("Heatmap error: no unique values in y_var")
+          stop("No unique y-axis values")
+        }
+        
         # Create matrix
-        if (length(unique(df[[x_var]])) < 2) {
+        if (length(unique(df[[x_var_display]])) < 2) {
           # If only one condition, create a simple bar plot
           top_terms <- head(df[order(df[[value_var]], decreasing = TRUE), ], input$max_terms)
           
