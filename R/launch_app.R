@@ -24,6 +24,20 @@
 launch_iscore_app <- function(data_dir = NULL, port = getOption("shiny.port"), 
                               launch.browser = getOption("shiny.launch.browser", TRUE), ...) {
   
+  # Check if parent data directory is configured
+  if (is.null(data_dir)) {
+    if (is_first_launch()) {
+      cat("Welcome to iSCORE-PDecipher!\n")
+      parent_dir <- setup_parent_dir(prompt_if_missing = TRUE)
+      if (is.null(parent_dir)) {
+        stop("Setup cancelled. Cannot launch app without data directory.")
+      }
+    }
+    
+    # Use dataset selection with configured parent directory
+    data_dir <- select_dataset_directory()
+  }
+  
   # Source required functions from the R directory
   # These are helper functions not exported from the package
   

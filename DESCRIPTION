@@ -49,7 +49,9 @@ Imports:
     ComplexHeatmap,
     SingleCellExperiment,
     dittoSeq,
-    enrichplot
+    enrichplot,
+    rappdirs,
+    jsonlite
 Suggests:
     knitr,
     rmarkdown,

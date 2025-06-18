@@ -151,16 +151,34 @@ validate_dataset_directory <- function(data_dir) {
 #'
 #' @return Named list of dataset paths
 get_dataset_options <- function() {
-  # Check which OS we're on and adjust paths accordingly
-  if (.Platform$OS.type == "windows") {
-    base_path <- "E:/ASAP/scRNASeq/PerturbSeq/final"
-  } else {
-    base_path <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final"
+  # Get parent directory from config
+  parent_dir <- get_parent_data_dir()
+  
+  if (is.null(parent_dir)) {
+    # Fallback to original hard-coded paths for backwards compatibility
+    if (.Platform$OS.type == "windows") {
+      base_path <- "E:/ASAP/scRNASeq/PerturbSeq/final"
+    } else {
+      base_path <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final"
+    }
+    parent_dir <- base_path
   }
   
-  list(
-    "iSCORE-PD only" = file.path(base_path, "iSCORE-PD"),
-    "iSCORE-PD + CRISPRi" = file.path(base_path, "iSCORE-PD_plus_CRISPRi"),
-    "iSCORE-PD + CRISPRi + CRISPRa" = file.path(base_path, "iSCORE-PD_plus_CRISPRi_and_CRISPRa")
+  # Build dataset paths using configured parent directory
+  dataset_paths <- list(
+    "iSCORE-PD only" = file.path(parent_dir, "iSCORE-PD"),
+    "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi"),
+    "iSCORE-PD + CRISPRi + CRISPRa" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi_plus_CRISPRa")
   )
+  
+  # Filter to only return datasets that actually exist
+  existing_datasets <- list()
+  for (name in names(dataset_paths)) {
+    path <- dataset_paths[[name]]
+    if (dir.exists(path)) {
+      existing_datasets[[name]] <- path
+    }
+  }
+  
+  return(existing_datasets)
 }
