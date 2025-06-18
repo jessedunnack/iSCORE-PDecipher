@@ -692,16 +692,26 @@ server <- function(input, output, session) {
       return(character(0))
     }
     
-    # Map user-friendly key to actual data values
-    method_filter <- switch(method_key,
-      "MAST" = quote(method == "MAST"),
-      "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
-      "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
-      quote(FALSE)
-    )
-    
-    # Apply filter and get unique genes
-    filtered_data <- data[eval(method_filter, data), ]
+    # Filter based on method key
+    if (method_key == "MAST") {
+      filtered_data <- data[data$method == "MAST", ]
+    } else if (method_key == "MixScale_CRISPRi") {
+      # Check if modality column exists
+      if ("modality" %in% names(data)) {
+        filtered_data <- data[data$method == "MixScale" & data$modality == "CRISPRi", ]
+      } else {
+        return(character(0))
+      }
+    } else if (method_key == "MixScale_CRISPRa") {
+      # Check if modality column exists
+      if ("modality" %in% names(data)) {
+        filtered_data <- data[data$method == "MixScale" & data$modality == "CRISPRa", ]
+      } else {
+        return(character(0))
+      }
+    } else {
+      return(character(0))
+    }
     
     # Check which column contains gene names
     gene_col <- if ("gene" %in% names(filtered_data)) "gene" else "mutation_perturbation"
@@ -817,22 +827,38 @@ server <- function(input, output, session) {
     req(input$global_analysis_type, input$global_gene)
     
     if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
-      # Map method key back to filter expression
-      method_filter <- switch(input$global_analysis_type,
-        "MAST" = quote(method == "MAST"),
-        "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
-        "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
-        quote(FALSE)
-      )
-      
       # Get gene column name
       gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
       
-      # Filter data
-      filtered_data <- app_data$consolidated_data[
-        eval(method_filter, app_data$consolidated_data) &
-        app_data$consolidated_data[[gene_col]] == input$global_gene,
-      ]
+      # Filter based on method key
+      if (input$global_analysis_type == "MAST") {
+        filtered_data <- app_data$consolidated_data[
+          app_data$consolidated_data$method == "MAST" &
+          app_data$consolidated_data[[gene_col]] == input$global_gene,
+        ]
+      } else if (input$global_analysis_type == "MixScale_CRISPRi") {
+        if ("modality" %in% names(app_data$consolidated_data)) {
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data$modality == "CRISPRi" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene,
+          ]
+        } else {
+          filtered_data <- data.frame()
+        }
+      } else if (input$global_analysis_type == "MixScale_CRISPRa") {
+        if ("modality" %in% names(app_data$consolidated_data)) {
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data$modality == "CRISPRa" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene,
+          ]
+        } else {
+          filtered_data <- data.frame()
+        }
+      } else {
+        filtered_data <- data.frame()
+      }
       
       clusters <- sort(unique(filtered_data$cluster))
       
@@ -861,23 +887,41 @@ server <- function(input, output, session) {
     req(input$global_analysis_type, input$global_gene, input$global_cluster)
     
     if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
-      # Map method key back to filter expression
-      method_filter <- switch(input$global_analysis_type,
-        "MAST" = quote(method == "MAST"),
-        "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
-        "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
-        quote(FALSE)
-      )
-      
       # Get gene column name
       gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
       
-      # Filter data
-      filtered_data <- app_data$consolidated_data[
-        eval(method_filter, app_data$consolidated_data) &
-        app_data$consolidated_data[[gene_col]] == input$global_gene &
-        app_data$consolidated_data$cluster == input$global_cluster,
-      ]
+      # Filter based on method key
+      if (input$global_analysis_type == "MAST") {
+        filtered_data <- app_data$consolidated_data[
+          app_data$consolidated_data$method == "MAST" &
+          app_data$consolidated_data[[gene_col]] == input$global_gene &
+          app_data$consolidated_data$cluster == input$global_cluster,
+        ]
+      } else if (input$global_analysis_type == "MixScale_CRISPRi") {
+        if ("modality" %in% names(app_data$consolidated_data)) {
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data$modality == "CRISPRi" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene &
+            app_data$consolidated_data$cluster == input$global_cluster,
+          ]
+        } else {
+          filtered_data <- data.frame()
+        }
+      } else if (input$global_analysis_type == "MixScale_CRISPRa") {
+        if ("modality" %in% names(app_data$consolidated_data)) {
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data$modality == "CRISPRa" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene &
+            app_data$consolidated_data$cluster == input$global_cluster,
+          ]
+        } else {
+          filtered_data <- data.frame()
+        }
+      } else {
+        filtered_data <- data.frame()
+      }
       
       experiments <- sort(unique(filtered_data$experiment))
       
