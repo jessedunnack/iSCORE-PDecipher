@@ -161,7 +161,6 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
     tags$link(rel = "stylesheet", type = "text/css", href = "custom_enhanced.css"),
-    tags$link(rel = "stylesheet", type = "text/css", href = "nested_tabs.css"),
     tags$script(src = "app.js"),
     tags$script(HTML("
       // Show/hide loading overlay
@@ -411,7 +410,7 @@ ui <- fluidPage(
         hr(),
         
         # Data Selection
-        h5(icon("sliders-h"), "Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
+        h5("Data Selection", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
       
       selectInput("global_analysis_type",
                   "Analysis Type",
@@ -474,7 +473,7 @@ ui <- fluidPage(
       
       hr(),
       
-      h5(icon("cog"), "Analysis Settings", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
+      h5("Analysis Settings", style = "margin-bottom: 15px; font-weight: bold; color: #337ab7;"),
       
       sliderInput("global_pval",
                   "P-value Threshold",
@@ -485,9 +484,6 @@ ui <- fluidPage(
                   width = "100%"),
       
       hr(),
-      
-      # Section indicator
-      uiOutput("section_indicator"),
       
       # Data status
       uiOutput("data_status")
@@ -506,11 +502,9 @@ ui <- fluidPage(
       ),
       
       tabsetPanel(
-        id = "main_sections",
-        type = "pills",
-        class = "main-sections",
+        id = "main_tabs",
         
-        # Landing Page / Overview
+        # Landing Page
         tabPanel(
           "Overview",
           icon = icon("home"),
@@ -519,120 +513,87 @@ ui <- fluidPage(
           landingPageWithUmapUI("landing")
         ),
         
-        # DE Genes Section
+        # DE Results Page
         tabPanel(
-          "DE Genes",
-          icon = icon("dna"),
-          value = "de_genes_section",
+          "DE Results",
+          icon = icon("volcano"),
+          value = "de_results",
           br(),
-          div(class = "section-header",
-            h2("Differential Expression Gene Analysis"),
-            p("Analyze gene-level changes across mutations and perturbations. Explore expression patterns, compare conditions, and identify key drivers.")
-          ),
-          
-          tabsetPanel(
-            id = "de_genes_tabs",
-            type = "tabs",
-            class = "subsection-tabs",
-            
-            tabPanel(
-              "UMAP & Volcano Plots",
-              icon = icon("volcano"),
-              value = "de_volcano",
-              br(),
-              mod_de_results_ui("de_results_module")
-            ),
-            
-            tabPanel(
-              "Gene Overlaps & Correlations",
-              icon = icon("project-diagram"),
-              value = "de_overlaps",
-              br(),
-              mod_de_analysis_ui("de_analysis_module")
-            ),
-            
-            tabPanel(
-              "DE Gene Heatmaps",
-              icon = icon("fire"),
-              value = "de_heatmaps",
-              br(),
-              mod_de_heatmap_ui("de_heatmap_module")
-            )
-          ),
-          
-          # Export section for DE Genes
-          div(class = "export-section",
-            h4(icon("download"), "Export DE Gene Results"),
-            p("Download your differential expression analysis results in various formats."),
-            actionButton("export_de_genes", "Go to Export Options", class = "btn-info")
-          )
+          mod_de_results_ui("de_results_module")
         ),
         
-        # Functional Enrichment Section
+        # Basic Visualization (main plotting interface)
         tabPanel(
-          "Functional Enrichment",
+          "Basic Visualization",
           icon = icon("chart-bar"),
-          value = "enrichment_section",
+          value = "visualization",
           br(),
-          div(class = "section-header",
-            h2("Functional Enrichment Analysis"),
-            p("Explore pathway and gene set enrichment results. Identify biological processes, molecular functions, and pathways associated with your genes of interest.")
-          ),
-          
-          tabsetPanel(
-            id = "enrichment_tabs",
-            type = "tabs",
-            class = "subsection-tabs",
-            
-            tabPanel(
-              "Basic Visualization",
-              icon = icon("chart-bar"),
-              value = "basic_viz",
-              br(),
-              mod_visualization_ui("visualization_module")
-            ),
-            
-            tabPanel(
-              "Enrichment Heatmaps",
-              icon = icon("th"),
-              value = "enrichment_heatmaps",
-              br(),
-              mod_heatmap_ui("heatmap_module")
-            ),
-            
-            tabPanel(
-              "Method Comparison",
-              icon = icon("chart-line"),
-              value = "method_comparison",
-              br(),
-              mod_comparison_ui("comparison_module")
-            ),
-            
-            tabPanel(
-              "KEGG Pathview",
-              icon = icon("sitemap"),
-              value = "kegg_pathview",
-              br(),
-              mod_pathview_ui("pathview_module")
-            )
-          ),
-          
-          # Export section for Enrichment
-          div(class = "export-section",
-            h4(icon("download"), "Export Enrichment Results"),
-            p("Download your functional enrichment analysis results in various formats."),
-            actionButton("export_enrichment", "Go to Export Options", class = "btn-info")
-          )
+          mod_visualization_ui("visualization_module")
         ),
         
-        # Global Export Tab (kept as separate main tab for now)
+        # Method Comparison
         tabPanel(
-          "Export",
+          "Method Comparison",
+          icon = icon("chart-line"),
+          value = "comparison",
+          br(),
+          h2("Compare Analysis Methods"),
+          p("Compare MAST vs MixScale results to identify convergent pathways"),
+          mod_comparison_ui("comparison_module")
+        ),
+        
+        # Heatmap Visualization
+        tabPanel(
+          "Heatmap Visualization",
+          icon = icon("th"),
+          value = "heatmap",
+          br(),
+          h2("Interactive Heatmaps"),
+          p("Create customizable heatmaps of enrichment results"),
+          mod_heatmap_ui("heatmap_module")
+        ),
+        
+        # NEW: DE Gene Analysis
+        tabPanel(
+          "DE Gene Analysis",
+          icon = icon("chart-line"),
+          value = "de_analysis",
+          br(),
+          h2("DE Gene Analysis"),
+          p("Cross-condition comparisons, overlaps, and correlations of differentially expressed genes"),
+          mod_de_analysis_ui("de_analysis_module")
+        ),
+        
+        # NEW: DE Gene Heatmaps
+        tabPanel(
+          "DE Gene Heatmaps", 
+          icon = icon("fire"),
+          value = "de_heatmap",
+          br(),
+          h2("DE Gene Heatmaps"),
+          p("Interactive heatmap builder for differential expression patterns with source distinction"),
+          mod_de_heatmap_ui("de_heatmap_module")
+        ),
+        
+        # KEGG Pathview
+        tabPanel(
+          "KEGG Pathview",
+          icon = icon("sitemap"),
+          value = "pathview",
+          br(),
+          h2("KEGG Pathway Visualization"),
+          p("Visualize differential expression on KEGG pathway diagrams"),
+          mod_pathview_ui("pathview_module")
+        ),
+        
+        # Export Results
+        tabPanel(
+          "Export Results",
           icon = icon("download"),
           value = "export",
           br(),
           h2("Export Results"),
-          p("Download all your analysis results, figures, and data in various formats."),
+          p("Download figures and data in various formats"),
           mod_export_ui("export_module")
         )
       )
@@ -809,45 +770,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Section indicator display
-  output$section_indicator <- renderUI({
-    current_section <- input$main_sections
-    
-    if (is.null(current_section)) return(NULL)
-    
-    section_info <- switch(current_section,
-      "overview" = list(
-        icon = icon("home"),
-        text = "Overview applies to both sections",
-        color = "#28a745"
-      ),
-      "de_genes_section" = list(
-        icon = icon("dna"),
-        text = "Settings apply to DE Genes analysis",
-        color = "#3c8dbc"
-      ),
-      "enrichment_section" = list(
-        icon = icon("chart-bar"),
-        text = "Settings apply to Enrichment analysis",
-        color = "#f39c12"
-      ),
-      "export" = list(
-        icon = icon("download"),
-        text = "Export all results",
-        color = "#6c757d"
-      )
-    )
-    
-    if (!is.null(section_info)) {
-      tags$div(
-        class = "alert",
-        style = paste0("background-color: ", section_info$color, "20; border-left: 4px solid ", section_info$color, "; padding: 10px; margin-bottom: 15px;"),
-        section_info$icon,
-        tags$strong(section_info$text)
-      )
-    }
-  })
-  
   # Data status display
   output$data_status <- renderUI({
     if (app_data$data_loaded) {
@@ -957,15 +879,6 @@ server <- function(input, output, session) {
     comparison_data = comparison_results,
     visualization_data = visualization_results
   )
-  
-  # Observers for export navigation buttons
-  observeEvent(input$export_de_genes, {
-    updateTabsetPanel(session, "main_sections", selected = "export")
-  })
-  
-  observeEvent(input$export_enrichment, {
-    updateTabsetPanel(session, "main_sections", selected = "export")
-  })
 }
 
 # Run the app

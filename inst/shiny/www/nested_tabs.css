@@ -1,0 +1,166 @@
+/* Nested Tab Styling for iSCORE-PDecipher App Reorganization */
+
+/* Main section tabs (pills) */
+.nav-pills.main-sections {
+  margin-bottom: 30px;
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 10px;
+}
+
+.nav-pills.main-sections .nav-link {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 12px 24px;
+  margin-right: 10px;
+  color: #495057;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-pills.main-sections .nav-link:hover {
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.nav-pills.main-sections .nav-link.active {
+  color: white;
+  background-color: #3c8dbc;
+  border-color: #3c8dbc;
+  box-shadow: 0 4px 12px rgba(60, 141, 188, 0.3);
+}
+
+/* Section descriptions */
+.section-header {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border-left: 4px solid #3c8dbc;
+}
+
+.section-header h2 {
+  margin-top: 0;
+  color: #2c5282;
+  font-weight: 600;
+}
+
+.section-header p {
+  margin-bottom: 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+/* Sub-section tabs (regular tabs) */
+.subsection-tabs .nav-tabs {
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 20px;
+}
+
+.subsection-tabs .nav-link {
+  color: #495057;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.subsection-tabs .nav-link:hover {
+  border-color: transparent;
+  border-bottom-color: #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.subsection-tabs .nav-link.active {
+  color: #3c8dbc;
+  background-color: transparent;
+  border-color: transparent;
+  border-bottom-color: #3c8dbc;
+  font-weight: 600;
+}
+
+/* Icon spacing */
+.nav-link i {
+  margin-right: 8px;
+}
+
+/* Overview tab special styling */
+.nav-pills.main-sections .nav-link[data-value="overview"] {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.nav-pills.main-sections .nav-link[data-value="overview"]:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.nav-pills.main-sections .nav-link[data-value="overview"].active {
+  background-color: #1e7e34;
+  border-color: #1c7430;
+}
+
+/* Export section styling */
+.export-section {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 30px;
+  border: 1px solid #dee2e6;
+}
+
+.export-section h4 {
+  color: #495057;
+  margin-bottom: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .nav-pills.main-sections .nav-link {
+    font-size: 14px;
+    padding: 8px 16px;
+    margin-bottom: 5px;
+  }
+  
+  .section-header {
+    padding: 15px;
+  }
+  
+  .section-header h2 {
+    font-size: 20px;
+  }
+  
+  .subsection-tabs .nav-link {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+/* Loading states for sections */
+.section-loading {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+}
+
+/* Smooth transitions between sections */
+.tab-content {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
