@@ -393,9 +393,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # Initialize with global cluster or "All"
+    # DON'T initialize with global cluster - wait for user to click UMAP
+    # This ensures volcano plot doesn't show data that doesn't match the UMAP view
     observe({
-      if (is.null(values$selected_cluster)) {
+      if (FALSE) {  # Disabled - we want user to explicitly select from UMAP
         values$selected_cluster <- isolate(global_selection()$cluster)
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
           values$selected_cluster <- "All"
@@ -816,7 +817,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               annotations = list(
                 x = 0,
                 y = 5,
-                text = "Please select a cluster to view differential expression results",
+                text = "Click on a cluster in the UMAP to view its differential expression results",
                 showarrow = FALSE,
                 font = list(size = 16, color = "#3c8dbc")
               )
@@ -881,7 +882,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               annotations = list(
                 x = 0,
                 y = 5,
-                text = "Please select a cluster to view differential expression results",
+                text = "Click on a cluster in the UMAP to view its differential expression results",
                 showarrow = FALSE,
                 font = list(size = 16, color = "#3c8dbc")
               )
