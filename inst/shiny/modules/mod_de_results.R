@@ -393,13 +393,17 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # DON'T initialize with global cluster - wait for user to click UMAP
-    # This ensures volcano plot doesn't show data that doesn't match the UMAP view
+    # Track if we're updating to prevent circular updates
+    local_updating <- reactiveVal(FALSE)
+    
+    # Initialize from global settings
     observe({
-      if (FALSE) {  # Disabled - we want user to explicitly select from UMAP
-        values$selected_cluster <- isolate(global_selection()$cluster)
-        if (is.null(values$selected_cluster) || values$selected_cluster == "") {
-          values$selected_cluster <- "All"
+      if (!local_updating() && !is.null(global_selection()$cluster)) {
+        # Only update if different from current selection
+        if (is.null(values$selected_cluster) || values$selected_cluster != global_selection()$cluster) {
+          values$selected_cluster <- global_selection()$cluster
+          # Update the cluster selector dropdown
+          updateSelectInput(session, "cluster_selector", selected = values$selected_cluster)
         }
       }
     })
@@ -473,11 +477,23 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       output$n_cells_text <- renderText({ format(nrow(values$umap_data), big.mark = ",") })
     })
     
-    # Update selected cluster when dropdown changes - CLEANED: Removed debugging cat() statements
+    # Update selected cluster when dropdown changes
     observeEvent(input$cluster_selector, {
       if (input$cluster_selector != "") {
-        # Ensure we're using the actual cluster value (e.g., "cluster_1") not the display label
+        # Set flag to prevent circular updates
+        local_updating(TRUE)
+        
+        # Update local state
         values$selected_cluster <- input$cluster_selector
+        
+        # Send update to global settings
+        session$sendInputMessage("update_cluster_from_module", 
+                               list(value = input$cluster_selector))
+        
+        cat("[DE Results] Sent cluster update to global:", input$cluster_selector, "\n")
+        
+        # Reset flag
+        local_updating(FALSE)
       } else {
         values$selected_cluster <- NULL
       }

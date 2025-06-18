@@ -415,8 +415,8 @@ ui <- fluidPage(
       
       selectInput("global_analysis_type",
                   "Analysis Type",
-                  choices = c("MAST", "MixScale"),
-                  selected = "MAST",
+                  choices = c("Loading..." = ""),  # Will be populated dynamically
+                  selected = NULL,
                   width = "100%"),
       
       selectInput("global_gene",
@@ -656,13 +656,64 @@ server <- function(input, output, session) {
     default_cluster = "cluster_0",
     default_experiment = "default",
     default_enrichment = "GO_BP",
-    default_direction = "ALL"
+    default_direction = "ALL",
+    # NEW: Track available options dynamically
+    available_methods = list(),      # e.g., list(MAST=TRUE, CRISPRi=TRUE, CRISPRa=FALSE)
+    available_genes_by_method = list(),  # e.g., list(MAST=c("LRRK2",...), CRISPRi=c(...))
+    # NEW: Global state tracking
+    update_in_progress = FALSE,      # Flag to prevent circular updates
+    last_update_source = NULL        # Track where update originated
   )
   
   # Global p-value threshold
   global_pval <- reactive({
     input$global_pval
   })
+  
+  # Helper function to detect available methods in data
+  detect_available_methods <- function(data) {
+    if (is.null(data) || nrow(data) == 0) {
+      return(list(MAST = FALSE, CRISPRi = FALSE, CRISPRa = FALSE))
+    }
+    
+    methods <- unique(data$method)
+    modalities <- if ("modality" %in% names(data)) unique(data$modality) else character(0)
+    
+    list(
+      MAST = "MAST" %in% methods,
+      CRISPRi = "MixScale" %in% methods && "CRISPRi" %in% modalities,
+      CRISPRa = "MixScale" %in% methods && "CRISPRa" %in% modalities
+    )
+  }
+  
+  # Helper function to get valid genes for a method
+  get_valid_genes_for_method <- function(data, method_key) {
+    if (is.null(data) || nrow(data) == 0) {
+      return(character(0))
+    }
+    
+    # Map user-friendly key to actual data values
+    method_filter <- switch(method_key,
+      "MAST" = quote(method == "MAST"),
+      "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
+      "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
+      quote(FALSE)
+    )
+    
+    # Apply filter and get unique genes
+    filtered_data <- data[eval(method_filter, data), ]
+    
+    # Check which column contains gene names
+    gene_col <- if ("gene" %in% names(filtered_data)) "gene" else "mutation_perturbation"
+    
+    sort(unique(filtered_data[[gene_col]]))
+  }
+  
+  # Helper function to check if a gene/method combination is valid
+  is_valid_combination <- function(data, gene, method_key) {
+    valid_genes <- get_valid_genes_for_method(data, method_key)
+    gene %in% valid_genes
+  }
   
   # Initialize app with data - run once on startup
   observe({
@@ -678,34 +729,85 @@ server <- function(input, output, session) {
       } else {
         initialize_app_with_data(app_data)
       }
+      
+      # After data is loaded, detect available methods
+      if (!is.null(app_data$consolidated_data)) {
+        app_data$available_methods <- detect_available_methods(app_data$consolidated_data)
+        
+        # Build genes by method lookup
+        for (method_key in c("MAST", "MixScale_CRISPRi", "MixScale_CRISPRa")) {
+          app_data$available_genes_by_method[[method_key]] <- 
+            get_valid_genes_for_method(app_data$consolidated_data, method_key)
+        }
+        
+        cat("Available methods detected:\n")
+        cat("  MAST:", app_data$available_methods$MAST, "\n")
+        cat("  CRISPRi:", app_data$available_methods$CRISPRi, "\n")
+        cat("  CRISPRa:", app_data$available_methods$CRISPRa, "\n")
+      }
     }
   })
   
-  # Update gene choices based on consolidated data
+  # Update Analysis Type dropdown based on available data
+  observe({
+    req(app_data$data_loaded)
+    
+    if (!app_data$update_in_progress) {
+      # Create user-friendly labels based on what's available
+      choices <- c()
+      
+      if (isTRUE(app_data$available_methods$MAST)) {
+        choices["iSCORE-PD (MAST)"] <- "MAST"
+      }
+      
+      if (isTRUE(app_data$available_methods$CRISPRi)) {
+        choices["PerturbSeq (CRISPRi)"] <- "MixScale_CRISPRi"
+      }
+      
+      if (isTRUE(app_data$available_methods$CRISPRa)) {
+        choices["PerturbSeq (CRISPRa)"] <- "MixScale_CRISPRa"
+      }
+      
+      if (length(choices) > 0) {
+        # Select first available or keep current if valid
+        current <- input$global_analysis_type
+        selected <- if (!is.null(current) && current %in% choices) {
+          current
+        } else {
+          choices[1]
+        }
+        
+        updateSelectInput(session, "global_analysis_type", 
+                         choices = choices,
+                         selected = selected)
+      }
+    }
+  })
+  
+  # Update gene choices based on selected analysis type
   observe({
     req(app_data$data_loaded)
     req(input$global_analysis_type)
     
-    if (!is.null(app_data$consolidated_data)) {
-      genes <- unique(app_data$consolidated_data[
-        app_data$consolidated_data$method == input$global_analysis_type, 
-        "gene"
-      ])
-      genes <- sort(genes)
+    if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
+      # Get only genes valid for selected method
+      valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
       
-      # Set default if available
-      selected <- NULL
-      if (length(genes) > 0) {
-        if (!is.null(app_data$default_gene) && app_data$default_gene %in% genes) {
-          selected <- app_data$default_gene
+      if (length(valid_genes) > 0) {
+        # Keep current selection if still valid, otherwise pick first
+        current_gene <- input$global_gene
+        selected <- if (!is.null(current_gene) && current_gene %in% valid_genes) {
+          current_gene
+        } else if (!is.null(app_data$default_gene) && app_data$default_gene %in% valid_genes) {
+          app_data$default_gene
         } else {
-          selected <- genes[1]
+          valid_genes[1]
         }
+        
+        updateSelectInput(session, "global_gene", 
+                         choices = valid_genes, 
+                         selected = selected)
       }
-      
-      updateSelectInput(session, "global_gene", 
-                       choices = genes, 
-                       selected = selected)
     }
   })
   
@@ -714,18 +816,33 @@ server <- function(input, output, session) {
     req(app_data$data_loaded)
     req(input$global_analysis_type, input$global_gene)
     
-    if (!is.null(app_data$consolidated_data)) {
-      clusters <- unique(app_data$consolidated_data[
-        app_data$consolidated_data$method == input$global_analysis_type &
-        app_data$consolidated_data$gene == input$global_gene,
-        "cluster"
-      ])
-      clusters <- sort(clusters)
+    if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
+      # Map method key back to filter expression
+      method_filter <- switch(input$global_analysis_type,
+        "MAST" = quote(method == "MAST"),
+        "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
+        "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
+        quote(FALSE)
+      )
+      
+      # Get gene column name
+      gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
+      
+      # Filter data
+      filtered_data <- app_data$consolidated_data[
+        eval(method_filter, app_data$consolidated_data) &
+        app_data$consolidated_data[[gene_col]] == input$global_gene,
+      ]
+      
+      clusters <- sort(unique(filtered_data$cluster))
       
       # Set default if available
       selected <- NULL
       if (length(clusters) > 0) {
-        if (!is.null(app_data$default_cluster) && app_data$default_cluster %in% clusters) {
+        current_cluster <- input$global_cluster
+        if (!is.null(current_cluster) && current_cluster %in% clusters) {
+          selected <- current_cluster
+        } else if (!is.null(app_data$default_cluster) && app_data$default_cluster %in% clusters) {
           selected <- app_data$default_cluster
         } else {
           selected <- clusters[1]
@@ -743,14 +860,26 @@ server <- function(input, output, session) {
     req(app_data$data_loaded)
     req(input$global_analysis_type, input$global_gene, input$global_cluster)
     
-    if (!is.null(app_data$consolidated_data)) {
-      experiments <- unique(app_data$consolidated_data[
-        app_data$consolidated_data$method == input$global_analysis_type &
-        app_data$consolidated_data$gene == input$global_gene &
+    if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
+      # Map method key back to filter expression
+      method_filter <- switch(input$global_analysis_type,
+        "MAST" = quote(method == "MAST"),
+        "MixScale_CRISPRi" = quote(method == "MixScale" & modality == "CRISPRi"),
+        "MixScale_CRISPRa" = quote(method == "MixScale" & modality == "CRISPRa"),
+        quote(FALSE)
+      )
+      
+      # Get gene column name
+      gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
+      
+      # Filter data
+      filtered_data <- app_data$consolidated_data[
+        eval(method_filter, app_data$consolidated_data) &
+        app_data$consolidated_data[[gene_col]] == input$global_gene &
         app_data$consolidated_data$cluster == input$global_cluster,
-        "experiment"
-      ])
-      experiments <- sort(experiments)
+      ]
+      
+      experiments <- sort(unique(filtered_data$experiment))
       
       # For MAST, default should typically be "default"
       selected <- NULL
@@ -877,8 +1006,17 @@ server <- function(input, output, session) {
   
   # Create reactive for global data selection
   global_data_selection <- reactive({
+    # Map the analysis type to the method used in data filtering
+    analysis_type_for_filter <- switch(input$global_analysis_type,
+      "MAST" = "MAST",
+      "MixScale_CRISPRi" = "MixScale",
+      "MixScale_CRISPRa" = "MixScale",
+      input$global_analysis_type  # fallback
+    )
+    
     list(
-      analysis_type = input$global_analysis_type,
+      analysis_type = analysis_type_for_filter,
+      analysis_type_raw = input$global_analysis_type,  # Keep raw value for modules that need it
       gene = input$global_gene,
       cluster = input$global_cluster,
       experiment = input$global_experiment,
@@ -897,9 +1035,17 @@ server <- function(input, output, session) {
     req(app_data$data_loaded)
     selection <- global_data_selection()
     
+    # Determine modality based on raw analysis type
+    modality <- switch(selection$analysis_type_raw,
+      "MixScale_CRISPRi" = "CRISPRi",
+      "MixScale_CRISPRa" = "CRISPRa",
+      NULL
+    )
+    
     get_significant_terms_from_consolidated(
       app_data$consolidated_data,
       analysis_type = selection$analysis_type,
+      modality = modality,
       gene = selection$gene,
       cluster = selection$cluster,
       experiment = selection$experiment,
@@ -969,6 +1115,64 @@ server <- function(input, output, session) {
   observeEvent(input$export_enrichment, {
     updateTabsetPanel(session, "main_sections", selected = "export")
   })
+  
+  # ===== BIDIRECTIONAL SYNC HANDLERS =====
+  
+  # Handler for cluster selection from UMAP clicks
+  observeEvent(input$update_cluster_from_module, {
+    if (!app_data$update_in_progress) {
+      app_data$update_in_progress <- TRUE
+      app_data$last_update_source <- "de_results_module"
+      
+      cat("[SYNC] Received cluster update from module:", input$update_cluster_from_module, "\n")
+      
+      updateSelectInput(session, "global_cluster", 
+                       selected = input$update_cluster_from_module)
+      
+      app_data$update_in_progress <- FALSE
+    }
+  })
+  
+  # Handler for gene selection from modules
+  observeEvent(input$update_gene_from_module, {
+    if (!app_data$update_in_progress) {
+      app_data$update_in_progress <- TRUE
+      app_data$last_update_source <- "module"
+      
+      cat("[SYNC] Received gene update from module:", input$update_gene_from_module, "\n")
+      
+      updateSelectInput(session, "global_gene", 
+                       selected = input$update_gene_from_module)
+      
+      app_data$update_in_progress <- FALSE
+    }
+  })
+  
+  # Handler for analysis type from modules
+  observeEvent(input$update_analysis_type_from_module, {
+    if (!app_data$update_in_progress) {
+      app_data$update_in_progress <- TRUE
+      app_data$last_update_source <- "module"
+      
+      cat("[SYNC] Received analysis type update from module:", input$update_analysis_type_from_module, "\n")
+      
+      updateSelectInput(session, "global_analysis_type", 
+                       selected = input$update_analysis_type_from_module)
+      
+      app_data$update_in_progress <- FALSE
+    }
+  })
+  
+  # Debug mode for tracking state changes
+  if (isTRUE(getOption("iscore.debug"))) {
+    observe({
+      req(input$global_analysis_type, input$global_gene, input$global_cluster)
+      cat("[DEBUG] Global state changed:", 
+          "Method:", input$global_analysis_type,
+          "Gene:", input$global_gene,
+          "Cluster:", input$global_cluster, "\n")
+    })
+  }
 }
 
 # Run the app
