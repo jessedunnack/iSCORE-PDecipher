@@ -556,7 +556,7 @@ ui <- fluidPage(
         # NEW: DE Gene Analysis
         tabPanel(
           "DE Gene Analysis",
-          icon = icon("project-diagram"),
+          icon = icon("chart-line"),
           value = "de_analysis",
           br(),
           h2("DE Gene Analysis"),
@@ -578,7 +578,7 @@ ui <- fluidPage(
         # KEGG Pathview
         tabPanel(
           "KEGG Pathview",
-          icon = icon("project-diagram"),
+          icon = icon("sitemap"),
           value = "pathview",
           br(),
           h2("KEGG Pathway Visualization"),
