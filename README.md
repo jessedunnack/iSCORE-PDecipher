@@ -8,6 +8,9 @@
 
 iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating three distinct experimental approaches: genetic mutations (iSCORE-PD), gene knockdowns (CRISPRi), and gene activations (CRISPRa). It provides tools for differential expression analysis, functional enrichment analysis, and professional interactive visualizations.
 
+## 🖥️ **Cross-Platform Compatible**
+✅ **Windows** | ✅ **Mac** | ✅ **Linux** - Full compatibility with automatic setup and data transfer tools
+
 ## 🧬 Three Distinct Dataset Collections
 
 ### 1. **iSCORE-PD Genetic Mutations**
@@ -33,13 +36,19 @@ iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disea
 ### From GitHub (Recommended)
 
 ```r
-# Install devtools if needed
-if (!require("devtools", quietly = TRUE))
-    install.packages("devtools")
+# Install remotes if needed (recommended over devtools)
+if (!require("remotes", quietly = TRUE))
+    install.packages("remotes")
 
-# Install iSCORE-PDecipher
-devtools::install_github("jessedunnack/iSCORE-PDecipher")
+# Install iSCORE-PDecipher (works on Windows, Mac, Linux)
+remotes::install_github("jessedunnack/iSCORE-PDecipher")
 ```
+
+**Cross-Platform Notes:**
+- ✅ **Windows**: Works with R 4.0+ and RTools
+- ✅ **Mac**: Works with R 4.0+ and Xcode command line tools  
+- ✅ **Linux**: Works with R 4.0+ and build-essential
+- 🔧 **First Launch**: App will prompt for data directory location and save configuration
 
 ### Prerequisites
 
@@ -187,6 +196,28 @@ required_pkgs <- c("clusterProfiler", "heatmaply", "dittoSeq")
 missing <- setdiff(required_pkgs, rownames(installed.packages()))
 if (length(missing) > 0) BiocManager::install(missing)
 ```
+
+### Cross-Platform Issues
+```r
+# Reset configuration if setup fails
+unlink(iSCORE.PDecipher:::get_config_path())
+launch_iscore_app()  # Will prompt for setup again
+
+# Check configuration status
+iSCORE.PDecipher:::is_first_launch()
+iSCORE.PDecipher:::get_parent_data_dir()
+```
+
+## 📚 Documentation
+
+### Cross-Platform Setup
+- **[Mac Compatibility Guide](MAC_COMPATIBILITY_GUIDE.md)** - Complete setup instructions for Mac users
+- **[Mac Setup Checklist](MAC_SETUP_CHECKLIST.md)** - Quick reference for data transfer and setup
+- **[Cross-Platform Development Guidelines](CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md)** - For developers contributing to the package
+
+### Advanced Documentation  
+- **[Project Documentation (CLAUDE.md)](CLAUDE.md)** - Complete project overview and implementation details
+- **User Guides** - Located in `docs/` directory
 
 ## Citation
 
