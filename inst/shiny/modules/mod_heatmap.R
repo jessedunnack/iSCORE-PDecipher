@@ -8,13 +8,15 @@ tryCatch({
   message("Could not load source_labeling.R: ", e$message)
   
   # Define basic fallback functions
-  add_source_labels <- function(data, gene_col = "mutation_perturbation", 
-                               method_col = "method", modality_col = "modality") {
+  add_source_labels <<- function(data, gene_col = "mutation_perturbation", 
+                                 method_col = "method", modality_col = "modality") {
+    message("Using fallback add_source_labels function")
     # Simple fallback - just return the data without source labels
     return(data)
   }
   
-  create_source_label <- function(gene, method, modality = NULL) {
+  create_source_label <<- function(gene, method, modality = NULL) {
+    if (length(gene) == 0 || is.null(gene)) return(character(0))
     return(as.character(gene))
   }
 })
@@ -433,29 +435,33 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           x_var <- "condition"
         }
         
+        # Initialize x_var_display first
+        x_var_display <- x_var
+        
         # Add source labels for gene columns
         if (x_var %in% c("gene", "mutation", "mutation_perturbation")) {
           # Add source labels to distinguish iSCORE-PD vs PerturbSeq
           tryCatch({
-            df <- add_source_labels(df, 
-                                   gene_col = x_var,
-                                   method_col = if("method" %in% names(df)) "method" else "analysis_type",
-                                   modality_col = if("modality" %in% names(df)) "modality" else NULL)
-            
-            # Use source labels for display
-            if ("source_label" %in% names(df)) {
-              df$display_label <- df$source_label
-              x_var_display <- "display_label"
+            # Check if add_source_labels function exists
+            if (exists("add_source_labels")) {
+              df_with_labels <- add_source_labels(df, 
+                                       gene_col = x_var,
+                                       method_col = if("method" %in% names(df)) "method" else "analysis_type",
+                                       modality_col = if("modality" %in% names(df)) "modality" else NULL)
+              
+              # Use source labels for display if they were successfully added
+              if ("source_label" %in% names(df_with_labels)) {
+                df <- df_with_labels
+                df$display_label <- df$source_label
+                x_var_display <- "display_label"
+              }
             } else {
-              x_var_display <- x_var
+              message("add_source_labels function not available, using original column")
             }
           }, error = function(e) {
             message("Error adding source labels: ", e$message)
-            # Fallback to original column
-            x_var_display <- x_var
+            # x_var_display already set to x_var above
           })
-        } else {
-          x_var_display <- x_var
         }
         
         # Use Description or term_name for y-axis

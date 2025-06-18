@@ -8,22 +8,46 @@
 #' @param modality Optional modality for MixScale (CRISPRi, CRISPRa)
 #' @return Gene label with source annotation
 create_source_label <- function(gene, method, modality = NULL) {
+  # Handle empty inputs
+  if (length(gene) == 0 || length(method) == 0) {
+    return(character(0))
+  }
+  
   # Handle vectors
   if (length(gene) > 1) {
+    # Ensure all vectors are same length
+    max_len <- max(length(gene), length(method), ifelse(is.null(modality), 1, length(modality)))
+    
+    # Recycle vectors to same length
+    gene <- rep_len(gene, max_len)
+    method <- rep_len(method, max_len)
+    if (!is.null(modality)) {
+      modality <- rep_len(modality, max_len)
+    } else {
+      modality <- rep(NA_character_, max_len)
+    }
+    
     return(mapply(create_source_label, gene, method, modality, USE.NAMES = FALSE))
   }
   
   # Single value logic
-  if (is.na(gene) || is.null(gene)) return(NA_character_)
+  if (is.na(gene) || is.null(gene) || gene == "") return(NA_character_)
+  if (is.na(method) || is.null(method) || method == "") return(as.character(gene))
   
-  label <- dplyr::case_when(
-    method == "MAST" ~ paste0(gene, " (iSCORE-PD)"),
-    method == "MixScale" & !is.null(modality) & modality == "CRISPRi" ~ paste0(gene, " (CRISPRi)"),
-    method == "MixScale" & !is.null(modality) & modality == "CRISPRa" ~ paste0(gene, " (CRISPRa)"),
-    method == "MixScale_CRISPRa" ~ paste0(gene, " (CRISPRa)"),
-    method == "MixScale" ~ paste0(gene, " (CRISPRi)"), # Default MixScale to CRISPRi
-    TRUE ~ as.character(gene)
-  )
+  # Safe case_when replacement that handles NAs
+  if (method == "MAST") {
+    label <- paste0(gene, " (iSCORE-PD)")
+  } else if (method == "MixScale" && !is.null(modality) && !is.na(modality) && modality == "CRISPRi") {
+    label <- paste0(gene, " (CRISPRi)")
+  } else if (method == "MixScale" && !is.null(modality) && !is.na(modality) && modality == "CRISPRa") {
+    label <- paste0(gene, " (CRISPRa)")
+  } else if (method == "MixScale_CRISPRa") {
+    label <- paste0(gene, " (CRISPRa)")
+  } else if (method == "MixScale") {
+    label <- paste0(gene, " (CRISPRi)")  # Default MixScale to CRISPRi
+  } else {
+    label <- as.character(gene)
+  }
   
   return(label)
 }
@@ -40,6 +64,12 @@ add_source_labels <- function(data,
                             method_col = "method",
                             modality_col = "modality") {
   
+  # Input validation
+  if (is.null(data) || nrow(data) == 0) {
+    warning("Data is NULL or empty")
+    return(data)
+  }
+  
   if (!gene_col %in% names(data)) {
     warning(paste("Column", gene_col, "not found in data"))
     return(data)
@@ -50,15 +80,36 @@ add_source_labels <- function(data,
     return(data)
   }
   
-  # Get modality if available
-  modality <- if (modality_col %in% names(data)) data[[modality_col]] else NULL
+  # Get modality if available, otherwise NULL
+  modality <- if (!is.null(modality_col) && modality_col %in% names(data)) {
+    data[[modality_col]]
+  } else {
+    NULL
+  }
   
-  # Create source labels
-  data$source_label <- create_source_label(
-    gene = data[[gene_col]],
-    method = data[[method_col]],
-    modality = modality
-  )
+  # Validate gene and method columns have values
+  if (all(is.na(data[[gene_col]])) || all(data[[gene_col]] == "")) {
+    warning("Gene column contains only NA or empty values")
+    return(data)
+  }
+  
+  if (all(is.na(data[[method_col]])) || all(data[[method_col]] == "")) {
+    warning("Method column contains only NA or empty values")
+    return(data)
+  }
+  
+  # Create source labels safely
+  tryCatch({
+    data$source_label <- create_source_label(
+      gene = data[[gene_col]],
+      method = data[[method_col]],
+      modality = modality
+    )
+  }, error = function(e) {
+    warning(paste("Error creating source labels:", e$message))
+    # Return data without source labels
+    return(data)
+  })
   
   return(data)
 }
