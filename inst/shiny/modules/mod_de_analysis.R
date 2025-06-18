@@ -5,8 +5,15 @@
 library(dplyr)
 library(ggplot2)
 library(plotly)
-library(VennDiagram)
-if (requireNamespace("UpSetR", quietly = TRUE)) {
+
+# Load optional libraries
+venn_available <- requireNamespace("VennDiagram", quietly = TRUE)
+if (venn_available) {
+  library(VennDiagram)
+}
+
+upset_available <- requireNamespace("UpSetR", quietly = TRUE)
+if (upset_available) {
   library(UpSetR)
 }
 
@@ -335,7 +342,7 @@ mod_de_analysis_server <- function(id, app_data) {
     
     # Check if UpSetR is available
     output$has_upset <- reactive({
-      requireNamespace("UpSetR", quietly = TRUE) && !is.null(analysis_data$overlaps)
+      upset_available && !is.null(analysis_data$overlaps)
     })
     outputOptions(output, "has_upset", suspendWhenHidden = FALSE)
     
@@ -343,7 +350,7 @@ mod_de_analysis_server <- function(id, app_data) {
     output$upset_plot <- renderPlot({
       req(analysis_data$overlaps)
       
-      if (requireNamespace("UpSetR", quietly = TRUE)) {
+      if (upset_available) {
         gene_lists <- analysis_data$overlaps$gene_lists
         if (length(gene_lists) >= 2) {
           tryCatch({
@@ -353,6 +360,9 @@ mod_de_analysis_server <- function(id, app_data) {
             text(0.5, 0.5, "Error generating UpSet plot", cex = 1.5)
           })
         }
+      } else {
+        plot.new()
+        text(0.5, 0.5, "UpSetR package not available.\nInstall with: install.packages('UpSetR')", cex = 1.2)
       }
     })
     
@@ -362,6 +372,12 @@ mod_de_analysis_server <- function(id, app_data) {
       
       gene_lists <- analysis_data$overlaps$gene_lists
       if (length(gene_lists) >= 2) {
+        if (!venn_available) {
+          plot.new()
+          text(0.5, 0.5, "VennDiagram package not available.\nInstall with: install.packages('VennDiagram')", cex = 1.2)
+          return()
+        }
+        
         tryCatch({
           if (length(gene_lists) == 2) {
             venn.plot <- VennDiagram::venn.diagram(
