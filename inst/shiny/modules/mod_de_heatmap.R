@@ -244,53 +244,75 @@ mod_de_heatmap_server <- function(id, app_data) {
       processing_log = character()
     )
     
-    # Load DE data (mock for now)
+    # Load real DE data
     observe({
       req(app_data$data)
       
-      # Create more comprehensive mock DE data
-      genes <- c("LRRK2", "PINK1", "SNCA", "GBA", "PARK7", "ATP13A2", "DNAJC6", "FBXO7", "SYNJ1", "VPS13C")
-      clusters <- paste0("cluster_", 0:4)
-      sources <- c("iSCORE-PD", "CRISPRi", "CRISPRa")
-      
-      mock_de_data <- expand.grid(
-        gene = genes,
-        cluster = clusters, 
-        source = sources,
-        stringsAsFactors = FALSE
-      )
-      
-      # Add random gene names and statistics
-      n_genes_per_condition <- 100
-      full_mock_data <- data.frame()
-      
-      for (i in 1:nrow(mock_de_data)) {
-        condition_data <- data.frame(
-          gene = mock_de_data$gene[i],
-          cluster = mock_de_data$cluster[i],
-          source = mock_de_data$source[i],
-          gene_name = paste0("ENSG", sprintf("%08d", 1:n_genes_per_condition)),
-          log2FC = rnorm(n_genes_per_condition, 0, 1.5),
-          pvalue = runif(n_genes_per_condition, 0.0001, 0.1),
-          method = ifelse(mock_de_data$source[i] == "iSCORE-PD", "MAST", "MixScale"),
-          experiment = "default",
-          stringsAsFactors = FALSE
+      # Check if we have access to the actual DE results file
+      de_file_path <- file.path(dirname(dirname(getwd())), "full_DE_results.rds")
+      if (!file.exists(de_file_path)) {
+        # Try alternative paths
+        alt_paths <- c(
+          "full_DE_results.rds",
+          "../full_DE_results.rds", 
+          "../../full_DE_results.rds"
         )
-        full_mock_data <- rbind(full_mock_data, condition_data)
+        de_file_path <- NULL
+        for (path in alt_paths) {
+          if (file.exists(path)) {
+            de_file_path <- path
+            break
+          }
+        }
       }
       
-      # Add source labels
-      full_mock_data$source_label <- paste0(full_mock_data$gene, " (", full_mock_data$source, ")")
+      if (is.null(de_file_path) || !file.exists(de_file_path)) {
+        heatmap_data$processing_log <- c(heatmap_data$processing_log,
+                                        "ERROR: DE results file (full_DE_results.rds) not found")
+        showNotification(
+          "DE results file (full_DE_results.rds) not found. Please ensure the file is available.",
+          type = "error",
+          duration = NULL
+        )
+        return()
+      }
       
-      heatmap_data$de_data <- full_mock_data
-      heatmap_data$processing_log <- c(heatmap_data$processing_log, 
-                                      paste("Loaded", nrow(full_mock_data), "DE gene records"))
-      
-      # Update gene filter choices
-      available_genes <- unique(full_mock_data$gene)
-      updateSelectizeInput(session, "gene_filter",
-                          choices = available_genes,
-                          selected = available_genes[1:5])
+      # Load and process actual DE results
+      tryCatch({
+        de_results <- readRDS(de_file_path)
+        processed_de <- process_de_data_with_metadata(de_results)
+        
+        if (nrow(processed_de) == 0) {
+          heatmap_data$processing_log <- c(heatmap_data$processing_log,
+                                          "WARNING: No DE results found in data file")
+          showNotification("No DE results found in the data file", type = "warning")
+          return()
+        }
+        
+        heatmap_data$de_data <- processed_de
+        heatmap_data$processing_log <- c(heatmap_data$processing_log, 
+                                        paste("Loaded", nrow(processed_de), "real DE gene records"))
+        
+        # Update gene filter choices
+        available_genes <- unique(processed_de$gene)
+        updateSelectizeInput(session, "gene_filter",
+                            choices = available_genes,
+                            selected = head(available_genes, 5))
+        
+        showNotification(
+          paste("Loaded", nrow(processed_de), "DE gene records from", length(available_genes), "genes"),
+          type = "message"
+        )
+        
+      }, error = function(e) {
+        heatmap_data$processing_log <- c(heatmap_data$processing_log,
+                                        paste("ERROR loading DE results:", e$message))
+        showNotification(
+          paste("Error loading DE results:", e$message),
+          type = "error",
+          duration = NULL
+        )
+      })
     })
     
     # Process data for heatmap

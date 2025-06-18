@@ -189,34 +189,67 @@ mod_de_analysis_server <- function(id, app_data) {
       correlations = NULL
     )
     
-    # Load and process DE data
+    # Load and process real DE data
     observe({
       req(app_data$data)
       
-      # For now, create mock DE data since full_DE_results.rds may not be readily available
-      # In production, this would load from the actual DE results file
-      mock_de_data <- data.frame(
-        gene = rep(c("LRRK2", "PINK1", "SNCA", "GBA", "PARK7"), each = 100),
-        cluster = rep(paste0("cluster_", 0:4), 100),
-        gene_name = paste0("Gene_", 1:500),
-        log2FC = rnorm(500, 0, 1),
-        pvalue = runif(500, 0.001, 0.1),
-        method = rep(c("MAST", "MixScale"), 250),
-        source = rep(c("iSCORE-PD", "CRISPRi"), 250),
-        experiment = "default",
-        stringsAsFactors = FALSE
-      )
+      # Check if we have access to the actual DE results file
+      de_file_path <- file.path(dirname(dirname(getwd())), "full_DE_results.rds")
+      if (!file.exists(de_file_path)) {
+        # Try alternative paths
+        alt_paths <- c(
+          "full_DE_results.rds",
+          "../full_DE_results.rds", 
+          "../../full_DE_results.rds"
+        )
+        de_file_path <- NULL
+        for (path in alt_paths) {
+          if (file.exists(path)) {
+            de_file_path <- path
+            break
+          }
+        }
+      }
       
-      # Add source labels
-      mock_de_data$source_label <- paste0(mock_de_data$gene, " (", mock_de_data$source, ")")
+      if (is.null(de_file_path) || !file.exists(de_file_path)) {
+        showNotification(
+          "DE results file (full_DE_results.rds) not found. Please ensure the file is available.",
+          type = "error",
+          duration = NULL
+        )
+        return()
+      }
       
-      analysis_data$de_data <- mock_de_data
-      
-      # Update gene choices
-      available_genes <- unique(mock_de_data$gene)
-      updateSelectizeInput(session, "gene_selection",
-                          choices = available_genes,
-                          selected = available_genes[1:3])
+      # Load and process actual DE results
+      tryCatch({
+        de_results <- readRDS(de_file_path)
+        processed_de <- process_de_data_with_metadata(de_results)
+        
+        if (nrow(processed_de) == 0) {
+          showNotification("No DE results found in the data file", type = "warning")
+          return()
+        }
+        
+        analysis_data$de_data <- processed_de
+        
+        # Update gene choices
+        available_genes <- unique(processed_de$gene)
+        updateSelectizeInput(session, "gene_selection",
+                            choices = available_genes,
+                            selected = head(available_genes, 3))
+        
+        showNotification(
+          paste("Loaded", nrow(processed_de), "DE gene records from", length(available_genes), "genes"),
+          type = "message"
+        )
+        
+      }, error = function(e) {
+        showNotification(
+          paste("Error loading DE results:", e$message),
+          type = "error",
+          duration = NULL
+        )
+      })
     })
     
     # Process data based on user selections
