@@ -27,8 +27,13 @@ check_dataset_files <- function(dataset_dir) {
     "full_DE_results.rds"
   )
   
-  # UMAP data files
-  umap_dir <- file.path(dataset_dir, "inst", "extdata", "umap_data")
+  # UMAP data files - check both package location and dataset location
+  umap_dir_dataset <- file.path(dataset_dir, "inst", "extdata", "umap_data")
+  umap_dir_package <- file.path(dirname(dataset_dir), "update_analysis_scripts", "iSCORE-PDecipher", "inst", "extdata", "umap_data")
+  
+  # Use package location if it exists, otherwise dataset location
+  umap_dir <- if (dir.exists(umap_dir_package)) umap_dir_package else umap_dir_dataset
+  
   umap_files <- c(
     "all_umap_data_combined.rds"
   )
@@ -38,7 +43,7 @@ check_dataset_files <- function(dataset_dir) {
   umap_pattern <- switch(dataset_name,
     "iSCORE-PD" = "iSCORE_PD_umap_data",
     "iSCORE-PD_plus_CRISPRi" = "iSCORE_PD_CRISPRi_umap_data",
-    "iSCORE-PD_plus_CRISPRi_plus_CRISPRa" = "Full_Dataset_umap_data",
+    "iSCORE-PD_plus_CRISPRi_and_CRISPRa" = "Full_Dataset_umap_data",
     "unknown_pattern"
   )
   
@@ -118,7 +123,7 @@ generate_transfer_report <- function(parent_dir = NULL) {
   dataset_dirs <- c(
     "iSCORE-PD",
     "iSCORE-PD_plus_CRISPRi", 
-    "iSCORE-PD_plus_CRISPRi_plus_CRISPRa"
+    "iSCORE-PD_plus_CRISPRi_and_CRISPRa"
   )
   
   report <- list()
@@ -228,7 +233,7 @@ prepare_mac_transfer_copy <- function(source_parent_dir, dest_parent_dir, copy_m
   dataset_dirs <- c(
     "iSCORE-PD",
     "iSCORE-PD_plus_CRISPRi", 
-    "iSCORE-PD_plus_CRISPRi_plus_CRISPRa"
+    "iSCORE-PD_plus_CRISPRi_and_CRISPRa"
   )
   
   for (dataset_name in dataset_dirs) {

@@ -168,7 +168,7 @@ get_dataset_options <- function() {
   dataset_paths <- list(
     "iSCORE-PD only" = file.path(parent_dir, "iSCORE-PD"),
     "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi"),
-    "iSCORE-PD + CRISPRi + CRISPRa" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi_plus_CRISPRa")
+    "iSCORE-PD + CRISPRi + CRISPRa" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa")
   )
   
   # Filter to only return datasets that actually exist
