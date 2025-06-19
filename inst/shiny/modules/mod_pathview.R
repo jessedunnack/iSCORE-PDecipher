@@ -315,108 +315,32 @@ mod_pathview_server <- function(id, app_data, selected_enrichment_data, global_s
       showNotification("Pathview module is responding to button clicks!", type = "message")
     })
     
-    # Prepare DE data from global selection
-    observe({
-      req(global_selection())
-      selection <- global_selection()
+    # DISABLED: Automatic DE data loading to prevent interference with other modules
+    # Users should use the "Load Pathway Data" button instead
+    # observe({
+    #   req(global_selection())
+    #   selection <- global_selection()
+    #   
+    #   # Check that we have valid selection values
+    #   req(selection$analysis_type)
+    #   req(selection$gene)
+    #   req(selection$cluster)
+    #   
+    #   message("=== Loading DE data from global selection ===")
+    #   message("Analysis type: ", selection$analysis_type)
+    #   message("Gene: ", selection$gene)
+    #   message("Cluster: ", selection$cluster)
+    #   
+    #   # Load the actual DE results from full_DE_results.rds
+    #   tryCatch({
+    #     # Look for the DE results file
+    # Disabled to prevent interference with DE heatmap module
       
-      # Check that we have valid selection values
-      req(selection$analysis_type)
-      req(selection$gene)
-      req(selection$cluster)
-      
-      message("=== Loading DE data from global selection ===")
-      message("Analysis type: ", selection$analysis_type)
-      message("Gene: ", selection$gene)
-      message("Cluster: ", selection$cluster)
-      
-      # Load the actual DE results from full_DE_results.rds
-      tryCatch({
-        # Look for the DE results file
-      de_env_path <- Sys.getenv("ISCORE_DE_FILE", "")
-      possible_paths <- c(
-        de_env_path,
-        "/Users/hockemeyer/Desktop/Functional Enrichment/full_DE_results.rds",
-        "/Users/hockemeyer/Desktop/Functional Enrichment/shiny_vis/full_DE_results.rds",
-        file.path(dirname(Sys.getenv("ISCORE_ENRICHMENT_DIR", "")), "full_DE_results.rds")
-      )
-      # Remove empty paths
-      possible_paths <- possible_paths[possible_paths != ""]
-      
-      de_file_path <- NULL
-      for (path in possible_paths) {
-        if (file.exists(path)) {
-          de_file_path <- path
-          break
-        }
-      }
-      
-      if (!is.null(de_file_path)) {
-        message("Loading DE results from: ", de_file_path)
-        full_de <- readRDS(de_file_path)
-        
-        # Navigate to the correct data based on global selection
-        if (selection$analysis_type == "MAST") {
-          de_results <- full_de$iSCORE_PD_MAST[[selection$gene]][[selection$cluster]]$results
-        } else if (selection$analysis_type == "MixScale") {
-          de_results <- full_de$CRISPRi_Mixscale[[selection$gene]][[selection$cluster]]$results
-        }
-        
-        if (!is.null(de_results) && is.data.frame(de_results)) {
-          message("Found DE results: ", nrow(de_results), " genes")
-          
-          # Create proper DE data frame based on analysis type
-          if (selection$analysis_type == "MAST") {
-            # MAST has avg_log2FC and p_val_adj columns
-            de_data <- data.frame(
-              gene_symbol = rownames(de_results),
-              log2FoldChange = de_results$avg_log2FC,
-              padj = de_results$p_val_adj,
-              stringsAsFactors = FALSE
-            )
-          } else if (selection$analysis_type == "MixScale") {
-            # MixScale has different structure - use first available log2FC and p-value columns
-            log2fc_cols <- grep("^log2FC_", names(de_results), value = TRUE)
-            p_cols <- grep("^p_", names(de_results), value = TRUE)
-            
-            if (length(log2fc_cols) > 0 && length(p_cols) > 0) {
-              # Use the first log2FC column and first p-value column
-              de_data <- data.frame(
-                gene_symbol = if("gene_ID" %in% names(de_results)) de_results$gene_ID else rownames(de_results),
-                log2FoldChange = de_results[[log2fc_cols[1]]],
-                padj = de_results[[p_cols[1]]],
-                stringsAsFactors = FALSE
-              )
-            } else {
-              stop("Could not find log2FC or p-value columns in MixScale data")
-            }
-          }
-          
-          message("DE data created with ", nrow(de_data), " genes")
-          message("Log2FC range: ", round(min(de_data$log2FoldChange, na.rm = TRUE), 2), 
-                 " to ", round(max(de_data$log2FoldChange, na.rm = TRUE), 2))
-          
-          sig_genes <- sum(de_data$padj <= 0.05, na.rm = TRUE)
-          message("Significant genes (padj <= 0.05): ", sig_genes)
-          
-          module_data$de_data <- de_data
-          showNotification(paste("Loaded real DE data:", nrow(de_data), "genes,", sig_genes, "significant"), type = "message")
-          
-        } else {
-          message("Could not find DE results for this condition")
-          showNotification("No DE results found for this analysis condition", type = "error")
-        }
-        
-      } else {
-        message("Could not find full_DE_results.rds file")
-        showNotification("Could not locate DE results file", type = "warning")
-      }
-      
-      }, error = function(e) {
-        message("Error loading DE data: ", e$message)
-        showNotification(paste("Error loading DE data:", e$message), type = "error")
-      })
-    })
+    #   }, error = function(e) {
+    #     message("Error loading DE data: ", e$message)
+    #     showNotification(paste("Error loading DE data:", e$message), type = "error")
+    #   })
+    # })
     
     # Generate pathway diagram
     observeEvent(input$generate_pathway, {
