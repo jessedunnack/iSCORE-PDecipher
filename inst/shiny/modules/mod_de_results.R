@@ -334,13 +334,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # Load DE results data from full_DE_results.rds
-    observe({
-      req(app_data$data_loaded)
-      cat("[DE Results] Loading DE results data...\n")
-      
-      # Get the dataset directory from environment
-      data_dir <- dirname(Sys.getenv("ISCORE_DATA_FILE", ""))
+    # DISABLED: Automatic DE results loading to prevent interference with other modules
+    # observe({
+    #   req(app_data$data_loaded)
+    #   cat("[DE Results] Loading DE results data...\n")
+    #   
+    #   # Get the dataset directory from environment
+    # Disabled automatic DE loading to prevent interference with other modules
       
       # Look for full_DE_results.rds in the dataset directory
       possible_de_paths <- c(
@@ -391,7 +391,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
                        type = "warning",
                        duration = 5)
       }
-    })
+    # })
     
     # Track if we're updating to prevent circular updates
     local_updating <- reactiveVal(FALSE)
