@@ -289,10 +289,10 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
     
     # Sync cluster selection with global settings
     observe({
-      req(global_selection$cluster)
-      if (!heatmap_data$local_updating && input$cluster_select != global_selection$cluster) {
+      req(global_selection()$cluster)
+      if (!heatmap_data$local_updating && input$cluster_select != global_selection()$cluster) {
         heatmap_data$local_updating <- TRUE
-        updateSelectInput(session, "cluster_select", selected = global_selection$cluster)
+        updateSelectInput(session, "cluster_select", selected = global_selection()$cluster)
         heatmap_data$local_updating <- FALSE
       }
     })
