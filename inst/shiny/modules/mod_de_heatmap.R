@@ -54,29 +54,26 @@ mod_de_heatmap_ui <- function(id) {
       # Data scope
       wellPanel(
         h5("Data Scope"),
-        selectInput(ns("data_scope"),
-                    "Dataset Scope:",
-                    choices = c("Full Dataset" = "full",
-                                "Selected Clusters" = "clusters",
-                                "Selected Genes" = "genes"),
-                    selected = "clusters"),
+        selectInput(ns("cluster_select"),
+                    "Cluster:",
+                    choices = paste0("cluster_", 0:13),
+                    selected = "cluster_0"),
+        
+        helpText("Cluster selection is synced with global settings"),
+        
+        # Add gene filtering option
+        checkboxInput(ns("filter_by_genes"),
+                      "Filter by specific genes",
+                      value = FALSE),
         
         conditionalPanel(
-          condition = paste0("input['", ns("data_scope"), "'] == 'clusters'"),
-          checkboxGroupInput(ns("cluster_filter"),
-                             "Clusters:",
-                             choices = paste0("cluster_", 0:9),
-                             selected = paste0("cluster_", 0:2))
-        ),
-        
-        conditionalPanel(
-          condition = paste0("input['", ns("data_scope"), "'] == 'genes'"),
+          condition = paste0("input['", ns("filter_by_genes"), "'] == true"),
           selectizeInput(ns("gene_filter"),
-                         "Genes:",
+                         "Genes to include:",
                          choices = NULL,
                          multiple = TRUE,
                          options = list(placeholder = "Select genes...",
-                                       maxItems = 20))
+                                       maxItems = 50))
         )
       ),
       
@@ -275,7 +272,7 @@ mod_de_heatmap_ui <- function(id) {
   )
 }
 
-mod_de_heatmap_server <- function(id, app_data) {
+mod_de_heatmap_server <- function(id, app_data, global_selection) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -286,8 +283,30 @@ mod_de_heatmap_server <- function(id, app_data) {
       heatmap_matrix = NULL,
       plot = NULL,
       processing_log = character(),
-      de_loaded = FALSE  # Flag to prevent repeated loading
+      de_loaded = FALSE,  # Flag to prevent repeated loading
+      local_updating = FALSE  # Flag to prevent update loops
     )
+    
+    # Sync cluster selection with global settings
+    observe({
+      req(global_selection$cluster)
+      if (!heatmap_data$local_updating && input$cluster_select != global_selection$cluster) {
+        heatmap_data$local_updating <- TRUE
+        updateSelectInput(session, "cluster_select", selected = global_selection$cluster)
+        heatmap_data$local_updating <- FALSE
+      }
+    })
+    
+    # Update global settings when local cluster changes
+    observeEvent(input$cluster_select, {
+      if (!heatmap_data$local_updating) {
+        heatmap_data$local_updating <- TRUE
+        # Send message to update global cluster
+        session$sendInputMessage("update_cluster_from_module", 
+                               list(value = input$cluster_select))
+        heatmap_data$local_updating <- FALSE
+      }
+    })
     
     # Load DE data ONLY when user clicks "Load Data" button
     observeEvent(input$load_data_btn, {
@@ -331,13 +350,20 @@ mod_de_heatmap_server <- function(id, app_data) {
         de_results <- readRDS(de_file_path)
         heatmap_data$processing_log <- c(heatmap_data$processing_log, "DE file loaded, starting processing...")
         
-        # Use smaller limit for heatmaps to ensure good performance (max 300 per condition)
+        # Process only the selected cluster to improve performance
         # Add timeout to prevent hanging
-        setTimeLimit(cpu = 60, elapsed = 120, transient = TRUE)  # 2 minute timeout
+        setTimeLimit(cpu = 30, elapsed = 60, transient = TRUE)  # 1 minute timeout
         
         on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))  # Reset timeout
         
-        processed_de <- process_de_data_with_metadata(de_results, max_genes_per_condition = 100)
+        # Filter to only the selected cluster before processing
+        selected_cluster <- input$cluster_select
+        heatmap_data$processing_log <- c(heatmap_data$processing_log, 
+                                        paste("Processing DE data for", selected_cluster, "only"))
+        
+        processed_de <- process_de_data_with_metadata(de_results, 
+                                                     max_genes_per_condition = 50,
+                                                     cluster_filter = selected_cluster)
         
         if (nrow(processed_de) == 0) {
           heatmap_data$processing_log <- c(heatmap_data$processing_log,
@@ -403,15 +429,14 @@ mod_de_heatmap_server <- function(id, app_data) {
       filtered_data <- data %>%
         dplyr::filter(source %in% input$source_filter)
       
-      # Apply data scope filter
-      if (input$data_scope == "clusters") {
-        req(input$cluster_filter)
+      # Apply cluster filter (always use the selected cluster)
+      filtered_data <- filtered_data %>%
+        dplyr::filter(cluster == input$cluster_select)
+      
+      # Apply gene filter if enabled
+      if (input$filter_by_genes && length(input$gene_filter) > 0) {
         filtered_data <- filtered_data %>%
-          dplyr::filter(cluster %in% input$cluster_filter)
-      } else if (input$data_scope == "genes") {
-        req(input$gene_filter)
-        filtered_data <- filtered_data %>%
-          dplyr::filter(gene %in% input$gene_filter)
+          dplyr::filter(gene_name %in% input$gene_filter)
       }
       
       # Apply significance cutoffs

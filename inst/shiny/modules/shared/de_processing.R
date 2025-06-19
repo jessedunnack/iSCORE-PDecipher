@@ -6,7 +6,7 @@
 #' @param de_results DE results from full_DE_results.rds
 #' @param metadata Cell metadata from final_dataset_metadata.rds
 #' @return Processed data frame with DE statistics and metadata
-process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes_per_condition = 1000) {
+process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes_per_condition = 1000, cluster_filter = NULL) {
   
   processed_data <- data.frame()
   
@@ -16,6 +16,11 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
     
     for (gene in names(mast_data)) {
       for (cluster in names(mast_data[[gene]])) {
+        # Skip clusters not in filter (if specified)
+        if (!is.null(cluster_filter) && !cluster %in% cluster_filter) {
+          next
+        }
+        
         if (!is.null(mast_data[[gene]][[cluster]]$results)) {
           results <- mast_data[[gene]][[cluster]]$results
           
@@ -55,6 +60,11 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
     
     for (gene in names(crispi_data)) {
       for (cluster in names(crispi_data[[gene]])) {
+        # Skip clusters not in filter (if specified)
+        if (!is.null(cluster_filter) && !cluster %in% cluster_filter) {
+          next
+        }
+        
         if (!is.null(crispi_data[[gene]][[cluster]]$results)) {
           results <- crispi_data[[gene]][[cluster]]$results
           
@@ -103,6 +113,11 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
     
     for (gene in names(crispa_data)) {
       for (cluster in names(crispa_data[[gene]])) {
+        # Skip clusters not in filter (if specified)
+        if (!is.null(cluster_filter) && !cluster %in% cluster_filter) {
+          next
+        }
+        
         if (!is.null(crispa_data[[gene]][[cluster]]$results)) {
           results <- crispa_data[[gene]][[cluster]]$results
           

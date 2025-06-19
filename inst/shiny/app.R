@@ -1133,7 +1133,8 @@ server <- function(input, output, session) {
   
   de_heatmap_results <- mod_de_heatmap_server(
     "de_heatmap_module",
-    app_data = app_data
+    app_data = app_data,
+    global_selection = global_selection
   )
   
   pathview_results <- mod_pathview_server(
