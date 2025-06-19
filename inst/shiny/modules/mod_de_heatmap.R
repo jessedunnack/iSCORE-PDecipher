@@ -43,6 +43,106 @@ tryCatch({
   create_source_label <<- function(gene, method, modality = NULL) return(as.character(gene))
 })
 
+# Fast cluster-specific DE data extraction 
+extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100) {
+  processed_data <- data.frame()
+  
+  # Process MAST results - only for target cluster
+  if ("iSCORE_PD_MAST" %in% names(de_results)) {
+    mast_data <- de_results$iSCORE_PD_MAST
+    
+    for (gene in names(mast_data)) {
+      # Skip if this cluster doesn't exist for this gene
+      if (!target_cluster %in% names(mast_data[[gene]])) next
+      
+      cluster_results <- mast_data[[gene]][[target_cluster]]
+      if (!is.null(cluster_results$results)) {
+        results <- cluster_results$results
+        
+        # Quick filter to significant genes only
+        sig_results <- results[!is.na(results$p_val_adj) & results$p_val_adj < 0.05, ]
+        
+        # Limit to top genes by significance
+        if (nrow(sig_results) > max_genes) {
+          sig_results <- sig_results[order(sig_results$p_val_adj), ][1:max_genes, ]
+        }
+        
+        if (nrow(sig_results) > 0) {
+          cluster_data <- data.frame(
+            gene = gene,
+            cluster = target_cluster,
+            gene_name = rownames(sig_results),
+            log2FC = sig_results$avg_log2FC,
+            pvalue = sig_results$p_val_adj,
+            method = "MAST",
+            source = "iSCORE-PD",
+            experiment = "default",
+            stringsAsFactors = FALSE
+          )
+          processed_data <- rbind(processed_data, cluster_data)
+        }
+      }
+    }
+  }
+  
+  # Process CRISPRi results - only for target cluster (if present)
+  if ("CRISPRi_Mixscale" %in% names(de_results)) {
+    crispi_data <- de_results$CRISPRi_Mixscale
+    
+    for (gene in names(crispi_data)) {
+      # Skip if this cluster doesn't exist for this gene
+      if (!target_cluster %in% names(crispi_data[[gene]])) next
+      
+      cluster_results <- crispi_data[[gene]][[target_cluster]]
+      if (!is.null(cluster_results$results)) {
+        results <- cluster_results$results
+        
+        # Find experiment-specific columns
+        log2fc_cols <- grep("^log2FC_", names(results), value = TRUE)
+        
+        for (log2fc_col in log2fc_cols) {
+          exp <- gsub("^log2FC_", "", log2fc_col)
+          pval_col <- paste0("p_cell_type", exp, ":weight")
+          
+          if (pval_col %in% names(results) && nrow(results) > 0) {
+            # Quick filter to significant genes
+            valid_rows <- !is.na(results[[pval_col]]) & results[[pval_col]] < 0.05
+            sig_results <- results[valid_rows, ]
+            
+            # Limit to top genes
+            if (nrow(sig_results) > max_genes) {
+              sig_results <- sig_results[order(sig_results[[pval_col]]), ][1:max_genes, ]
+            }
+            
+            if (nrow(sig_results) > 0) {
+              cluster_data <- data.frame(
+                gene = gene,
+                cluster = target_cluster,
+                gene_name = rownames(sig_results),
+                log2FC = sig_results[[log2fc_col]],
+                pvalue = sig_results[[pval_col]],
+                method = "MixScale",
+                source = "CRISPRi", 
+                experiment = exp,
+                stringsAsFactors = FALSE
+              )
+              processed_data <- rbind(processed_data, cluster_data)
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  # Clean up and add source labels
+  if (nrow(processed_data) > 0) {
+    processed_data <- processed_data[!is.na(processed_data$log2FC) & !is.na(processed_data$pvalue), ]
+    processed_data$source_label <- paste0(processed_data$gene, " (", processed_data$source, ")")
+  }
+  
+  return(processed_data)
+}
+
 mod_de_heatmap_ui <- function(id) {
   ns <- NS(id)
   
@@ -361,9 +461,8 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
         heatmap_data$processing_log <- c(heatmap_data$processing_log, 
                                         paste("Processing DE data for", selected_cluster, "only"))
         
-        processed_de <- process_de_data_with_metadata(de_results, 
-                                                     max_genes_per_condition = 50,
-                                                     cluster_filter = selected_cluster)
+        # Use a much more targeted approach - extract only what we need
+        processed_de <- extract_cluster_de_data(de_results, selected_cluster, max_genes = 100)
         
         if (nrow(processed_de) == 0) {
           heatmap_data$processing_log <- c(heatmap_data$processing_log,
