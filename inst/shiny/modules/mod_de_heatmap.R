@@ -420,6 +420,7 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
     
     # Process data for heatmap
     processed_heatmap_data <- reactive({
+      req(heatmap_data$de_loaded)  # Only process when data is loaded
       req(heatmap_data$de_data)
       req(input$source_filter)
       
@@ -624,7 +625,14 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
         return()
       }
       
-      data <- processed_heatmap_data()
+      tryCatch({
+        data <- processed_heatmap_data()
+      }, error = function(e) {
+        cat("Status: Waiting for data initialization\n")
+        cat("=====================================\n")
+        cat("Click 'Load DE Data' when ready.\n")
+        return()
+      })
       
       if (is.null(data)) {
         cat("Status: Data loaded, waiting for settings\n")
@@ -668,7 +676,7 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
     output$settings_summary <- renderPrint({
       cat("Current Heatmap Settings:\n")
       cat("========================\n")
-      cat("Data scope:", input$data_scope, "\n")
+      cat("Cluster:", input$cluster_select, "\n")
       cat("Sources:", paste(input$source_filter, collapse = ", "), "\n")
       cat("Gene selection:", input$gene_selection_mode, "\n")
       cat("log2FC cutoff:", input$log2fc_cutoff, "\n")
