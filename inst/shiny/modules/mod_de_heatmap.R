@@ -410,16 +410,21 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
     
     # Load DE data ONLY when user clicks "Load Data" button
     observeEvent(input$load_data_btn, {
+      message("[DE HEATMAP] Load data button clicked!")
+      
       # Prevent multiple loading
       if (heatmap_data$de_loaded) {
         showNotification("Data already loaded. Use 'Refresh Data' if needed.", type = "message", duration = 3)
         return()
       }
       
+      message("[DE HEATMAP] Checking app_data$data_loaded: ", app_data$data_loaded)
       req(app_data$data_loaded)
       
       # Use the same DE file path logic as the existing DE Results module
       data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+      message("[DE HEATMAP] ISCORE_DATA_DIR: '", data_dir, "'")
+      
       if (data_dir == "") {
         heatmap_data$processing_log <- c(heatmap_data$processing_log,
                                         "WARNING: No data directory configured")
