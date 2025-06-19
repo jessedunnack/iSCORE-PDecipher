@@ -175,7 +175,15 @@ mod_comparison_server <- function(id, app_data, pval_threshold) {
       
       showNotification("Loading comparison data...", type = "message", duration = NULL, id = "loading")
       
-      base_path <- APP_CONFIG$enrichment_results_path
+      base_path <- APP_CONFIG$enrichment_base_dir
+      
+      # Check if enrichment directory is configured
+      if (is.null(base_path) || base_path == "") {
+        showNotification("Enrichment directory not configured. Method comparison not available.", 
+                         type = "warning", duration = 5)
+        removeNotification("loading")
+        return()
+      }
       
       # Load MAST results
       mast_file <- file.path(base_path, "MAST", input$gene_select, input$cluster_select,
@@ -383,8 +391,9 @@ mod_comparison_server <- function(id, app_data, pval_threshold) {
     output$convergent_plot <- renderPlot({
       req(comparison_data$comparison_results)
       
-      # Get shared terms
-      shared_ids <- comparison_data$comparison_results$shared_ids
+      # Get shared terms by intersecting mast_ids and mixscale_ids
+      shared_ids <- intersect(comparison_data$comparison_results$mast_ids,
+                              comparison_data$comparison_results$mixscale_ids)
       
       if (length(shared_ids) > 0) {
         # Get terms that appear in both MAST and MixScale
