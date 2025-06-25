@@ -177,13 +177,25 @@ mod_de_results_ui <- function(id) {
       )
     ),
     
-    # Bottom panel: Summary statistics
+    # Bottom panel: Summary statistics and overlapping genes
     fluidRow(
       column(12,
         wellPanel(
-          h4("Summary Statistics"),
-          div(id = ns("summary_stats"),
-            uiOutput(ns("stats_content"))
+          fluidRow(
+            # Left half: Compact summary statistics
+            column(6,
+              h4("Summary Statistics"),
+              div(id = ns("summary_stats"),
+                uiOutput(ns("stats_content"))
+              )
+            ),
+            # Right half: Overlapping genes list
+            column(6,
+              h4("Overlapping DE Genes"),
+              div(id = ns("overlap_genes"),
+                uiOutput(ns("overlap_content"))
+              )
+            )
           )
         )
       )
@@ -1022,7 +1034,12 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
       }
       
-      # Calculate overlap between MAST and MixScale significant genes
+      # Calculate overlap between MAST and MixScale significant genes WITH DIRECTION INFO
+      mast_sig_genes <- character(0)
+      mixscale_sig_genes <- character(0)
+      mast_sig_data <- NULL
+      mixscale_sig_data <- NULL
+      
       if (mast_sig > 0 && mixscale_sig > 0 && !is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
         # Get gene names that are significant in both
         mast_filtered <- values$de_data_mast
@@ -1039,21 +1056,27 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == current_gene, ]
         }
         
-        # Get significant gene lists
-        mast_sig_genes <- character(0)
+        # Get significant gene data with direction info
         if (nrow(mast_filtered) > 0) {
-          mast_sig_genes <- mast_filtered$gene_name[!is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
-                                                   mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1]
+          mast_sig_idx <- !is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
+                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1
+          mast_sig_data <- mast_filtered[mast_sig_idx, c("gene_name", "log2FC", "pvalue")]
+          mast_sig_genes <- mast_sig_data$gene_name
         }
         
-        mixscale_sig_genes <- character(0)
         if (nrow(mixscale_filtered) > 0) {
-          mixscale_sig_genes <- mixscale_filtered$gene_name[!is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
-                                                           mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1]
+          mixscale_sig_idx <- !is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
+                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1
+          mixscale_sig_data <- mixscale_filtered[mixscale_sig_idx, c("gene_name", "log2FC", "pvalue")]
+          mixscale_sig_genes <- mixscale_sig_data$gene_name
         }
         
         # Calculate overlap
         overlap <- length(intersect(mast_sig_genes, mixscale_sig_genes))
+        
+        # Store the significant gene data for overlap analysis
+        values$mast_sig_data <- mast_sig_data
+        values$mixscale_sig_data <- mixscale_sig_data
       }
       
       # Statistical significance of overlap (Fisher's exact test)
@@ -1170,6 +1193,183 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         p(paste("Statistics for", cluster_text), class = "text-muted text-center")
       )
     })
+    
+    # Render overlapping genes content
+    output$overlap_content <- renderUI({
+      if (is.null(values$mast_sig_data) || is.null(values$mixscale_sig_data)) {
+        return(
+          div(class = "text-center text-muted",
+            p("No overlapping genes found"),
+            small("Requires significant genes in both MAST and MixScale results")
+          )
+        )
+      }
+      
+      # Get overlapping genes with direction information
+      mast_genes <- values$mast_sig_data
+      mixscale_genes <- values$mixscale_sig_data
+      
+      # Find overlapping genes
+      overlap_genes <- intersect(mast_genes$gene_name, mixscale_genes$gene_name)
+      
+      if (length(overlap_genes) == 0) {
+        return(
+          div(class = "text-center text-muted",
+            p("No overlapping genes found"),
+            small("Different significant genes between MAST and MixScale")
+          )
+        )
+      }
+      
+      # Categorize overlapping genes by direction
+      same_direction_up <- character(0)
+      same_direction_down <- character(0)
+      opposite_direction <- character(0)
+      
+      for (gene in overlap_genes) {
+        mast_fc <- mast_genes$log2FC[mast_genes$gene_name == gene][1]
+        mixscale_fc <- mixscale_genes$log2FC[mixscale_genes$gene_name == gene][1]
+        
+        if (!is.na(mast_fc) && !is.na(mixscale_fc)) {
+          if (mast_fc > 0 && mixscale_fc > 0) {
+            same_direction_up <- c(same_direction_up, gene)
+          } else if (mast_fc < 0 && mixscale_fc < 0) {
+            same_direction_down <- c(same_direction_down, gene)
+          } else {
+            opposite_direction <- c(opposite_direction, gene)
+          }
+        }
+      }
+      
+      # Create downloadable gene lists
+      all_overlap_data <- data.frame(
+        Gene = overlap_genes,
+        MAST_log2FC = sapply(overlap_genes, function(g) {
+          idx <- which(mast_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mast_genes$log2FC[idx] else NA
+        }),
+        MAST_pvalue = sapply(overlap_genes, function(g) {
+          idx <- which(mast_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mast_genes$pvalue[idx] else NA
+        }),
+        MixScale_log2FC = sapply(overlap_genes, function(g) {
+          idx <- which(mixscale_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mixscale_genes$log2FC[idx] else NA
+        }),
+        MixScale_pvalue = sapply(overlap_genes, function(g) {
+          idx <- which(mixscale_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mixscale_genes$pvalue[idx] else NA
+        }),
+        stringsAsFactors = FALSE
+      )
+      
+      # Store for download
+      values$overlap_data <- all_overlap_data
+      
+      # Create UI
+      tagList(
+        # Summary counts
+        div(style = "margin-bottom: 15px;",
+          fluidRow(
+            column(4,
+              div(class = "text-center",
+                h6("Same ↑", style = "color: #d9534f; margin-bottom: 5px;"),
+                h4(length(same_direction_up), style = "color: #d9534f; margin: 0;"),
+                small("Both up-regulated")
+              )
+            ),
+            column(4,
+              div(class = "text-center",
+                h6("Same ↓", style = "color: #5bc0de; margin-bottom: 5px;"),
+                h4(length(same_direction_down), style = "color: #5bc0de; margin: 0;"),
+                small("Both down-regulated")
+              )
+            ),
+            column(4,
+              div(class = "text-center",
+                h6("Opposite", style = "color: #f0ad4e; margin-bottom: 5px;"),
+                h4(length(opposite_direction), style = "color: #f0ad4e; margin: 0;"),
+                small("Different directions")
+              )
+            )
+          )
+        ),
+        
+        hr(style = "margin: 10px 0;"),
+        
+        # Gene lists with expand/collapse
+        if (length(same_direction_up) > 0) {
+          tagList(
+            h6("Same Direction Up-regulated:", style = "color: #d9534f;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(same_direction_up, collapse = ", ")
+            )
+          )
+        },
+        
+        if (length(same_direction_down) > 0) {
+          tagList(
+            h6("Same Direction Down-regulated:", style = "color: #5bc0de;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(same_direction_down, collapse = ", ")
+            )
+          )
+        },
+        
+        if (length(opposite_direction) > 0) {
+          tagList(
+            h6("Opposite Directions:", style = "color: #f0ad4e;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(opposite_direction, collapse = ", ")
+            )
+          )
+        },
+        
+        # Download button
+        div(class = "text-center", style = "margin-top: 15px;",
+          downloadButton(
+            ns("download_overlap"),
+            "Download Gene List",
+            class = "btn-sm btn-primary",
+            icon = icon("download")
+          )
+        )
+      )
+    })
+    
+    # Download handler for overlapping genes
+    output$download_overlap <- downloadHandler(
+      filename = function() {
+        cluster_suffix <- if (is.null(values$selected_cluster) || values$selected_cluster == "All") {
+          "all_clusters"
+        } else {
+          values$selected_cluster
+        }
+        
+        gene_suffix <- if (is.null(global_selection()$gene) || global_selection()$gene == "All") {
+          "all_genes"
+        } else {
+          global_selection()$gene
+        }
+        
+        paste0("overlapping_DE_genes_", gene_suffix, "_", cluster_suffix, "_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        if (!is.null(values$overlap_data)) {
+          write.csv(values$overlap_data, file, row.names = FALSE)
+        } else {
+          # Create empty file with headers
+          empty_df <- data.frame(
+            Gene = character(0),
+            MAST_log2FC = numeric(0),
+            MAST_pvalue = numeric(0),
+            MixScale_log2FC = numeric(0),
+            MixScale_pvalue = numeric(0)
+          )
+          write.csv(empty_df, file, row.names = FALSE)
+        }
+      }
+    )
     
     # Return values for potential use by other modules
     return(list(
