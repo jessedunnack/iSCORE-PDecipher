@@ -972,10 +972,131 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         values$selected_cluster
       }
       
-      # Calculate stats (mock for now)
-      mast_sig <- 156  # Would calculate from actual data
-      mixscale_sig <- 203
-      overlap <- 47
+      # Calculate stats from actual data
+      mast_sig <- 0
+      mixscale_sig <- 0
+      overlap <- 0
+      
+      # Get current global selection for filtering
+      current_gene <- global_selection()$gene
+      
+      # Calculate MAST significant genes
+      if (!is.null(values$de_data_mast) && nrow(values$de_data_mast) > 0) {
+        mast_filtered <- values$de_data_mast
+        
+        # Filter by selected cluster
+        if (!is.null(values$selected_cluster) && values$selected_cluster != "All" && values$selected_cluster != "") {
+          mast_filtered <- mast_filtered[mast_filtered$cluster == values$selected_cluster, ]
+        }
+        
+        # Filter by global gene selection
+        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+          mast_filtered <- mast_filtered[mast_filtered$gene == current_gene, ]
+        }
+        
+        # Apply significance criteria
+        if (nrow(mast_filtered) > 0) {
+          mast_sig <- sum(!is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
+                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1)
+        }
+      }
+      
+      # Calculate MixScale significant genes
+      if (!is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0) {
+        mixscale_filtered <- values$de_data_mixscale
+        
+        # Filter by selected cluster
+        if (!is.null(values$selected_cluster) && values$selected_cluster != "All" && values$selected_cluster != "") {
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$cluster == values$selected_cluster, ]
+        }
+        
+        # Filter by global gene selection
+        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == current_gene, ]
+        }
+        
+        # Apply significance criteria
+        if (nrow(mixscale_filtered) > 0) {
+          mixscale_sig <- sum(!is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
+                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1)
+        }
+      }
+      
+      # Calculate overlap between MAST and MixScale significant genes
+      if (mast_sig > 0 && mixscale_sig > 0 && !is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
+        # Get gene names that are significant in both
+        mast_filtered <- values$de_data_mast
+        mixscale_filtered <- values$de_data_mixscale
+        
+        # Apply same filtering as above
+        if (!is.null(values$selected_cluster) && values$selected_cluster != "All" && values$selected_cluster != "") {
+          mast_filtered <- mast_filtered[mast_filtered$cluster == values$selected_cluster, ]
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$cluster == values$selected_cluster, ]
+        }
+        
+        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+          mast_filtered <- mast_filtered[mast_filtered$gene == current_gene, ]
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == current_gene, ]
+        }
+        
+        # Get significant gene lists
+        mast_sig_genes <- character(0)
+        if (nrow(mast_filtered) > 0) {
+          mast_sig_genes <- mast_filtered$gene_name[!is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
+                                                   mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1]
+        }
+        
+        mixscale_sig_genes <- character(0)
+        if (nrow(mixscale_filtered) > 0) {
+          mixscale_sig_genes <- mixscale_filtered$gene_name[!is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
+                                                           mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1]
+        }
+        
+        # Calculate overlap
+        overlap <- length(intersect(mast_sig_genes, mixscale_sig_genes))
+      }
+      
+      # Statistical significance of overlap (Fisher's exact test)
+      fisher_p <- NA
+      fisher_or <- NA
+      background_total <- 0
+      
+      if (mast_sig > 0 && mixscale_sig > 0 && overlap >= 0) {
+        # Estimate background set size (genes tested in both methods)
+        # For now, use a conservative estimate based on typical gene expression datasets
+        # In production, this should be calculated from the actual background sets
+        background_total <- if (!is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
+          # Estimate from unique gene names in both datasets
+          mast_genes <- unique(values$de_data_mast$gene_name)
+          mixscale_genes <- unique(values$de_data_mixscale$gene_name)
+          length(intersect(mast_genes, mixscale_genes))
+        } else {
+          15000  # Conservative estimate for typical expression datasets
+        }
+        
+        # Only perform test if we have sufficient data
+        if (background_total > max(mast_sig, mixscale_sig) && background_total > 0) {
+          # Create 2x2 contingency table for Fisher's exact test
+          # Table: overlap, mast_only, mixscale_only, neither
+          mast_only <- mast_sig - overlap
+          mixscale_only <- mixscale_sig - overlap
+          neither <- background_total - mast_sig - mixscale_only
+          
+          # Ensure all values are non-negative
+          if (mast_only >= 0 && mixscale_only >= 0 && neither >= 0) {
+            contingency_matrix <- matrix(c(overlap, mast_only, mixscale_only, neither), 
+                                       nrow = 2, byrow = TRUE)
+            
+            tryCatch({
+              fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
+              fisher_p <- fisher_result$p.value
+              fisher_or <- fisher_result$estimate
+            }, error = function(e) {
+              cat("[DE Results] Fisher's exact test failed:", e$message, "\n")
+            })
+          }
+        }
+      }
       
       tagList(
         fluidRow(
@@ -1001,6 +1122,50 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             )
           )
         ),
+        
+        # Statistical significance test results
+        if (!is.na(fisher_p)) {
+          tagList(
+            hr(),
+            div(class = "text-center",
+              h5("Overlap Significance Test", style = "margin-bottom: 15px;"),
+              fluidRow(
+                column(6,
+                  div(
+                    strong("Fisher's Exact Test"),
+                    br(),
+                    span("p-value: ", style = "color: #666;"),
+                    span(format(fisher_p, digits = 3, scientific = TRUE), 
+                         style = paste0("color: ", if (fisher_p < 0.05) "#d9534f" else "#333", ";")),
+                    br(),
+                    span("Background genes: ", style = "color: #666;"),
+                    span(format(background_total, big.mark = ","))
+                  )
+                ),
+                column(6,
+                  div(
+                    strong("Effect Size"),
+                    br(),
+                    span("Odds Ratio: ", style = "color: #666;"),
+                    span(format(fisher_or, digits = 2)),
+                    br(),
+                    span("Interpretation: ", style = "color: #666;"),
+                    span(if (fisher_p < 0.05) "Significant overlap" else "Random overlap",
+                         style = paste0("color: ", if (fisher_p < 0.05) "#5cb85c" else "#f0ad4e", ";"))
+                  )
+                )
+              )
+            )
+          )
+        } else {
+          tagList(
+            hr(),
+            div(class = "text-center text-muted",
+              p("Statistical test requires both MAST and MixScale data")
+            )
+          )
+        },
+        
         hr(),
         p(paste("Statistics for", cluster_text), class = "text-muted text-center")
       )
