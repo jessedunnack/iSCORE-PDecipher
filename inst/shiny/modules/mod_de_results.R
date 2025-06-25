@@ -334,59 +334,73 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # DISABLED: Automatic DE results loading to prevent interference with other modules
-    # Users must manually load volcano plot data when on the DE Results tab
+    # Track DE loading status
+    de_data_loaded <- reactiveVal(FALSE)
     
-    # # Look for full_DE_results.rds in the dataset directory
-    # possible_de_paths <- c(
-    #   file.path(data_dir, "full_DE_results.rds"),
-    #   Sys.getenv("ISCORE_DE_FILE", ""),
-    #   file.path(dirname(Sys.getenv("ISCORE_ENRICHMENT_DIR", "")), "full_DE_results.rds")
-    # )
-    # 
-    # # Remove empty paths
-    # possible_de_paths <- possible_de_paths[possible_de_paths != ""]
-    # 
-    # de_loaded <- FALSE
-    # for (path in possible_de_paths) {
-    #   cat("[DE Results] Checking DE path:", path, "\n")
-    #   if (file.exists(path)) {
-    #     tryCatch({
-    #       de_results <- readRDS(path)
-    #       cat("[DE Results] Successfully loaded DE results from:", path, "\n")
-    #       cat("[DE Results] DE results structure:", paste(names(de_results), collapse=", "), "\n")
-    #       
-    #       # Extract MAST and MixScale data
-    #       if ("iSCORE_PD_MAST" %in% names(de_results)) {
-    #         # Convert MAST data to volcano plot format
-    #         mast_data <- de_results$iSCORE_PD_MAST
-    #         values$de_data_mast <- process_mast_for_volcano(mast_data)
-    #         cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
-    #       cat("[DE Results] Available MAST genes:", paste(unique(values$de_data_mast$gene), collapse=", "), "\n")
-    #       }
-    #       
-    #       if ("CRISPRi_Mixscale" %in% names(de_results)) {
-    #         # Convert MixScale data to volcano plot format  
-    #         mixscale_data <- de_results$CRISPRi_Mixscale
-    #         values$de_data_mixscale <- process_mixscale_for_volcano(mixscale_data)
-    #         cat("[DE Results] Processed MixScale data:", nrow(values$de_data_mixscale), "rows\n")
-    #       cat("[DE Results] Available MixScale genes:", paste(unique(values$de_data_mixscale$gene), collapse=", "), "\n")
-    #       }
-    #       
-    #       de_loaded <- TRUE
-    #       break
-    #     }, error = function(e) {
-    #       cat("[DE Results] Failed to load DE results from", path, ":", e$message, "\n")
-    #     })
-    #   }
-    # }
-    # 
-    # if (!de_loaded) {
-    #   showNotification("DE results file not found. Volcano plots will not be available.", 
-    #                  type = "warning",
-    #                  duration = 5)
-    # }
-    # })
+    # Function to load DE data on demand
+    load_de_data <- function() {
+      if (!de_data_loaded()) {
+        cat("[DE Results] Loading DE data on demand...\n")
+        
+        # Show loading notification
+        showNotification("Loading differential expression data...", type = "message", duration = 3)
+        
+        # Get dataset directory
+        data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+        
+        # Look for full_DE_results.rds in the dataset directory
+        possible_de_paths <- c(
+          file.path(data_dir, "full_DE_results.rds"),
+          Sys.getenv("ISCORE_DE_FILE", ""),
+          file.path(dirname(Sys.getenv("ISCORE_ENRICHMENT_DIR", "")), "full_DE_results.rds")
+        )
+        
+        # Remove empty paths
+        possible_de_paths <- possible_de_paths[possible_de_paths != ""]
+        
+        de_loaded <- FALSE
+        for (path in possible_de_paths) {
+          cat("[DE Results] Checking DE path:", path, "\n")
+          if (file.exists(path)) {
+            tryCatch({
+              de_results <- readRDS(path)
+              cat("[DE Results] Successfully loaded DE results from:", path, "\n")
+              cat("[DE Results] DE results structure:", paste(names(de_results), collapse=", "), "\n")
+              
+              # Extract MAST and MixScale data
+              if ("iSCORE_PD_MAST" %in% names(de_results)) {
+                # Convert MAST data to volcano plot format
+                mast_data <- de_results$iSCORE_PD_MAST
+                values$de_data_mast <- process_mast_for_volcano(mast_data)
+                cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
+                cat("[DE Results] Available MAST genes:", paste(unique(values$de_data_mast$gene), collapse=", "), "\n")
+              }
+              
+              if ("CRISPRi_Mixscale" %in% names(de_results)) {
+                # Convert MixScale data to volcano plot format  
+                mixscale_data <- de_results$CRISPRi_Mixscale
+                values$de_data_mixscale <- process_mixscale_for_volcano(mixscale_data)
+                cat("[DE Results] Processed MixScale data:", nrow(values$de_data_mixscale), "rows\n")
+                cat("[DE Results] Available MixScale genes:", paste(unique(values$de_data_mixscale$gene), collapse=", "), "\n")
+              }
+              
+              de_loaded <- TRUE
+              de_data_loaded(TRUE)
+              showNotification("DE data loaded successfully!", type = "message", duration = 2)
+              break
+            }, error = function(e) {
+              cat("[DE Results] Failed to load DE results from", path, ":", e$message, "\n")
+              showNotification(paste("Error loading DE data:", e$message), type = "error", duration = 5)
+            })
+          }
+        }
+        
+        if (!de_loaded) {
+          cat("[DE Results] No DE results loaded\n")
+          showNotification("No DE results found. Please ensure full_DE_results.rds is available.", type = "warning", duration = 5)
+        }
+      }
+    }
     
     # Track if we're updating to prevent circular updates
     local_updating <- reactiveVal(FALSE)
@@ -818,6 +832,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     output$mast_volcano <- renderPlotly({
       tryCatch({
         
+        # Load DE data on demand when volcano plot is first rendered
+        load_de_data()
+        
         # Check if cluster is selected
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
           plot_ly() %>%
@@ -882,6 +899,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     # Render MixScale volcano plot - CLEANED: Removed interfering cat() statements
     output$mixscale_volcano <- renderPlotly({
       tryCatch({
+        
+        # Load DE data on demand when volcano plot is first rendered
+        load_de_data()
         
         # Check if cluster is selected
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
