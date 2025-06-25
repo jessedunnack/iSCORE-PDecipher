@@ -1200,7 +1200,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         return(
           div(class = "text-center text-muted",
             p("No overlapping genes found"),
-            small("Requires significant genes in both MAST and MixScale results")
+            tags$small("Requires significant genes in both MAST and MixScale results")
           )
         )
       }
@@ -1216,7 +1216,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         return(
           div(class = "text-center text-muted",
             p("No overlapping genes found"),
-            small("Different significant genes between MAST and MixScale")
+            tags$small("Different significant genes between MAST and MixScale")
           )
         )
       }
@@ -1275,21 +1275,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               div(class = "text-center",
                 h6("Same ↑", style = "color: #d9534f; margin-bottom: 5px;"),
                 h4(length(same_direction_up), style = "color: #d9534f; margin: 0;"),
-                small("Both up-regulated")
+                tags$small("Both up-regulated")
               )
             ),
             column(4,
               div(class = "text-center",
                 h6("Same ↓", style = "color: #5bc0de; margin-bottom: 5px;"),
                 h4(length(same_direction_down), style = "color: #5bc0de; margin: 0;"),
-                small("Both down-regulated")
+                tags$small("Both down-regulated")
               )
             ),
             column(4,
               div(class = "text-center",
                 h6("Opposite", style = "color: #f0ad4e; margin-bottom: 5px;"),
                 h4(length(opposite_direction), style = "color: #f0ad4e; margin: 0;"),
-                small("Different directions")
+                tags$small("Different directions")
               )
             )
           )
