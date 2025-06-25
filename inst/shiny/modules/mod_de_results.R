@@ -1328,7 +1328,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Download button
         div(class = "text-center", style = "margin-top: 15px;",
           downloadButton(
-            ns("download_overlap"),
+            session$ns("download_overlap"),
             "Download Gene List",
             class = "btn-sm btn-primary",
             icon = icon("download")
