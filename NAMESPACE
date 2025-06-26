@@ -42,4 +42,4 @@ export(generate_manuscript_signature_summary)
 # Analysis pipeline functions
 export(run_mast_analysis)
 export(run_mixscale_analysis)
-export(run_full_analysis)
+export(run_complete_pipeline)
