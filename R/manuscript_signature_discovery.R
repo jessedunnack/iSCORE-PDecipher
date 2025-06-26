@@ -150,6 +150,18 @@ compute_signature_rankings <- function(all_signatures) {
           overlap_stats <- cluster_result$overlap_stats
           pathway_stats <- cluster_result$pathway_overlap_stats
           
+          # Debug: Check what we have in overlap_stats
+          cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- overlap_stats:",
+              "count=", overlap_stats$overlap_count %||% "NULL",
+              ", jaccard=", overlap_stats$jaccard_index %||% "NULL",
+              ", fisher_p=", overlap_stats$fisher_p %||% "NULL", "\n")
+          
+          # Skip if overlap_stats contains error
+          if ("error" %in% names(overlap_stats)) {
+            cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- SKIPPED: overlap_stats has error\n")
+            next
+          }
+          
           # Calculate composite score
           composite_score <- calculate_composite_signature_score(
             overlap_stats = overlap_stats,
