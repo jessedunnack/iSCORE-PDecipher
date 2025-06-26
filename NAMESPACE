@@ -39,6 +39,12 @@ export(analyze_gene_pair_signatures)
 export(discover_top_signatures)
 export(generate_manuscript_signature_summary)
 
+# PD biological interpretation functions
+export(analyze_pd_signatures)
+export(extract_signature_biological_context)
+export(create_pd_signature_summary)
+export(generate_signature_interpretation)
+
 # Analysis pipeline functions
 export(run_mast_analysis)
 export(run_mixscale_analysis)

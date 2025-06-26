@@ -10,10 +10,12 @@ if (pkg_root == "") {
     source("R/gene_harmonization.R")
     source("R/signature_analysis.R")
     source("R/manuscript_signature_discovery.R")
+    source("R/pd_signature_interpretation.R")
   } else if (file.exists("../../R/gene_harmonization.R")) {
     source("../../R/gene_harmonization.R")
     source("../../R/signature_analysis.R")
     source("../../R/manuscript_signature_discovery.R")
+    source("../../R/pd_signature_interpretation.R")
   } else {
     # Try from working directory parent
     base_dir <- getwd()
@@ -24,6 +26,7 @@ if (pkg_root == "") {
       source(file.path(base_dir, "R", "gene_harmonization.R"))
       source(file.path(base_dir, "R", "signature_analysis.R"))
       source(file.path(base_dir, "R", "manuscript_signature_discovery.R"))
+      source(file.path(base_dir, "R", "pd_signature_interpretation.R"))
     }
   }
 } else {
@@ -154,6 +157,54 @@ mod_signature_nomination_ui <- function(id) {
                               class = "btn-success btn-sm"),
                 downloadButton(ns("download_full"), "Download Full Results (Excel)", 
                               class = "btn-info btn-sm", style = "margin-left: 10px;")
+              )
+            )
+          ),
+          
+          # PD Biological Interpretation tab (NEW)
+          tabPanel("PD Biology Focus", value = "pd_biology",
+            wellPanel(
+              h4("Parkinson's Disease Biological Interpretation", icon("brain")),
+              p("Focused analysis of signatures for Parkinson's disease-relevant biological processes."),
+              
+              # PD analysis summary
+              div(style = "margin-bottom: 20px;",
+                h5("Key Biological Findings", style = "color: #d73027;"),
+                uiOutput(ns("pd_biological_summary"))
+              ),
+              
+              # Top PD-relevant signatures table
+              div(style = "margin-bottom: 20px;",
+                h5("Top PD-Relevant Signatures"),
+                DT::dataTableOutput(ns("pd_signatures_table"))
+              ),
+              
+              # PD pathway frequency analysis
+              div(style = "margin-bottom: 20px;",
+                h5("Most Frequently Disrupted PD Pathways"),
+                plotlyOutput(ns("pd_pathway_frequency"), height = "400px")
+              ),
+              
+              # Biological category breakdown
+              div(style = "margin-bottom: 20px;",
+                h5("Biological Process Categories"),
+                plotlyOutput(ns("pd_categories_plot"), height = "350px")
+              ),
+              
+              # Manuscript-ready summary
+              div(style = "margin-top: 20px;",
+                h5("Manuscript Summary", style = "color: #2c3e50;"),
+                wellPanel(style = "background-color: #f8f9fa;",
+                  verbatimTextOutput(ns("manuscript_summary"))
+                )
+              ),
+              
+              # Download PD analysis results
+              div(class = "text-center", style = "margin: 15px 0;",
+                downloadButton(ns("download_pd_analysis"), "Download PD Analysis (CSV)", 
+                              class = "btn-warning btn-sm"),
+                downloadButton(ns("download_manuscript"), "Download Manuscript Summary (TXT)", 
+                              class = "btn-primary btn-sm", style = "margin-left: 10px;")
               )
             )
           ),
@@ -418,9 +469,31 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           }
         )
         
+        progress$set(message = "Running PD biological analysis...", value = 0.9)
+        
+        # Run PD-focused biological interpretation
+        pd_analysis <- NULL
+        if ("pd_focus" %in% input$analysis_scope) {
+          tryCatch({
+            pd_analysis <- analyze_pd_signatures(
+              signature_results = signature_results,
+              enrichment_data = filtered_data,
+              focus_on_pan_cluster = TRUE
+            )
+            cat("[PD ANALYSIS] Successfully completed PD biological interpretation\n")
+          }, error = function(e) {
+            cat("[PD ANALYSIS] Error in PD analysis:", e$message, "\n")
+            pd_analysis <<- NULL
+          })
+        }
+        
+        # Combine results
+        final_results <- signature_results
+        final_results$pd_analysis <- pd_analysis
+        
         progress$set(message = "Analysis complete!", value = 1.0)
         
-        return(signature_results)
+        return(final_results)
         
       }, error = function(e) {
         progress$set(message = paste("Error:", e$message), value = 1.0)
@@ -628,8 +701,288 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       }
     })
     
+    # === PD BIOLOGICAL ANALYSIS OUTPUTS (NEW) ===
+    
+    # PD biological summary
+    output$pd_biological_summary <- renderUI({
+      req(values$analysis_results)
+      req(values$analysis_results$pd_analysis)
+      
+      pd_analysis <- values$analysis_results$pd_analysis
+      
+      if (is.null(pd_analysis) || is.null(pd_analysis$pd_summary)) {
+        return(div(
+          class = "alert alert-info",
+          h5("PD Analysis Not Available"),
+          p("PD-focused analysis was not performed or failed. Ensure 'PD-relevant focus' is selected in analysis scope.")
+        ))
+      }
+      
+      summary_stats <- pd_analysis$pd_summary$summary_stats
+      biological_categories <- pd_analysis$pd_summary$biological_categories
+      
+      # Get top 3 biological categories
+      category_ranking <- biological_categories[order(unlist(biological_categories), decreasing = TRUE)]
+      top_categories <- head(names(category_ranking)[unlist(category_ranking) > 0], 3)
+      
+      tagList(
+        div(class = "row",
+          div(class = "col-md-6",
+            h6("Analysis Overview", style = "color: #2c3e50; font-weight: bold;"),
+            tags$ul(
+              tags$li(paste("Analysis Type:", str_to_title(summary_stats$analysis_type))),
+              tags$li(paste("Signatures Analyzed:", summary_stats$total_signatures)),
+              tags$li(paste("Mean PD Relevance:", round(summary_stats$mean_pd_relevance, 2)))
+            )
+          ),
+          div(class = "col-md-6",
+            h6("Top Biological Categories", style = "color: #d73027; font-weight: bold;"),
+            if (length(top_categories) > 0) {
+              tags$ol(
+                lapply(seq_along(top_categories), function(i) {
+                  cat_name <- top_categories[i]
+                  count <- biological_categories[[cat_name]]
+                  display_name <- str_to_title(gsub("_", " ", cat_name))
+                  tags$li(paste0(display_name, " (", count, " occurrences)"))
+                })
+              )
+            } else {
+              p("No major biological categories identified", style = "color: #666;")
+            }
+          )
+        ),
+        div(style = "margin-top: 15px;",
+          h6("Key Insights", style = "color: #27ae60; font-weight: bold;"),
+          div(class = "well well-sm", style = "background-color: #f1f8e9;",
+            if (!is.null(summary_stats$most_relevant_signature) && summary_stats$most_relevant_signature != "None") {
+              p(paste("🔬 Most PD-relevant signature:", summary_stats$most_relevant_signature))
+            },
+            if (length(top_categories) > 0) {
+              p(paste("🧠 Dominant biological theme:", str_to_title(gsub("_", " ", summary_stats$top_biological_category))))
+            }
+          )
+        )
+      )
+    })
+    
+    # PD signatures table
+    output$pd_signatures_table <- DT::renderDataTable({
+      req(values$analysis_results)
+      req(values$analysis_results$pd_analysis)
+      
+      pd_analysis <- values$analysis_results$pd_analysis
+      
+      if (is.null(pd_analysis$enhanced_signatures) || length(pd_analysis$enhanced_signatures) == 0) {
+        return(DT::datatable(
+          data.frame(Message = "No PD-relevant signatures found"),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      # Create summary table from enhanced signatures
+      table_data <- data.frame()
+      for (i in seq_along(pd_analysis$enhanced_signatures)) {
+        sig <- pd_analysis$enhanced_signatures[[i]]
+        
+        row_data <- data.frame(
+          Rank = i,
+          Gene_Pair = sig$signature$gene_pair,
+          Cluster = sig$signature$cluster,
+          Signature_Strength = round(sig$signature$signature_strength, 2),
+          PD_Relevance = round(sig$pd_relevance_score, 2),
+          Shared_PD_Pathways = nrow(sig$shared_pd_pathways),
+          Mitochondrial = sig$biological_categories$mitochondrial,
+          Protein_Quality = sig$biological_categories$protein_quality,
+          Autophagy = sig$biological_categories$autophagy,
+          Dopamine = sig$biological_categories$dopamine,
+          stringsAsFactors = FALSE
+        )
+        table_data <- rbind(table_data, row_data)
+      }
+      
+      # Sort by PD relevance
+      table_data <- table_data[order(-table_data$PD_Relevance, -table_data$Signature_Strength), ]
+      
+      DT::datatable(table_data,
+                   options = list(pageLength = 10, scrollX = TRUE, autoWidth = TRUE),
+                   rownames = FALSE) %>%
+        DT::formatRound(c("Signature_Strength", "PD_Relevance"), digits = 2) %>%
+        DT::formatStyle("PD_Relevance",
+                       background = DT::styleColorBar(range(table_data$PD_Relevance), "#fee0d2"),
+                       backgroundSize = "100% 90%",
+                       backgroundRepeat = "no-repeat",
+                       backgroundPosition = "center")
+    })
+    
+    # PD pathway frequency plot
+    output$pd_pathway_frequency <- renderPlotly({
+      req(values$analysis_results)
+      req(values$analysis_results$pd_analysis)
+      
+      pd_analysis <- values$analysis_results$pd_analysis
+      
+      if (is.null(pd_analysis$enhanced_signatures) || length(pd_analysis$enhanced_signatures) == 0) {
+        return(plotly_empty("No PD pathway data available"))
+      }
+      
+      # Aggregate pathway information across all signatures
+      all_pathways <- data.frame()
+      for (sig in pd_analysis$enhanced_signatures) {
+        if (nrow(sig$shared_pd_pathways) > 0) {
+          pathway_data <- sig$shared_pd_pathways
+          pathway_data$gene_pair <- sig$signature$gene_pair
+          all_pathways <- rbind(all_pathways, pathway_data)
+        }
+      }
+      
+      if (nrow(all_pathways) == 0) {
+        return(plotly_empty("No shared PD pathways found"))
+      }
+      
+      # Create frequency table
+      pathway_frequency <- as.data.frame(table(all_pathways$pathway))
+      names(pathway_frequency) <- c("Pathway", "Frequency")
+      pathway_frequency <- pathway_frequency[order(-pathway_frequency$Frequency), ]
+      pathway_frequency <- head(pathway_frequency, 15)  # Top 15 pathways
+      
+      # Create plot
+      p <- ggplot(pathway_frequency, aes(x = reorder(Pathway, Frequency), y = Frequency)) +
+        geom_col(fill = "#d73027", alpha = 0.8) +
+        coord_flip() +
+        labs(title = "Most Frequently Disrupted PD-Relevant Pathways",
+             x = "Pathway", y = "Frequency Across Signatures") +
+        theme_minimal() +
+        theme(axis.text.y = element_text(size = 10))
+      
+      ggplotly(p, tooltip = c("x", "y"))
+    })
+    
+    # PD categories plot
+    output$pd_categories_plot <- renderPlotly({
+      req(values$analysis_results)
+      req(values$analysis_results$pd_analysis)
+      
+      pd_analysis <- values$analysis_results$pd_analysis
+      
+      if (is.null(pd_analysis$pd_summary$biological_categories)) {
+        return(plotly_empty("No biological category data available"))
+      }
+      
+      categories <- pd_analysis$pd_summary$biological_categories
+      
+      # Convert to data frame
+      cat_data <- data.frame(
+        Category = names(categories),
+        Count = unlist(categories),
+        stringsAsFactors = FALSE
+      )
+      
+      # Remove categories with 0 count
+      cat_data <- cat_data[cat_data$Count > 0, ]
+      
+      if (nrow(cat_data) == 0) {
+        return(plotly_empty("No biological categories with counts > 0"))
+      }
+      
+      # Clean up category names for display
+      cat_data$Category_Display <- str_to_title(gsub("_", " ", cat_data$Category))
+      cat_data <- cat_data[order(-cat_data$Count), ]
+      
+      # Create plot
+      p <- ggplot(cat_data, aes(x = reorder(Category_Display, Count), y = Count)) +
+        geom_col(fill = "#2166ac", alpha = 0.8) +
+        coord_flip() +
+        labs(title = "Biological Process Categories in PD Signatures",
+             x = "Biological Process", y = "Pathway Count") +
+        theme_minimal() +
+        theme(axis.text.y = element_text(size = 11))
+      
+      ggplotly(p, tooltip = c("x", "y"))
+    })
+    
+    # Manuscript summary
+    output$manuscript_summary <- renderText({
+      req(values$analysis_results)
+      req(values$analysis_results$pd_analysis)
+      
+      pd_analysis <- values$analysis_results$pd_analysis
+      
+      if (is.null(pd_analysis$pd_summary$manuscript_summary)) {
+        return("Manuscript summary not available.")
+      }
+      
+      pd_analysis$pd_summary$manuscript_summary
+    })
+    
+    # Download handlers for PD analysis
+    output$download_pd_analysis <- downloadHandler(
+      filename = function() {
+        paste0("pd_signature_analysis_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        req(values$analysis_results$pd_analysis)
+        
+        # Create detailed table from enhanced signatures
+        table_data <- data.frame()
+        for (i in seq_along(values$analysis_results$pd_analysis$enhanced_signatures)) {
+          sig <- values$analysis_results$pd_analysis$enhanced_signatures[[i]]
+          
+          row_data <- data.frame(
+            rank = i,
+            gene_pair = sig$signature$gene_pair,
+            mast_gene = sig$signature$mast_gene,
+            crispri_gene = sig$signature$crispri_gene,
+            cluster = sig$signature$cluster,
+            signature_strength = sig$signature$signature_strength,
+            pd_relevance_score = sig$pd_relevance_score,
+            shared_pd_pathways = nrow(sig$shared_pd_pathways),
+            mitochondrial_pathways = sig$biological_categories$mitochondrial,
+            protein_quality_pathways = sig$biological_categories$protein_quality,
+            autophagy_pathways = sig$biological_categories$autophagy,
+            dopamine_pathways = sig$biological_categories$dopamine,
+            synaptic_pathways = sig$biological_categories$synaptic,
+            oxidative_stress_pathways = sig$biological_categories$oxidative_stress,
+            neuronal_pathways = sig$biological_categories$neuronal,
+            stringsAsFactors = FALSE
+          )
+          table_data <- rbind(table_data, row_data)
+        }
+        
+        write.csv(table_data, file, row.names = FALSE)
+      }
+    )
+    
+    output$download_manuscript <- downloadHandler(
+      filename = function() {
+        paste0("manuscript_summary_", Sys.Date(), ".txt")
+      },
+      content = function(file) {
+        req(values$analysis_results$pd_analysis)
+        writeLines(values$analysis_results$pd_analysis$pd_summary$manuscript_summary, file)
+      }
+    )
+    
+    # Helper function for empty plotly plots
+    plotly_empty <- function(message) {
+      plotly::plot_ly() %>%
+        plotly::add_text(x = 0.5, y = 0.5, text = message, 
+                        textfont = list(size = 16, color = "gray"),
+                        showlegend = FALSE) %>%
+        plotly::layout(
+          xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+          yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+          plot_bgcolor = "rgba(0,0,0,0)",
+          paper_bgcolor = "rgba(0,0,0,0)"
+        )
+    }
+    
     # Helper function for null coalescing
     `%||%` <- function(a, b) if (is.null(a)) b else a
+    
+    # Helper function for string manipulation
+    str_to_title <- function(x) {
+      gsub("(^|[[:space:]])([[:alpha:]])", "\\1\\U\\2", x, perl = TRUE)
+    }
     
     # Return reactive values for potential use by other modules
     return(list(
