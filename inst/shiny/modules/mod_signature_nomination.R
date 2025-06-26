@@ -445,12 +445,33 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         values$analysis_results <- results
         values$analysis_running <- FALSE
         
+        # Debug: Log what results we got
+        cat("[RESULTS DEBUG] Analysis completed successfully\n")
+        cat("[RESULTS DEBUG] Results structure:", paste(names(results), collapse = ", "), "\n")
+        
+        if ("analysis_summary" %in% names(results)) {
+          summary_stats <- results$analysis_summary
+          cat("[RESULTS DEBUG] Summary stats:", paste(names(summary_stats), collapse = ", "), "\n")
+          cat("[RESULTS DEBUG] Total signatures:", summary_stats$total_signatures %||% "NULL", "\n")
+          cat("[RESULTS DEBUG] Pan-cluster count:", summary_stats$pan_cluster_count %||% "NULL", "\n")
+          cat("[RESULTS DEBUG] Strongest gene pair:", summary_stats$strongest_gene_pair %||% "NULL", "\n")
+        }
+        
+        if ("top_signatures" %in% names(results)) {
+          cat("[RESULTS DEBUG] Top signatures data frame rows:", nrow(results$top_signatures), "\n")
+          if (nrow(results$top_signatures) > 0) {
+            cat("[RESULTS DEBUG] Top signature columns:", paste(names(results$top_signatures), collapse = ", "), "\n")
+            cat("[RESULTS DEBUG] Top signature strength:", max(results$top_signatures$signature_strength, na.rm = TRUE), "\n")
+          }
+        }
+        
         # Update UI elements with results
         update_results_ui()
         
         showNotification("Signature analysis completed successfully!", type = "message")
       } else {
         values$analysis_running <- FALSE
+        cat("[RESULTS DEBUG] Analysis returned NULL results\n")
         showNotification("Analysis failed. Please check your settings and try again.", type = "error")
       }
     })

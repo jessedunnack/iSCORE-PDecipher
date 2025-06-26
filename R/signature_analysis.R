@@ -338,6 +338,17 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
   crispri_data <- enrichment_data[enrichment_data$method == "MixScale" & 
                                  enrichment_data$mutation_perturbation == gene_pair$crispri_gene, ]
   
+  cat("[GENE PAIR DEBUG] Gene pair:", gene_pair$mast_gene, "vs", gene_pair$crispri_gene, "\n")
+  cat("[GENE PAIR DEBUG] MAST data found:", nrow(mast_data), "rows\n")
+  cat("[GENE PAIR DEBUG] CRISPRi data found:", nrow(crispri_data), "rows\n")
+  
+  if (nrow(mast_data) > 0) {
+    cat("[GENE PAIR DEBUG] MAST clusters:", paste(unique(mast_data$cluster), collapse = ", "), "\n")
+  }
+  if (nrow(crispri_data) > 0) {
+    cat("[GENE PAIR DEBUG] CRISPRi clusters:", paste(unique(crispri_data$cluster), collapse = ", "), "\n")
+  }
+  
   # Filter by clusters if specified
   if (!is.null(clusters)) {
     mast_data <- mast_data[mast_data$cluster %in% clusters, ]
@@ -365,8 +376,11 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
     cluster_mast <- mast_data[mast_data$cluster == cluster, ]
     cluster_crispri <- crispri_data[crispri_data$cluster == cluster, ]
     
+    cat("[CLUSTER DEBUG]", cluster, "- MAST terms:", nrow(cluster_mast), ", CRISPRi terms:", nrow(cluster_crispri), "\n")
+    
     if (nrow(cluster_mast) == 0 || nrow(cluster_crispri) == 0) {
       cluster_results[[cluster]] <- list(error = "Missing data for one method")
+      cat("[CLUSTER DEBUG]", cluster, "- SKIPPED: Missing data for one method\n")
       next
     }
     
@@ -378,11 +392,27 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
     mast_genes <- mast_genes[!is.na(mast_genes) & mast_genes != ""]
     crispri_genes <- crispri_genes[!is.na(crispri_genes) & crispri_genes != ""]
     
+    cat("[CLUSTER DEBUG]", cluster, "- Extracted MAST genes:", length(mast_genes), "\n")
+    cat("[CLUSTER DEBUG]", cluster, "- Extracted CRISPRi genes:", length(crispri_genes), "\n")
+    if (length(mast_genes) > 0) {
+      cat("[CLUSTER DEBUG]", cluster, "- Sample MAST genes:", paste(head(mast_genes, 5), collapse = ", "), "\n")
+    }
+    if (length(crispri_genes) > 0) {
+      cat("[CLUSTER DEBUG]", cluster, "- Sample CRISPRi genes:", paste(head(crispri_genes, 5), collapse = ", "), "\n")
+    }
+    
     if (length(mast_genes) > 0 && length(crispri_genes) > 0) {
       background_genes <- unique(c(mast_genes, crispri_genes))
       overlap_stats <- calculate_gene_overlap_significance(mast_genes, crispri_genes, background_genes)
+      
+      cat("[OVERLAP DEBUG]", cluster, "- Overlap count:", overlap_stats$overlap_count, "\n")
+      cat("[OVERLAP DEBUG]", cluster, "- Jaccard index:", round(overlap_stats$jaccard_index, 3), "\n")
+      if (overlap_stats$overlap_count > 0) {
+        cat("[OVERLAP DEBUG]", cluster, "- Overlapping genes:", paste(head(overlap_stats$overlap_genes, 5), collapse = ", "), "\n")
+      }
     } else {
       overlap_stats <- list(error = "No valid gene lists extracted")
+      cat("[OVERLAP DEBUG]", cluster, "- ERROR: No valid gene lists extracted\n")
     }
     
     # Pathway overlap analysis
