@@ -254,7 +254,7 @@ mod_signature_nomination_ui <- function(id) {
               
               # Detailed results for selected pair
               div(
-                uiOutput(ns("gene_pair_details"))
+                DT::dataTableOutput(ns("gene_pair_table"))
               ),
               
               # Correlation plot for selected pair
@@ -908,6 +908,109 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       ggplotly(p, tooltip = c("x", "y"))
     })
     
+    
+    # === CLUSTER-SPECIFIC SIGNATURES OUTPUTS ===
+    
+    # Cluster-specific signatures table
+    output$cluster_specific_table <- DT::renderDataTable({
+      req(values$analysis_results)
+      req(input$selected_cluster_detail)
+      
+      cluster_sigs <- values$analysis_results$cluster_specific_signatures
+      selected_cluster <- input$selected_cluster_detail
+      
+      if (is.null(cluster_sigs) || length(cluster_sigs) == 0 || 
+          !selected_cluster %in% names(cluster_sigs)) {
+        return(DT::datatable(
+          data.frame(Message = "No cluster-specific signatures found for this cluster"),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      cluster_data <- cluster_sigs[[selected_cluster]]
+      
+      if (nrow(cluster_data) > 0) {
+        display_data <- cluster_data[, c("gene_pair", "signature_strength", "gene_overlap_count", 
+                                       "pathway_overlap_count", "gene_fisher_p")]
+        colnames(display_data) <- c("Gene Pair", "Signature Strength", "Gene Overlaps", 
+                                   "Pathway Overlaps", "Fisher P-value")
+        
+        DT::datatable(display_data,
+                     options = list(pageLength = 10, scrollX = TRUE),
+                     rownames = FALSE) %>%
+          DT::formatRound(c("Signature Strength", "Fisher P-value"), digits = 3)
+      } else {
+        DT::datatable(data.frame(Message = "No signatures found for this cluster"),
+                     options = list(dom = 't'), rownames = FALSE)
+      }
+    })
+    
+    # === GENE PAIR ANALYSIS OUTPUTS ===
+    
+    # Gene pair analysis table  
+    output$gene_pair_table <- DT::renderDataTable({
+      req(values$analysis_results)
+      req(input$selected_gene_pair)
+      
+      all_sigs <- values$analysis_results$all_signatures
+      selected_pair <- input$selected_gene_pair
+      
+      if (nrow(all_sigs) == 0) {
+        return(DT::datatable(
+          data.frame(Message = "No signature data available"),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      
+      if (nrow(pair_data) > 0) {
+        display_data <- pair_data[, c("cluster", "signature_strength", "gene_overlap_count",
+                                     "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")]
+        colnames(display_data) <- c("Cluster", "Signature Strength", "Gene Overlaps",
+                                   "Pathway Overlaps", "Fisher P-value", "Jaccard Index")
+        
+        DT::datatable(display_data,
+                     options = list(pageLength = 10, scrollX = TRUE),
+                     rownames = FALSE) %>%
+          DT::formatRound(c("Signature Strength", "Fisher P-value", "Jaccard Index"), digits = 3)
+      } else {
+        DT::datatable(data.frame(Message = "No data found for this gene pair"),
+                     options = list(dom = 't'), rownames = FALSE)
+      }
+    })
+    
+    # === HEATMAP OUTPUTS ===
+    
+    # Pan-cluster heatmap (fix the infinite loading)
+    output$pan_cluster_heatmap <- renderPlotly({
+      req(values$analysis_results)
+      
+      pan_cluster_data <- values$analysis_results$pan_cluster_signatures
+      
+      if (is.null(pan_cluster_data) || nrow(pan_cluster_data) == 0) {
+        return(plotly_empty("No pan-cluster signatures available for heatmap"))
+      }
+      
+      # Create simple heatmap from pan-cluster data
+      heatmap_matrix <- as.matrix(pan_cluster_data[, c("mean_signature_strength", "max_signature_strength", 
+                                                      "cluster_count")])
+      rownames(heatmap_matrix) <- pan_cluster_data$gene_pair
+      
+      plot_ly(
+        z = ~heatmap_matrix,
+        x = colnames(heatmap_matrix),
+        y = rownames(heatmap_matrix),
+        type = "heatmap",
+        colorscale = "Blues",
+        hovertemplate = "Gene Pair: %{y}<br>Metric: %{x}<br>Value: %{z}<extra></extra>"
+      ) %>%
+      layout(
+        title = "Pan-Cluster Signature Heatmap",
+        xaxis = list(title = "Signature Metrics"),
+        yaxis = list(title = "Gene Pairs")
+      )
+    })
     
     # Download handlers for PD analysis
     output$download_pd_analysis <- downloadHandler(

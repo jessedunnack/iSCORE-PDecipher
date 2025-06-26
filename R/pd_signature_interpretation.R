@@ -425,6 +425,8 @@ generate_signature_interpretation <- function(signature, biological_categories, 
     signature$signature_strength
   } else if ("mean_signature_strength" %in% colnames(signature)) {
     signature$mean_signature_strength  
+  } else if ("max_signature_strength" %in% colnames(signature)) {
+    signature$max_signature_strength
   } else {
     "Unknown"
   }
