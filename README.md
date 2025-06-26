@@ -2,34 +2,38 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.1.3-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.2.0-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
-iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating three distinct experimental approaches: genetic mutations (iSCORE-PD), gene knockdowns (CRISPRi), and gene activations (CRISPRa). It provides tools for differential expression analysis, functional enrichment analysis, and professional interactive visualizations.
+iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, primarily focusing on genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). It provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and professional interactive visualizations.
 
 ## 🖥️ **Cross-Platform Compatible**
 ✅ **Windows** | ✅ **Mac** | ✅ **Linux** - Full compatibility with automatic setup and data transfer tools
 
-## 🧬 Three Distinct Dataset Collections
+## 🧬 Primary Dataset Collections
 
-### 1. **iSCORE-PD Genetic Mutations**
+### 1. **iSCORE-PD Genetic Mutations** (Primary Focus)
 - **13 PD-associated mutations** across 14 cell clusters
 - **Genes**: ATP13A2, DNAJC6, FBXO7, GBA, LRRK2, PARK7, PINK1, PRKN, SNCA variants, SYNJ1, VPS13C variants
 - **Analysis**: Mutant vs. isogenic wild-type comparisons using MAST
-- **Results**: 211,470 enrichment terms
+- **Results**: ~211,470 enrichment terms
 
-### 2. **CRISPRi Gene Knockdowns (PerturbSeq)**
+### 2. **CRISPRi Gene Knockdowns** (Secondary Focus)
 - **10 PD genes** across 10 cell clusters, 3 experiments
 - **Target genes**: ATP13A2, DNAJC6, FBXO7, LRRK2, PARK2, PARK7, PINK1, SNCA, SYNJ1, VPS13C
 - **Analysis**: Perturbed vs. non-targeting controls using MixScale
-- **Results**: 548,921 enrichment terms
+- **Results**: ~450,000 enrichment terms
 
-### 3. **CRISPRa Gene Activations (PerturbSeq)**
-- **10 PD genes** in 1 specialized cluster
-- **Target genes**: Same as CRISPRi experiments
-- **Analysis**: Activated vs. non-targeting controls using MixScale
-- **Results**: 6,946 enrichment terms
+### 3. **Cross-Method Signature Analysis** ⭐ NEW v0.2.0
+- **Signature discovery** between MAST mutations and CRISPRi knockdowns
+- **PD-focused biological interpretation** with pathway categorization
+- **Pan-cluster and cluster-specific signatures** for manuscript prioritization
+- **Interactive signature nomination** interface for rapid analysis
+
+**Total Primary Dataset**: ~663,000+ significant enrichment terms (p.adjust < 0.05)
+
+*Note: CRISPRa activation data included in some analyses but de-prioritized for primary workflows*
 
 ## Installation
 
@@ -114,7 +118,14 @@ main()  # Creates interactive UMAP visualizations
 - Clean interface with icon representations when collapsed
 - Synchronizes with all visualization modules
 
-### **DE Results Page** ⭐ NEW
+### **Signature Nomination Module** ⭐ NEW v0.2.0
+- **Cross-method signature discovery** between MAST mutations and CRISPRi knockdowns
+- **PD Biology Focus tab** with biological interpretation and pathway categorization
+- **Pan-cluster signatures** showing effects across multiple cell types
+- **Cluster-specific signatures** for cell type-specific analysis
+- **Interactive heatmaps** for signature visualization and comparison
+
+### **DE Results Page** ⭐ ENHANCED
 - **Interactive UMAP**: Click clusters to update volcano plots
 - **Dual Volcano Plots**: MAST and MixScale results side-by-side
 - **Dynamic Coloring**: By significance, experiment, or gene
@@ -210,14 +221,22 @@ iSCORE.PDecipher:::get_parent_data_dir()
 
 ## 📚 Documentation
 
+### Quick Start Resources
+- **[Complete Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Organized guide to all documentation
+- **[Labmate Quickstart Guide](docs/LABMATE_QUICKSTART.md)** - Step-by-step setup for new users
+
 ### Cross-Platform Setup
-- **[Mac Compatibility Guide](MAC_COMPATIBILITY_GUIDE.md)** - Complete setup instructions for Mac users
-- **[Mac Setup Checklist](MAC_SETUP_CHECKLIST.md)** - Quick reference for data transfer and setup
-- **[Cross-Platform Development Guidelines](CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md)** - For developers contributing to the package
+- **[Mac Compatibility Guide](docs/MAC_COMPATIBILITY_GUIDE.md)** - Complete setup instructions for Mac users
+- **[Mac Setup Checklist](docs/MAC_SETUP_CHECKLIST.md)** - Quick reference for data transfer and setup
+- **[Cross-Platform Development Guidelines](docs/CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md)** - For developers contributing to the package
+
+### Analysis & Features
+- **[PD Signature Analysis Guide](docs/PD_SIGNATURE_ANALYSIS_GUIDE.md)** - Guide to signature nomination and biological interpretation
+- **[Future Enhancements](docs/FUTURE_ENHANCEMENTS.md)** - Planned data-driven discovery features
 
 ### Advanced Documentation  
 - **[Project Documentation (CLAUDE.md)](CLAUDE.md)** - Complete project overview and implementation details
-- **User Guides** - Located in `docs/` directory
+- **[All Documentation](docs/)** - Complete documentation directory
 
 ## Citation
 
@@ -244,7 +263,13 @@ Hockemeyer Lab + Bateup Lab
 
 ---
 
-## ✨ Key Features (v0.1.3)
+## ✨ Key Features (v0.2.0)
+
+### 🔬 **Cross-Method Signature Analysis** ⭐ NEW v0.2.0
+- **Shared signature discovery** between MAST mutations and CRISPRi knockdowns
+- **PD-focused biological interpretation** with automated pathway categorization
+- **Manuscript-ready prioritization** of strongest cross-method signatures
+- **Interactive signature nomination interface** for rapid hypothesis generation
 
 ### 🎯 **Interactive UMAP Visualization**
 - **Cell cluster exploration** with automatic dataset detection
