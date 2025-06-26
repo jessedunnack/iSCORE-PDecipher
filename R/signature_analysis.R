@@ -236,15 +236,25 @@ calculate_composite_signature_score <- function(overlap_stats, correlation_stats
   
   # Overlap component (based on Fisher's p-value and Jaccard index)
   if (!is.null(overlap_stats)) {
-    if (!is.null(overlap_stats$fisher_p) && !is.na(overlap_stats$fisher_p)) {
+    jaccard_val <- overlap_stats$jaccard_index %||% 0
+    overlap_count <- overlap_stats$overlap_count %||% 0
+    fisher_p <- overlap_stats$fisher_p %||% 1
+    
+    cat("[SCORE FIX DEBUG] overlap_stats available, jaccard:", jaccard_val, 
+        ", overlap_count:", overlap_count, 
+        ", fisher_p:", fisher_p, "\n")
+    
+    # Use Fisher's p-value only if it's significant (p < 0.1)
+    if (!is.null(fisher_p) && !is.na(fisher_p) && fisher_p < 0.1) {
       # Convert p-value to score (higher score for lower p-value)
-      overlap_score <- -log10(max(overlap_stats$fisher_p, 1e-10)) * overlap_stats$jaccard_index
+      overlap_score <- -log10(max(fisher_p, 1e-10)) * jaccard_val
+      cat("[SCORE FIX DEBUG] Using Fisher p-value scoring: ", overlap_score, "\n")
     } else {
-      # Use Jaccard index alone if no p-value (more robust fallback)
-      jaccard_val <- overlap_stats$jaccard_index %||% 0
-      overlap_count <- overlap_stats$overlap_count %||% 0
-      # Score based on both Jaccard similarity and absolute overlap count
-      overlap_score <- (jaccard_val * 10) + (log10(max(overlap_count, 1)) * 2)
+      # Use Jaccard index + count when Fisher's test is not significant
+      # Scale based on both similarity and absolute evidence
+      overlap_score <- (jaccard_val * 20) + (log10(max(overlap_count, 1)) * 3)
+      cat("[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard=", jaccard_val, 
+          ", count=", overlap_count, ", score=", overlap_score, "\n")
     }
   }
   
