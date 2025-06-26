@@ -132,6 +132,7 @@ source("modules/mod_export.R")
 source("modules/mod_de_analysis.R")  # Cross-condition DE gene analysis
 source("modules/mod_de_heatmap.R")  # Interactive DE gene heatmaps
 source("modules/mod_signature_nomination.R")  # Signature nomination module
+source("modules/mod_signature_trends.R")  # Signature trends analysis module
 
 # Ensure UI functions are available (fallback assignments)
 ui_functions <- list(
@@ -639,7 +640,28 @@ ui <- fluidPage(
             p("Discover shared biological signatures between MAST mutations and CRISPRi perturbations. Identify consistent patterns across experimental approaches for manuscript-ready insights.")
           ),
           
-          mod_signature_nomination_ui("signature_module")
+          div(class = "subsection-tabs",
+            tabsetPanel(
+              id = "signature_tabs",
+              type = "tabs",
+            
+            tabPanel(
+              "Signature Nomination",
+              icon = icon("search-plus"),
+              value = "signature_discovery",
+              br(),
+              mod_signature_nomination_ui("signature_module")
+            ),
+            
+            tabPanel(
+              "Signature Trends Analysis",
+              icon = icon("chart-line"),
+              value = "signature_trends",
+              br(),
+              mod_signature_trends_ui("signature_trends_module")
+            )
+          ) # End tabsetPanel
+          ) # End div.subsection-tabs
         ),
         
         # Global Export Tab (kept as separate main tab for now)
@@ -1169,6 +1191,13 @@ server <- function(input, output, session) {
     "signature_module",
     global_selection = global_data_selection,
     app_data = app_data
+  )
+  
+  # Signature Trends Analysis module
+  signature_trends_results <- mod_signature_trends_server(
+    "signature_trends_module",
+    analysis_results = reactive({ signature_results() }),
+    enrichment_data = reactive({ app_data$consolidated_data })
   )
   
   pathview_results <- mod_pathview_server(

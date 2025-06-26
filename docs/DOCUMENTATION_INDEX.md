@@ -14,6 +14,7 @@
 
 ### 📊 Analysis Guides
 - **[PD_SIGNATURE_ANALYSIS_GUIDE](PD_SIGNATURE_ANALYSIS_GUIDE.md)** - Guide to signature nomination and PD biology analysis
+- **[SIGNATURE_TRENDS_ANALYSIS_GUIDE](SIGNATURE_TRENDS_ANALYSIS_GUIDE.md)** - Data-driven signature trends discovery and analysis
 - **[GSEA_VISUALIZATION_SUMMARY](GSEA_VISUALIZATION_SUMMARY.md)** - GSEA analysis and visualization guide
 
 ### 🔬 Technical Documentation
@@ -99,7 +100,7 @@ iSCORE-PDecipher/
 
 **For Developers**: [CROSS_PLATFORM_DEVELOPMENT_GUIDELINES](CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md) → [Development files in dev/](../dev/)
 
-**For Analysis**: [PD_SIGNATURE_ANALYSIS_GUIDE](PD_SIGNATURE_ANALYSIS_GUIDE.md) → [Signature Nomination features](../README.md#signature-nomination-module--new-v020)
+**For Analysis**: [PD_SIGNATURE_ANALYSIS_GUIDE](PD_SIGNATURE_ANALYSIS_GUIDE.md) → [SIGNATURE_TRENDS_ANALYSIS_GUIDE](SIGNATURE_TRENDS_ANALYSIS_GUIDE.md) → [Signature Nomination features](../README.md#signature-nomination-module--new-v020)
 
 ---
 

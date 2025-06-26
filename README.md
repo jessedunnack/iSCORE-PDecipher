@@ -124,6 +124,7 @@ main()  # Creates interactive UMAP visualizations
 - **Pan-cluster signatures** showing effects across multiple cell types
 - **Cluster-specific signatures** for cell type-specific analysis
 - **Interactive heatmaps** for signature visualization and comparison
+- **Signature Trends Analysis** ⭐ NEW - Data-driven discovery of most frequent and impactful signatures without manual curation
 
 ### **DE Results Page** ⭐ ENHANCED
 - **Interactive UMAP**: Click clusters to update volcano plots
@@ -270,6 +271,7 @@ Hockemeyer Lab + Bateup Lab
 - **PD-focused biological interpretation** with automated pathway categorization
 - **Manuscript-ready prioritization** of strongest cross-method signatures
 - **Interactive signature nomination interface** for rapid hypothesis generation
+- **Data-driven signature trends analysis** with frequency rankings and impact scoring for unbiased discovery
 
 ### 🎯 **Interactive UMAP Visualization**
 - **Cell cluster exploration** with automatic dataset detection
