@@ -1,6 +1,36 @@
 # Signature Nomination Module for Cross-Method Comparison
 # Interactive interface for discovering shared signatures between MAST and CRISPRi
 
+# Source required R functions for signature analysis
+# Find package root directory
+pkg_root <- system.file(package = "iSCORE.PDecipher")
+if (pkg_root == "") {
+  # Development mode - try to find R directory
+  if (file.exists("R/gene_harmonization.R")) {
+    source("R/gene_harmonization.R")
+    source("R/signature_analysis.R")
+    source("R/manuscript_signature_discovery.R")
+  } else if (file.exists("../../R/gene_harmonization.R")) {
+    source("../../R/gene_harmonization.R")
+    source("../../R/signature_analysis.R")
+    source("../../R/manuscript_signature_discovery.R")
+  } else {
+    # Try from working directory parent
+    base_dir <- getwd()
+    while (!file.exists(file.path(base_dir, "R", "gene_harmonization.R")) && base_dir != dirname(base_dir)) {
+      base_dir <- dirname(base_dir)
+    }
+    if (file.exists(file.path(base_dir, "R", "gene_harmonization.R"))) {
+      source(file.path(base_dir, "R", "gene_harmonization.R"))
+      source(file.path(base_dir, "R", "signature_analysis.R"))
+      source(file.path(base_dir, "R", "manuscript_signature_discovery.R"))
+    }
+  }
+} else {
+  # Installed package mode - functions should be available via namespace
+  # If not, this indicates a package installation issue
+}
+
 # UI function
 mod_signature_nomination_ui <- function(id) {
   ns <- NS(id)
