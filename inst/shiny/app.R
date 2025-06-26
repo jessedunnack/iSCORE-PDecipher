@@ -131,6 +131,7 @@ source("modules/mod_export.R")
 # NEW DE Gene Analysis modules
 source("modules/mod_de_analysis.R")  # Cross-condition DE gene analysis
 source("modules/mod_de_heatmap.R")  # Interactive DE gene heatmaps
+source("modules/mod_signature_nomination.R")  # Signature nomination module
 
 # Ensure UI functions are available (fallback assignments)
 ui_functions <- list(
@@ -625,6 +626,20 @@ ui <- fluidPage(
             p("Download your functional enrichment analysis results in various formats."),
             actionButton("export_enrichment", "Go to Export Options", class = "btn-info")
           )
+        ),
+        
+        # Signature Nomination Section
+        tabPanel(
+          "Signature Nomination",
+          icon = icon("search"),
+          value = "signature_nomination",
+          br(),
+          div(class = "section-header",
+            h2("Cross-Method Signature Discovery"),
+            p("Discover shared biological signatures between MAST mutations and CRISPRi perturbations. Identify consistent patterns across experimental approaches for manuscript-ready insights.")
+          ),
+          
+          mod_signature_nomination_ui("signature_module")
         ),
         
         # Global Export Tab (kept as separate main tab for now)
@@ -1135,6 +1150,13 @@ server <- function(input, output, session) {
     "de_heatmap_module",
     app_data = app_data,
     global_selection = global_data_selection
+  )
+  
+  # Signature Nomination module
+  signature_results <- mod_signature_nomination_server(
+    "signature_module",
+    global_selection = global_data_selection,
+    app_data = app_data
   )
   
   pathview_results <- mod_pathview_server(
