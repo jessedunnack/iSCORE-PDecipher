@@ -98,6 +98,37 @@ extract_signature_biological_context <- function(signature, enrichment_data, pd_
   ))
 }
 
+#' Extract gene names from signature (handles both individual and pan-cluster signatures)
+#'
+#' @param signature Signature row (may have mast_gene/crispri_gene or just gene_pair)
+#' @return List with mast_gene and crispri_gene
+extract_signature_genes <- function(signature) {
+  
+  # Check if signature has individual gene columns
+  if ("mast_gene" %in% colnames(signature) && "crispri_gene" %in% colnames(signature)) {
+    return(list(
+      mast_gene = as.character(signature$mast_gene),
+      crispri_gene = as.character(signature$crispri_gene)
+    ))
+  }
+  
+  # Parse from gene_pair column (format: "MAST_GENE_vs_CRISPRI_GENE")
+  if ("gene_pair" %in% colnames(signature)) {
+    gene_pair_parts <- strsplit(signature$gene_pair, "_vs_")[[1]]
+    if (length(gene_pair_parts) == 2) {
+      return(list(
+        mast_gene = gene_pair_parts[1],
+        crispri_gene = gene_pair_parts[2]
+      ))
+    }
+  }
+  
+  # Fallback: return NA values with warning
+  warning("Could not extract gene names from signature. Available columns: ", 
+          paste(colnames(signature), collapse = ", "))
+  return(list(mast_gene = NA, crispri_gene = NA))
+}
+
 #' Get enrichment terms for a signature and method
 #'
 #' @param signature Signature row
@@ -106,25 +137,38 @@ extract_signature_biological_context <- function(signature, enrichment_data, pd_
 #' @return Filtered enrichment terms
 get_signature_enrichment_terms <- function(signature, enrichment_data, method) {
   
+  # Extract gene names using helper function
+  gene_info <- extract_signature_genes(signature)
+  
   # Handle gene name mapping
   if (method == "MAST") {
-    if (signature$mast_gene == "SNCA_combined") {
+    if (gene_info$mast_gene == "SNCA_combined") {
       gene_filter <- c("SNCA_A30P", "SNCA_A53T")
-    } else if (signature$mast_gene == "VPS13C_combined") {
+    } else if (gene_info$mast_gene == "VPS13C_combined") {
       gene_filter <- c("VPS13C_A444P", "VPS13C_W395C")
     } else {
-      gene_filter <- signature$mast_gene
+      gene_filter <- gene_info$mast_gene
     }
   } else {
-    gene_filter <- signature$crispri_gene
+    gene_filter <- gene_info$crispri_gene
   }
   
   # Filter enrichment data
-  terms <- enrichment_data[
-    enrichment_data$method == method &
-    enrichment_data$mutation_perturbation %in% gene_filter &
-    enrichment_data$cluster == signature$cluster,
-  ]
+  if ("cluster" %in% colnames(signature) && !is.na(signature$cluster)) {
+    # Individual signature - filter by specific cluster
+    terms <- enrichment_data[
+      enrichment_data$method == method &
+      enrichment_data$mutation_perturbation %in% gene_filter &
+      enrichment_data$cluster == signature$cluster,
+    ]
+  } else {
+    # Pan-cluster signature - aggregate across all clusters
+    terms <- enrichment_data[
+      enrichment_data$method == method &
+      enrichment_data$mutation_perturbation %in% gene_filter,
+    ]
+    cat("[PD ANALYSIS] Using pan-cluster aggregation for", gene_filter, "(", method, ") -", nrow(terms), "terms\n")
+  }
   
   return(terms)
 }
@@ -149,14 +193,29 @@ filter_pd_relevant_terms <- function(terms, pd_pathways) {
   
   # Add PD relevance scoring
   if (nrow(pd_terms) > 0) {
-    pd_terms$pd_relevance_score <- sapply(pd_terms$Description, function(desc) {
-      sum(sapply(pd_pathways, function(pathway) {
-        grepl(pathway, desc, ignore.case = TRUE)
-      }))
-    })
+    cat("[PD ANALYSIS] Computing relevance scores for", nrow(pd_terms), "PD-relevant terms\n")
+    
+    # Ensure pd_pathways is a character vector
+    if (is.list(pd_pathways)) {
+      pd_pathways <- unlist(pd_pathways)
+    }
+    
+    pd_terms$pd_relevance_score <- vapply(pd_terms$Description, function(desc) {
+      if (is.na(desc) || !is.character(desc)) return(0)
+      sum(vapply(pd_pathways, function(pathway) {
+        grepl(pathway, as.character(desc), ignore.case = TRUE)
+      }, logical(1)))
+    }, numeric(1))
     
     # Sort by relevance and significance
-    pd_terms <- pd_terms[order(-pd_terms$pd_relevance_score, pd_terms$p.adjust), ]
+    # Handle potential NA values and ensure numeric types
+    if ("p.adjust" %in% colnames(pd_terms) && is.numeric(pd_terms$p.adjust)) {
+      pd_terms <- pd_terms[order(-pd_terms$pd_relevance_score, pd_terms$p.adjust, na.last = TRUE), ]
+    } else {
+      # Fallback: sort only by relevance score
+      pd_terms <- pd_terms[order(-pd_terms$pd_relevance_score, na.last = TRUE), ]
+      cat("[PD ANALYSIS] Warning: p.adjust column not available for sorting\n")
+    }
   }
   
   return(pd_terms)
@@ -294,15 +353,34 @@ categorize_biological_processes <- function(shared_pathways, pd_pathways) {
 #' @return Character string with biological interpretation
 generate_signature_interpretation <- function(signature, biological_categories, shared_pathways) {
   
+  # Extract gene names using helper function
+  gene_info <- extract_signature_genes(signature)
+  
   # Start with gene pair information
+  cluster_info <- if ("cluster" %in% colnames(signature)) signature$cluster else "Pan-cluster"
+  strength_info <- if ("signature_strength" %in% colnames(signature)) {
+    signature$signature_strength
+  } else if ("mean_signature_strength" %in% colnames(signature)) {
+    signature$mean_signature_strength  
+  } else {
+    "Unknown"
+  }
+  
   interpretation <- paste0(
-    "Gene Pair: ", signature$mast_gene, " (mutation) vs ", signature$crispri_gene, " (knockdown)\n",
-    "Cluster: ", signature$cluster, " | Signature Strength: ", round(signature$signature_strength, 2), "\n\n"
+    "Gene Pair: ", gene_info$mast_gene, " (mutation) vs ", gene_info$crispri_gene, " (knockdown)\n",
+    "Scope: ", cluster_info, " | Signature Strength: ", round(as.numeric(strength_info), 2), "\n\n"
   )
   
   # Identify dominant biological themes
   top_categories <- names(biological_categories)[biological_categories > 0]
-  top_categories <- top_categories[order(biological_categories[top_categories], decreasing = TRUE)]
+  
+  # Safely order categories
+  if (length(top_categories) > 0) {
+    category_values <- biological_categories[top_categories]
+    # Ensure values are numeric
+    category_values <- as.numeric(category_values)
+    top_categories <- top_categories[order(category_values, decreasing = TRUE, na.last = TRUE)]
+  }
   
   if (length(top_categories) == 0) {
     interpretation <- paste0(interpretation, 
@@ -322,7 +400,22 @@ generate_signature_interpretation <- function(signature, biological_categories, 
   # Add pathway examples if available
   if (nrow(shared_pathways) > 0) {
     interpretation <- paste0(interpretation, "\nShared Pathway Examples:\n")
-    top_pathways <- head(shared_pathways[order(shared_pathways$mast_pval, shared_pathways$crispri_pval), ], 3)
+    
+    # Safely sort pathways, handling NA values and potential list columns
+    if ("mast_pval" %in% colnames(shared_pathways) && "crispri_pval" %in% colnames(shared_pathways)) {
+      # Convert to numeric and handle NAs
+      mast_pval_safe <- as.numeric(shared_pathways$mast_pval)
+      crispri_pval_safe <- as.numeric(shared_pathways$crispri_pval)
+      
+      # Replace NA with large value for sorting (put NA values last)
+      mast_pval_safe[is.na(mast_pval_safe)] <- 1
+      crispri_pval_safe[is.na(crispri_pval_safe)] <- 1
+      
+      top_pathways <- head(shared_pathways[order(mast_pval_safe, crispri_pval_safe), ], 3)
+    } else {
+      # Fallback: just take first 3 pathways
+      top_pathways <- head(shared_pathways, 3)
+    }
     
     for (i in seq_len(nrow(top_pathways))) {
       pathway <- top_pathways$pathway[i]
@@ -480,7 +573,10 @@ create_pd_signature_summary <- function(enhanced_signatures, analysis_type) {
 generate_overall_biological_insights <- function(all_categories, summary_stats) {
   
   # Rank categories by frequency
-  category_ranking <- all_categories[order(unlist(all_categories), decreasing = TRUE)]
+  category_values <- unlist(all_categories)
+  # Ensure numeric values for sorting
+  category_values <- as.numeric(category_values)
+  category_ranking <- all_categories[order(category_values, decreasing = TRUE, na.last = TRUE)]
   top_3_categories <- head(names(category_ranking)[unlist(category_ranking) > 0], 3)
   
   insights <- paste0(

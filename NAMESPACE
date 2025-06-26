@@ -42,6 +42,7 @@ export(generate_manuscript_signature_summary)
 # PD biological interpretation functions
 export(analyze_pd_signatures)
 export(extract_signature_biological_context)
+export(extract_signature_genes)
 export(create_pd_signature_summary)
 export(generate_signature_interpretation)
 
