@@ -694,11 +694,22 @@ server <- function(input, output, session) {
     methods <- unique(data$method)
     modalities <- if ("modality" %in% names(data)) unique(data$modality) else character(0)
     
-    list(
-      MAST = "MAST" %in% methods,
-      CRISPRi = "MixScale" %in% methods && "CRISPRi" %in% modalities,
-      CRISPRa = "MixScale" %in% methods && "CRISPRa" %in% modalities
-    )
+    # If modality column exists, use it for precise detection
+    if ("modality" %in% names(data)) {
+      list(
+        MAST = "MAST" %in% methods,
+        CRISPRi = "MixScale" %in% methods && "CRISPRi" %in% modalities,
+        CRISPRa = "MixScale" %in% methods && "CRISPRa" %in% modalities
+      )
+    } else {
+      # Fallback: If no modality column, assume MixScale is CRISPRi
+      # This handles datasets created before modality column was added
+      list(
+        MAST = "MAST" %in% methods,
+        CRISPRi = "MixScale" %in% methods,  # Assume MixScale = CRISPRi if no modality column
+        CRISPRa = FALSE  # No CRISPRa without explicit modality
+      )
+    }
   }
   
   # Helper function to get valid genes for a method
@@ -715,7 +726,8 @@ server <- function(input, output, session) {
       if ("modality" %in% names(data)) {
         filtered_data <- data[data$method == "MixScale" & data$modality == "CRISPRi", ]
       } else {
-        return(character(0))
+        # Fallback: assume all MixScale is CRISPRi if no modality column
+        filtered_data <- data[data$method == "MixScale", ]
       }
     } else if (method_key == "MixScale_CRISPRa") {
       # Check if modality column exists
