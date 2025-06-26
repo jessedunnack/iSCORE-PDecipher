@@ -36,12 +36,18 @@ analyze_pd_signatures <- function(signature_results, enrichment_data, focus_on_p
     
     cat("[PD ANALYSIS] Analyzing signature", i, ":", signature$gene_pair, "\n")
     
-    # Get enrichment terms for this gene pair
-    signature_context <- extract_signature_biological_context(
-      signature, enrichment_data, pd_pathways
-    )
-    
-    enhanced_signatures[[i]] <- signature_context
+    # Get enrichment terms for this gene pair with error handling
+    tryCatch({
+      signature_context <- extract_signature_biological_context(
+        signature, enrichment_data, pd_pathways
+      )
+      enhanced_signatures[[i]] <- signature_context
+    }, error = function(e) {
+      cat("[ERROR] Failed to extract biological context for signature", i, ":", e$message, "\n")
+      cat("[ERROR] Signature structure:\n")
+      print(str(signature))
+      # Skip this signature and continue
+    })
   }
   
   # Create comprehensive summary
@@ -63,29 +69,69 @@ analyze_pd_signatures <- function(signature_results, enrichment_data, focus_on_p
 #' @return List with biological context information
 extract_signature_biological_context <- function(signature, enrichment_data, pd_pathways) {
   
-  # Get enrichment terms for both methods in this signature
-  mast_terms <- get_signature_enrichment_terms(
-    signature, enrichment_data, method = "MAST"
-  )
+  cat("[CONTEXT] Starting biological context extraction\n")
   
-  crispri_terms <- get_signature_enrichment_terms(
-    signature, enrichment_data, method = "MixScale"
-  )
+  # Get enrichment terms for both methods in this signature
+  cat("[CONTEXT] Getting MAST terms...\n")
+  mast_terms <- tryCatch({
+    get_signature_enrichment_terms(signature, enrichment_data, method = "MAST")
+  }, error = function(e) {
+    cat("[ERROR] MAST terms extraction failed:", e$message, "\n")
+    return(data.frame())
+  })
+  
+  cat("[CONTEXT] Getting CRISPRi terms...\n")
+  crispri_terms <- tryCatch({
+    get_signature_enrichment_terms(signature, enrichment_data, method = "MixScale")
+  }, error = function(e) {
+    cat("[ERROR] CRISPRi terms extraction failed:", e$message, "\n")
+    return(data.frame())
+  })
   
   # Identify PD-relevant terms
-  mast_pd_terms <- filter_pd_relevant_terms(mast_terms, pd_pathways)
-  crispri_pd_terms <- filter_pd_relevant_terms(crispri_terms, pd_pathways)
+  cat("[CONTEXT] Filtering for PD-relevant terms...\n")
+  mast_pd_terms <- tryCatch({
+    filter_pd_relevant_terms(mast_terms, pd_pathways)
+  }, error = function(e) {
+    cat("[ERROR] MAST PD filtering failed:", e$message, "\n")
+    return(data.frame())
+  })
+  
+  crispri_pd_terms <- tryCatch({
+    filter_pd_relevant_terms(crispri_terms, pd_pathways)
+  }, error = function(e) {
+    cat("[ERROR] CRISPRi PD filtering failed:", e$message, "\n")
+    return(data.frame())
+  })
+  
+  cat("[CONTEXT] Found", nrow(mast_pd_terms), "MAST PD terms and", nrow(crispri_pd_terms), "CRISPRi PD terms\n")
   
   # Find shared PD-relevant pathways
-  shared_pd_pathways <- find_shared_pathways(mast_pd_terms, crispri_pd_terms)
+  cat("[CONTEXT] Finding shared pathways...\n")
+  shared_pd_pathways <- tryCatch({
+    find_shared_pathways(mast_pd_terms, crispri_pd_terms)
+  }, error = function(e) {
+    cat("[ERROR] Shared pathway finding failed:", e$message, "\n")
+    return(data.frame())
+  })
   
   # Categorize biological processes
-  biological_categories <- categorize_biological_processes(shared_pd_pathways, pd_pathways)
+  cat("[CONTEXT] Categorizing biological processes...\n")
+  biological_categories <- tryCatch({
+    categorize_biological_processes(shared_pd_pathways, pd_pathways)
+  }, error = function(e) {
+    cat("[ERROR] Biological categorization failed:", e$message, "\n")
+    return(list())
+  })
   
   # Generate interpretation
-  interpretation <- generate_signature_interpretation(
-    signature, biological_categories, shared_pd_pathways
-  )
+  cat("[CONTEXT] Generating interpretation...\n")
+  interpretation <- tryCatch({
+    generate_signature_interpretation(signature, biological_categories, shared_pd_pathways)
+  }, error = function(e) {
+    cat("[ERROR] Interpretation generation failed:", e$message, "\n")
+    return("Unable to generate interpretation")
+  })
   
   return(list(
     signature = signature,
@@ -137,8 +183,25 @@ extract_signature_genes <- function(signature) {
 #' @return Filtered enrichment terms
 get_signature_enrichment_terms <- function(signature, enrichment_data, method) {
   
-  # Extract gene names using helper function
-  gene_info <- extract_signature_genes(signature)
+  # Debug info
+  cat("[DEBUG] Getting enrichment terms for method:", method, "\n")
+  cat("[DEBUG] Signature columns:", paste(colnames(signature), collapse = ", "), "\n")
+  
+  # Extract gene names using helper function with error handling
+  gene_info <- tryCatch({
+    result <- extract_signature_genes(signature)
+    cat("[DEBUG] Extracted genes - MAST:", result$mast_gene, "CRISPRi:", result$crispri_gene, "\n")
+    result
+  }, error = function(e) {
+    cat("[ERROR] Failed to extract gene names:", e$message, "\n")
+    return(list(mast_gene = NA, crispri_gene = NA))
+  })
+  
+  # Return empty if gene extraction failed
+  if (is.na(gene_info$mast_gene) || is.na(gene_info$crispri_gene)) {
+    cat("[WARNING] Could not extract valid gene names, returning empty data\n")
+    return(data.frame())
+  }
   
   # Handle gene name mapping
   if (method == "MAST") {

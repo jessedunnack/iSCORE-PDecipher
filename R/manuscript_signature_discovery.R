@@ -244,7 +244,7 @@ identify_pan_cluster_signatures <- function(signature_rankings, min_cluster_brea
 #' @param signature_rankings Data frame with signature rankings
 #' @param min_strength_threshold Minimum signature strength for consideration
 #' @return List of cluster-specific signatures by cluster
-identify_cluster_specific_signatures <- function(signature_rankings, min_strength_threshold = 1.0) {
+identify_cluster_specific_signatures <- function(signature_rankings, min_strength_threshold = 0.5) {
   
   if (nrow(signature_rankings) == 0) {
     return(list())

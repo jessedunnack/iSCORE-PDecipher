@@ -1,0 +1,1617 @@
+🔍 COMPREHENSIVE PD ANALYSIS DEBUG
+=====================================
+
+Debug started at: 2025-06-26 15:43:45 
+
+✅ All R functions loaded successfully
+
+✅ Data loaded from: ../../iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds 
+✅ Data size: 663280 enrichment terms
+
+Filtered data (MAST + MixScale): 663280 terms
+
+🧪 RUNNING SIGNATURE DISCOVERY
+==============================
+   Initializing signature discovery... 
+   Analyzing gene pair signatures... 
+   Analyzing ATP13A2 vs ATP13A2 
+   Analyzing ATP13A2 vs ATP13A2 - Analyzing ATP13A2 vs ATP13A2 
+[GENE PAIR DEBUG] Gene pair: ATP13A2 vs ATP13A2 
+[GENE PAIR DEBUG] MAST data found: 17209 rows
+[GENE PAIR DEBUG] CRISPRi data found: 56413 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_13, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_0 ( 1 of 13 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 1392 , CRISPRi terms: 6041 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 215 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 1237 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: ATP6V0C, NDUFS2, ATP5ME, NDUFC1, NDUFA13 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: NSF, KIRREL3, GIPC1, PREX1, PRKAR2B 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 23 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.016 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: NDUFC1, NDUFC2, CTNNB1, SOX4, ACSL4 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_1 ( 2 of 13 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 3500 , CRISPRi terms: 5465 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 1013 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 653 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: DMD, CARTPT, TAC1, ADAMTS16, COL1A2 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: DLG2, NLGN1, CDH10, GABRB1, KCND3 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 64 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.04 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: COL1A2, SLIT2, ATP2B1, PDE4D, DLG1 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_10 ( 3 of 13 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 86 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_11 ( 4 of 13 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 70 , CRISPRi terms: 4069 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 15 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 511 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: NEFM, TUBA1A, TUBB, VIM, LAMA5 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: AKT2, UNK, EIF2B3, EIF5, CPEB3 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0.002 
+[OVERLAP DEBUG] cluster_11 - Overlapping genes: NEFM 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_13 ( 5 of 13 ) 
+[CLUSTER DEBUG] cluster_13 - MAST terms: 483 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_13 - SKIPPED: Missing data for one method
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_2 ( 6 of 13 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 1847 , CRISPRi terms: 3797 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 267 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 66 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: NSDHL, ERG28, FDPS, HMGCS1, CYP51A1 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: SMARCA1, SMARCC2, INO80, INO80D, POLE3 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_3 ( 7 of 13 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 1375 , CRISPRi terms: 4901 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 99 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 346 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: CMTM8, ITGB4, NKX6-2, ID4, COL6A1 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: RPS21, RPL10A, RPL18A, RPL28, RPL13 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.005 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: SIL1, RPS3 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_4 ( 8 of 13 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 1677 , CRISPRi terms: 12856 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 114 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 2402 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: RPS27, RPS28, RPL41, RPLP1, RPS12 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: EIF3F, RPL23, RPS3, RPS7, RPL32 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 74 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.03 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: RPS27, RPS28, RPL41, RPLP1, RPS12 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_5 ( 9 of 13 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 94 , CRISPRi terms: 2384 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 7 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 222 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: PPP1R3C, INPP5K, FOS, 5063, 2353 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: PRNP, NAPA, STX12, BRAF, METTL5 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_6 ( 10 of 13 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 2469 , CRISPRi terms: 5077 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 249 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 943 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: YBX1, RPS27, RPLP1, RPS8, RPS24 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: NCBP1, EIF2B3, NCK1, UNK, RPL13 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 73 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.065 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: YBX1, RPS27, RPS8, RPL28, RPS15 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_7 ( 11 of 13 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 921 , CRISPRi terms: 7927 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 24 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 938 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: RPS13, RPS28, RPS27, RPL18A, XIST 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: ERP29, B2M, MAPK1, GPX8, SDF2L1 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 3 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: RPS27, GPM6B, 6232 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_8 ( 12 of 13 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 2042 , CRISPRi terms: 1896 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 180 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 28 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: NDUFC1, NDUFA4, UQCR10, NDUFB1, ATP5IF1 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: 2099, 11332, 26027, 23597, 1628 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.01 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: 10376, 5063 
+   Analyzing ATP13A2 vs ATP13A2 - cluster cluster_9 ( 13 of 13 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 1253 , CRISPRi terms: 2000 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 13 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 0 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: UCHL1, GNAS, ARRDC3, IGFBP2, SERPINF1 
+[OVERLAP DEBUG] cluster_9 - ERROR: No valid gene lists extracted
+   Completed ATP13A2 vs ATP13A2 
+   Analyzing DNAJC6 vs DNAJC6 
+   Analyzing DNAJC6 vs DNAJC6 - Analyzing DNAJC6 vs DNAJC6 
+[GENE PAIR DEBUG] Gene pair: DNAJC6 vs DNAJC6 
+[GENE PAIR DEBUG] MAST data found: 2848 rows
+[GENE PAIR DEBUG] CRISPRi data found: 38885 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_12, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_0 ( 1 of 14 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 158 , CRISPRi terms: 3212 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 28 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 326 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: CALR, TNC, HSPA5, PDIA6, COL3A1 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: DHX29, EIF2A, RPS6, RPS12, RPS17 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: RPL19 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_1 ( 2 of 14 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 573 , CRISPRi terms: 4351 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 105 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 68 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: HMGCS1, CYP51A1, IDI1, SQLE, INSIG1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: 5594, 2273, 5578, 6722, 5894 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_10 ( 3 of 14 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 242 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_11 ( 4 of 14 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 269 , CRISPRi terms: 428 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 19 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 0 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: RPSA, RPL30, RPS7, RPL35A, RPL37A 
+[OVERLAP DEBUG] cluster_11 - ERROR: No valid gene lists extracted
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_12 ( 5 of 14 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 73 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_14 ( 6 of 14 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 126 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_2 ( 7 of 14 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 861 , CRISPRi terms: 5101 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 60 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 519 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: RPS10, RPS15, RPL39, RPL28, RPS8 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: NCBP1, RPL37A, RPS18, RPL19, RPL5 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 38 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.07 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: RPS15, RPL39, RPS8, RPS14, RPL29 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_3 ( 8 of 14 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 379 , CRISPRi terms: 3528 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 71 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 85 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: SULF1, SPARCL1, CTSD, ANGPT1, LUM 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: GALNT1, TMED7, RAB21, ST6GAL1, ZDHHC17 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_4 ( 9 of 14 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 71 , CRISPRi terms: 6354 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 12 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 648 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: DNAJC6, PAK3, TTR, FTL, CRYAB 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: STC1, UBE3A, TM9SF4, PRNP, JPH4 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: DNAJC6, 7431 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_5 ( 10 of 14 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 47 , CRISPRi terms: 2638 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 9 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 34 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: MACF1, TUBGCP6, 6204, 6171, 6202 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: ABCB6, BACE2, ATP7A, DTNBP1, GPR143 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_7 ( 11 of 14 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 2 , CRISPRi terms: 1531 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 0 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 18 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: LUM, SERPINB6, CD151, BMP7, ANXA7 
+[OVERLAP DEBUG] cluster_7 - ERROR: No valid gene lists extracted
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_8 ( 12 of 14 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 25 , CRISPRi terms: 7187 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 7 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 992 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: DGAT1, LPIN1, BRI3BP, 8694, 23175 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: NCK1, RPS27A, RPS16, RPS15, RPL27A 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0 
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_9 ( 13 of 14 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 22 , CRISPRi terms: 1490 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 8 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 0 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: CRIP1, SULF1, ID4, ID3, ID1 
+[OVERLAP DEBUG] cluster_9 - ERROR: No valid gene lists extracted
+   Analyzing DNAJC6 vs DNAJC6 - cluster cluster_6 ( 14 of 14 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 0 , CRISPRi terms: 3065 
+[CLUSTER DEBUG] cluster_6 - SKIPPED: Missing data for one method
+   Completed DNAJC6 vs DNAJC6 
+   Analyzing FBXO7 vs FBXO7 
+   Analyzing FBXO7 vs FBXO7 - Analyzing FBXO7 vs FBXO7 
+[GENE PAIR DEBUG] Gene pair: FBXO7 vs FBXO7 
+[GENE PAIR DEBUG] MAST data found: 38541 rows
+[GENE PAIR DEBUG] CRISPRi data found: 56356 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_12, cluster_13, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_0 ( 1 of 15 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 3723 , CRISPRi terms: 1758 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 3190 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 308 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: GLRA2, NRP2, GRIN2A, GABRR1, GABRG3 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: IL1RAPL1, HIP1R, IGSF9, SLITRK1, CDH8 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 97 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.029 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: FAIM2, GLRA3, NLGN3, CSMD2, LRRC7 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_1 ( 2 of 15 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 1812 , CRISPRi terms: 6170 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 1223 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 804 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: IDI1, FDPS, MSMO1, INSIG1, HMGCS1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: BCS1L, KAT2A, DLAT, GMPR, HSD17B8 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 77 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.039 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: MSMO1, SREBF2, TM7SF2, TSPO, CLU 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_10 ( 3 of 15 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 2616 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_11 ( 4 of 15 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 214 , CRISPRi terms: 1302 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 56 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 26 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: S100A10, LOXL1, COL5A2, COL3A1, SULF1 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: RAB8B, HLA-A, ATG9A, RAB12, ABHD17B 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_12 ( 5 of 15 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 1811 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_13 ( 6 of 15 ) 
+[CLUSTER DEBUG] cluster_13 - MAST terms: 577 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_13 - SKIPPED: Missing data for one method
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_14 ( 7 of 15 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 183 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_2 ( 8 of 15 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 3628 , CRISPRi terms: 9139 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 3736 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 1044 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: NTRK2, NTN1, PALLD, GAP43, ARX 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: HERC4, DLG5, SUFU, C2CD3, VCP 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 330 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.074 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: TUBA1A, ENAH, MAP1B, TUBB3, PRKG1 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_3 ( 9 of 15 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 5820 , CRISPRi terms: 8170 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 3986 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 892 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: ANXA1, SAT1, TNFRSF12A, SCG2, RHOB 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: DRG1, EIF2S2, SYNCRIP, EIF4G1, EIF3A 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 217 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.047 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: SAT1, SCG2, PKM, DAG1, RHOJ 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_4 ( 10 of 15 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 4680 , CRISPRi terms: 7780 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 552 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 1332 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: ANXA2, DST, CD36, S100A10, WNT4 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: RPL7A, RPL23A, RPS12, RPL11, RPL3 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 100 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.056 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: PRKG1, COL6A1, TIMP1, SERPINE2, GAP43 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_5 ( 11 of 15 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 4253 , CRISPRi terms: 5359 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 1735 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 728 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: SULF1, COL3A1, COL5A2, GPM6B, MATN2 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: UTS2, FBXL20, PRNP, NEFL, CARTPT 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 106 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.045 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: EFEMP2, COL4A5, ANTXR1, CLASP2, ATP9A 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_6 ( 12 of 15 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 3826 , CRISPRi terms: 5208 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 432 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 790 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: SULF1, ANXA2, TIMP1, COL5A2, TWIST1 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: DHX9, EIF2B3, CPEB4, IGF2BP1, RPL13 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 37 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.031 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: TIMP1, RPL13, ADGRB3, CDH2, SEMA6A 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_7 ( 13 of 15 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 605 , CRISPRi terms: 6189 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 131 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 532 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: COL3A1, TGFB1I1, VCAN, DCN, COL5A2 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: MTOR, RPL23, RPLP2, RPSA, RPL28 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 5 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.008 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: TIMP1, VIM, ACTG1, CD99, CALM1 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_8 ( 14 of 15 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 648 , CRISPRi terms: 3791 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 238 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 337 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: GAP43, ANXA2, S100A10, TNC, SULF2 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: 58499, 351, 3169, 23007, 657 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 13 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.023 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: PLEC, SHH, ID1, SYT4, TUBB3 
+   Analyzing FBXO7 vs FBXO7 - cluster cluster_9 ( 15 of 15 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 4145 , CRISPRi terms: 1490 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 854 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 24 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: ANXA2, COL3A1, COL5A2, SULF1, COL6A1 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: 6513, 7422, 5908, 5295, 5906 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0.001 
+[OVERLAP DEBUG] cluster_9 - Overlapping genes: 7042 
+   Completed FBXO7 vs FBXO7 
+   Analyzing LRRK2 vs LRRK2 
+   Analyzing LRRK2 vs LRRK2 - Analyzing LRRK2 vs LRRK2 
+[GENE PAIR DEBUG] Gene pair: LRRK2 vs LRRK2 
+[GENE PAIR DEBUG] MAST data found: 24269 rows
+[GENE PAIR DEBUG] CRISPRi data found: 33895 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_12, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_0 ( 1 of 14 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 1893 , CRISPRi terms: 1823 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 495 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 95 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: COX4I1, NDUFA4, COX6C, COX5A, COX7B 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: PSAP, GYG1, ARSA, MANBA, HEXB 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 8 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.014 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: 2904, 1131, 6752, 2066, 2566 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_1 ( 2 of 14 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 870 , CRISPRi terms: 1968 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 174 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 101 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: TESC, FXYD6, FGF13, ANK3, DMD 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: 6426, 23118, 84818, 7187, 4790 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_10 ( 3 of 14 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 67 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_11 ( 4 of 14 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 126 , CRISPRi terms: 2188 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 9 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 95 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: CRABP1, ACOX3, TSTD1, BCAP31, XIST 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: RALGAPA1, CCNT2, ACVR2B, CYB5B, ERCC5 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_12 ( 5 of 14 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 1676 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_14 ( 6 of 14 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 7 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_2 ( 7 of 14 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 1116 , CRISPRi terms: 6114 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 255 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 759 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: RPLP1, RPS8, RPS12, RPS27, RPS23 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: UQCRH, SLC25A6, NDUFB11, MRPS33, ATP5MF 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 17 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.017 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: VCL, TPM1, PLS3, CANX, TUBB3 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_3 ( 8 of 14 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 1122 , CRISPRi terms: 2911 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 292 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 26 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: ATP1A2, AKAP6, FXYD1, ATP1B1, VCL 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: 6165, 6122, 6136, 6188, 6125 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: 6206 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_4 ( 9 of 14 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 8782 , CRISPRi terms: 4238 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 2858 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 497 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: RHOA, ATP5IF1, UQCRFS1, ATP5F1C, ATP5PO 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: CALR, PPIB, PDIA3, GET1, SEC11C 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 182 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.057 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: ATP5IF1, ATP5F1C, ATP5PO, ATP5F1D, ATP5PF 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_5 ( 10 of 14 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 1597 , CRISPRi terms: 1728 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 255 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 119 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: RPS12, FAU, RPLP1, RPS8, RPS23 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: 84441, 1871, 10046, 595, 27327 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 8 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.022 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: RPS12, RPL39, 6206, 6170, 3831 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_6 ( 11 of 14 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 370 , CRISPRi terms: 3346 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 41 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 462 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: RPS12, RPS23, RPL14, RPL36A, RPS3 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: MRPL51, MRPS17, MRPS33, MRPL18, MRPL13 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.004 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: RPS5, 6193 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_7 ( 12 of 14 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 5735 , CRISPRi terms: 4175 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 1453 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 325 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: RPS8, RPS27, RPL4, RPS28, EEF1D 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: ATP5PB, NDUFB8, NDUFB1, ATP5MC1, NDUFA13 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 59 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.034 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: EIF3A, WDR83OS, TIMM13, ATP1B3, AP3B1 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_8 ( 13 of 14 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 118 , CRISPRi terms: 3038 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 22 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 394 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: LUM, COL3A1, PCOLCE, TIMP2, WNT3 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: DUSP22, SBF1, DUSP1, PPM1F, ID4 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.005 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: NECAB2, PLP1 
+   Analyzing LRRK2 vs LRRK2 - cluster cluster_9 ( 14 of 14 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 790 , CRISPRi terms: 2366 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 67 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 60 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: RPLP1, RPL13, RPS12, RPS13, RPS27 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: BMPR1A, SKIL, SMURF2, BRMS1L, FOS 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0 
+   Completed LRRK2 vs LRRK2 
+   Analyzing PARK7 vs PARK7 
+   Analyzing PARK7 vs PARK7 - Analyzing PARK7 vs PARK7 
+[GENE PAIR DEBUG] Gene pair: PARK7 vs PARK7 
+[GENE PAIR DEBUG] MAST data found: 27884 rows
+[GENE PAIR DEBUG] CRISPRi data found: 31375 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_12, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing PARK7 vs PARK7 - cluster cluster_0 ( 1 of 13 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 2121 , CRISPRi terms: 4102 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 1525 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 378 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: TUBB2B, RIMS3, BRSK1, CDK5, FBXO2 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: MTREX, CWF19L2, MFAP1, SRSF3, NONO 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 60 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.033 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: ABR, SHANK2, PRKAR1B, CNTN4, DNM1 
+   Analyzing PARK7 vs PARK7 - cluster cluster_1 ( 2 of 13 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 1486 , CRISPRi terms: 5445 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 992 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 911 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: DBN1, AGRN, LRRC24, AMIGO2, HOMER1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: RWDD1, RPS18, RPL39, RPL15, IMPACT 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 55 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.03 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: KIF5B, SHANK2, LUM, COL6A2, MATN2 
+   Analyzing PARK7 vs PARK7 - cluster cluster_10 ( 3 of 13 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 3292 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing PARK7 vs PARK7 - cluster cluster_11 ( 4 of 13 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 3103 , CRISPRi terms: 1096 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 2564 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 125 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: PUF60, FIP1L1, LSM1, ETF1, SRSF2 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: TRPM3, FXYD6, PDE4B, PLCB4, KCNIP4 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 22 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0.008 
+[OVERLAP DEBUG] cluster_11 - Overlapping genes: AKT1, PARK7, NEDD4L, PRKAG2, SELENON 
+   Analyzing PARK7 vs PARK7 - cluster cluster_12 ( 5 of 13 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 981 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing PARK7 vs PARK7 - cluster cluster_2 ( 6 of 13 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 1863 , CRISPRi terms: 4508 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 2079 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 277 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: EIF4A3, PCGF2, SLC39A1, PRKRA, TLE5 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: SLC25A13, IMPDH2, NDUFB6, NDUFS3, ATP5F1D 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 23 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.01 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: SERP1, PAPSS2, PDIA3, CYFIP2, COTL1 
+   Analyzing PARK7 vs PARK7 - cluster cluster_3 ( 7 of 13 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 3695 , CRISPRi terms: 2160 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 3668 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 20 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: HSD17B12, PXDN, P3H4, FKBP10, APLP1 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: 1630, 7220, 659, 103910, 1808 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 14 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.004 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: 7976, 5894, 5170, 2534, 9353 
+   Analyzing PARK7 vs PARK7 - cluster cluster_4 ( 8 of 13 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 4214 , CRISPRi terms: 2344 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 3366 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 101 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: STMN1, STMN2, AKAP9, KIF21A, CAMSAP2 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: RABGEF1, PIK3CB, SRGAP2, SRGAP3, SIPA1L1 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 27 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.008 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: STMN1, LAMP1, HPS4, SCARB2, SEC61A1 
+   Analyzing PARK7 vs PARK7 - cluster cluster_5 ( 9 of 13 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 941 , CRISPRi terms: 2258 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 637 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 107 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: EXT1, LTBP3, NFIB, TWSG1, CTNNB1 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: SLC37A1, SLC12A9, SLC25A11, ANO5, GLRB 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 10 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.014 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: EFEMP1, SLC26A2, SOX5, CASK, ALCAM 
+   Analyzing PARK7 vs PARK7 - cluster cluster_6 ( 10 of 13 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 2007 , CRISPRi terms: 1350 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 1312 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 74 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: MRTO4, SF3B1, POP5, C1D, ERI3 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: SPHK1, PXDN, FURIN, JAK1, TCTA 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 7 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.005 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: AKT1, HSPB1, HIF1A, SHC1, PAF1 
+   Analyzing PARK7 vs PARK7 - cluster cluster_7 ( 11 of 13 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 715 , CRISPRi terms: 2099 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 719 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 57 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: SLC7A6, GOT2, NMB, CPT2, AKT2 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: 6309, 2181, 2222, 60481, 3157 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0 
+   Analyzing PARK7 vs PARK7 - cluster cluster_8 ( 12 of 13 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 2378 , CRISPRi terms: 4106 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 1076 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 134 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: GNB2, FHL1, HSPA1B, ADAM17, P4HB 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: PLXNB2, SMAD3, IGF1R, STXBP5, EPS8 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 11 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.009 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: CD151, PALLD, B2M, PUF60, CALD1 
+   Analyzing PARK7 vs PARK7 - cluster cluster_9 ( 13 of 13 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 1088 , CRISPRi terms: 1907 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 222 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 96 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: BBIP1, ATXN10, EXOC5, IFT74, SNAP29 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: PARK7, HSPD1, TMSB4X, TTYH3, ATP5F1D 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 3 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0.01 
+[OVERLAP DEBUG] cluster_9 - Overlapping genes: ATXN10, PTK2, TUBA1A 
+   Completed PARK7 vs PARK7 
+   Analyzing PINK1 vs PINK1 
+   Analyzing PINK1 vs PINK1 - Analyzing PINK1 vs PINK1 
+[GENE PAIR DEBUG] Gene pair: PINK1 vs PINK1 
+[GENE PAIR DEBUG] MAST data found: 4021 rows
+[GENE PAIR DEBUG] CRISPRi data found: 44434 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_13, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing PINK1 vs PINK1 - cluster cluster_0 ( 1 of 14 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 357 , CRISPRi terms: 6194 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 126 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 710 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: CARTPT, HCRT, GLRA2, ADCYAP1, SSTR2 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: TIMM10B, CHCHD6, CHCHD10, IMMP2L, MICU3 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 8 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.01 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: CARTPT, PRKAR1B, HMGCR, PINK1, CALB2 
+   Analyzing PINK1 vs PINK1 - cluster cluster_1 ( 2 of 14 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 197 , CRISPRi terms: 6714 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 154 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 677 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: GLI3, MYO1E, PROM1, MEF2C, EDNRB 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: COX8A, COX6A1, NDUFA13, COX6B1, NDUFS5 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.001 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: TRIM24 
+   Analyzing PINK1 vs PINK1 - cluster cluster_10 ( 3 of 14 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 6 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing PINK1 vs PINK1 - cluster cluster_11 ( 4 of 14 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 62 , CRISPRi terms: 1261 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 6 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 62 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: TSTD1, YBX1, TTR, HCRT, PINK1 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: 816, 4756, 54361, 5058, 81029 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0 
+   Analyzing PINK1 vs PINK1 - cluster cluster_13 ( 5 of 14 ) 
+[CLUSTER DEBUG] cluster_13 - MAST terms: 102 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_13 - SKIPPED: Missing data for one method
+   Analyzing PINK1 vs PINK1 - cluster cluster_14 ( 6 of 14 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 12 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing PINK1 vs PINK1 - cluster cluster_2 ( 7 of 14 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 2090 , CRISPRi terms: 2949 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 514 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 98 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: CHL1, ALCAM, ARX, EFNB3, NKX6-1 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: ADGRB3, SPOCK2, LRRC4, PTPRD, SDK1 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 8 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.013 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: PTPRZ1, GAP43, DCLK1, NLGN4X, PCDH17 
+   Analyzing PINK1 vs PINK1 - cluster cluster_3 ( 8 of 14 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 60 , CRISPRi terms: 2669 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 19 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 288 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: TTR, TAC1, STC2, NRG3, POMC 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: CHID1, WLS, PLOD3, GOLPH3, FUT11 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0 
+   Analyzing PINK1 vs PINK1 - cluster cluster_4 ( 9 of 14 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 516 , CRISPRi terms: 6935 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 26 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 1417 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: CARTPT, TAC1, POMC, CALCA, SYT4 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: RPL38, RPL27, RPL23A, RPL3, RPLP2 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 5 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: PINK1, NDUFA4, TFF3, 65018, 10752 
+   Analyzing PINK1 vs PINK1 - cluster cluster_5 ( 10 of 14 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 196 , CRISPRi terms: 2772 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 61 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 84 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: ECEL1, PCSK1N, TAC1, POMC, CALCA 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: MALAT1, NEAT1, CLOCK, HDAC4, ASH1L 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.007 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: APLF 
+   Analyzing PINK1 vs PINK1 - cluster cluster_6 ( 11 of 14 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 102 , CRISPRi terms: 4970 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 33 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 1042 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: CARTPT, PCSK1N, TAC1, HCRT, POMC 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: MAP1B, SLAIN1, ATXN7, HDAC6, STMN2 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.002 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: PCSK1N, KIRREL3 
+   Analyzing PINK1 vs PINK1 - cluster cluster_7 ( 12 of 14 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 216 , CRISPRi terms: 5385 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 49 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 636 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: CMTM8, JAM2, PTPRZ1, POU3F2, NTRK2 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: MTMR2, ANK3, GRM3, CNTNAP2, SYNE1 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 4 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.006 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: CMTM8, NRXN1, S100A10, OLFM2 
+   Analyzing PINK1 vs PINK1 - cluster cluster_8 ( 13 of 14 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 75 , CRISPRi terms: 3501 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 25 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 335 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: TAC1, COTL1, POMC, CALCA, TTR 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: 4891, 27173, 57153, 25800, 9376 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.006 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: 533, 23480 
+   Analyzing PINK1 vs PINK1 - cluster cluster_9 ( 14 of 14 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 30 , CRISPRi terms: 1084 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 9 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 78 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: PINK1, AIFM2, PLA2R1, POMC, 3075 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: HNRNPA2B1, SSBP1, PCBP1, POLR2H, MSH2 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0 
+   Completed PINK1 vs PINK1 
+   Analyzing SYNJ1 vs SYNJ1 
+   Analyzing SYNJ1 vs SYNJ1 - Analyzing SYNJ1 vs SYNJ1 
+[GENE PAIR DEBUG] Gene pair: SYNJ1 vs SYNJ1 
+[GENE PAIR DEBUG] MAST data found: 20081 rows
+[GENE PAIR DEBUG] CRISPRi data found: 45825 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_11, cluster_12, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_0 ( 1 of 13 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 1979 , CRISPRi terms: 3310 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 780 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 207 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: BID, ISCU, SDHC, DNAJC15, UQCR11 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: DCLK1, SLIT2, B4GALT5, RYK, CDH4 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 32 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.034 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: SLC9A6, SLC9A7, ADGRB3, CNTNAP2, EPHA5 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_1 ( 2 of 13 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 1187 , CRISPRi terms: 4412 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 392 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 232 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: NTRK2, VIM, TSPAN2, NKX6-2, COL6A1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: 1595, 4047, 2222, 3422, 6307 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 12 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.02 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: LPAR1, PCSK1N, DMD, LRRC4C, SELENOM 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_11 ( 3 of 13 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 50 , CRISPRi terms: 1261 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 9 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 143 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: BCAP31, PTGDS, XIST, SMS, TSTD1 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: ATP6V1A, PICALM, CDH2, CDH18, GNAO1 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_12 ( 4 of 13 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 2544 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_14 ( 5 of 13 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 7 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_2 ( 6 of 13 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 806 , CRISPRi terms: 6743 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 268 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 1194 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: NME3, NDUFB5, SDHC, PDE10A, PDE8B 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: NCBP1, EIF4G1, EIF3M, RPLP0, EIF4A1 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 52 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.037 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: NME3, SDHC, ATP5MC2, COL6A1, PRDX5 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_3 ( 7 of 13 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 202 , CRISPRi terms: 2371 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 81 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 89 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: SULF1, RHOB, NTRK2, RAMP1, SPARC 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: CST3, B2M, HSP90B1, CALR, IGFBP5 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.006 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: SCG2 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_4 ( 8 of 13 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 4571 , CRISPRi terms: 8890 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 1461 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 1121 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: NRXN1, PCLO, ATP6V1G2, RAB3A, NAPB 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: HSP90AB1, CCT6A, SPAG1, HSPA8, CDC37 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 144 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.059 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: RAP1B, PFN2, CANX, SYT4, CALM3 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_5 ( 9 of 13 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 113 , CRISPRi terms: 3529 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 21 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 502 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: BMERB1, HDGFL3, FGF13, STMN2, SYT4 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: RPL37A, RPL23, RPS24, RPL12, RPL7 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.004 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: STMN2, KIFAP3 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_6 ( 10 of 13 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 684 , CRISPRi terms: 4831 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 19 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 751 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: ATP5F1E, ATP5ME, NDUFA3, VIM, ELN 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: NFASC, MAST1, SACS, RAB27B, MACO1 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: VIM, SPARCL1 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_7 ( 11 of 13 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 5971 , CRISPRi terms: 3479 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 5746 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 336 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: SDHC, NDUFB5, ATP5MC2, SDHD, NDUFB11 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: PKM, RPS17, RPL24, RPS7, RPS24 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 202 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.034 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: SH3BGRL, PKM, RPS2, RPS8, RPL4 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_8 ( 12 of 13 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 1248 , CRISPRi terms: 4645 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 212 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 292 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: PINK1, NDUFB1, COX4I1, COX6B1, COX7B 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: DHX9, EIF4A1, PARP16, RPL35, RPL30 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 16 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.033 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: LAMP2, RPL31, RPS17, RPS10, SPTAN1 
+   Analyzing SYNJ1 vs SYNJ1 - cluster cluster_9 ( 13 of 13 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 719 , CRISPRi terms: 2354 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 132 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 98 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: ATP6V0E1, SLC16A1, ATP6V1G1, NDUFB2, ATP5ME 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: RBPJ, MAPK14, FOXP1, SAV1, FGFR2 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 2 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0.009 
+[OVERLAP DEBUG] cluster_9 - Overlapping genes: COL6A1, ITGB1 
+   Completed SYNJ1 vs SYNJ1 
+   Analyzing PRKN vs PARK2 
+   Analyzing PRKN vs PARK2 - Analyzing PRKN vs PARK2 
+[GENE PAIR DEBUG] Gene pair: PRKN vs PARK2 
+[GENE PAIR DEBUG] MAST data found: 6157 rows
+[GENE PAIR DEBUG] CRISPRi data found: 48293 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_11, cluster_12, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing PRKN vs PARK2 - cluster cluster_0 ( 1 of 13 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 1825 , CRISPRi terms: 3379 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 1342 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 324 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: VGF, VAMP2, BDNF, CELF4, GRIN2B 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: PRKACA, NEFH, STAU2, SYT4, NTNG1 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 79 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.05 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: CELF4, GRIN2B, SV2A, SYT4, SYP 
+   Analyzing PRKN vs PARK2 - cluster cluster_1 ( 2 of 13 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 425 , CRISPRi terms: 4827 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 71 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 897 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: GALNT3, CALCA, ANXA1, MAGI2, SMAD2 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: CFAP70, CFAP69, SLC9B2, CFAP43, CCDC146 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 3 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: TAC1, CDH6, RSU1 
+   Analyzing PRKN vs PARK2 - cluster cluster_11 ( 3 of 13 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 58 , CRISPRi terms: 3176 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 17 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 503 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: NUDT1, AGL, PENK, ASAH1, GRN 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: PRKN, DACH1, CNTNAP2, SHANK2, PLCB1 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0 
+   Analyzing PRKN vs PARK2 - cluster cluster_12 ( 4 of 13 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 15 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing PRKN vs PARK2 - cluster cluster_14 ( 5 of 13 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 136 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing PRKN vs PARK2 - cluster cluster_2 ( 6 of 13 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 778 , CRISPRi terms: 8594 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 401 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 1254 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: EPS15L1, AP5M1, STON1, SCYL1, IGF2R 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: NDUFS5, ALG9, ATP5ME, ATP5F1E, KRTCAP2 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 39 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.024 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: IGF2R, COPB2, TMED3, SEC31A, COPG1 
+   Analyzing PRKN vs PARK2 - cluster cluster_3 ( 7 of 13 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 876 , CRISPRi terms: 7453 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 194 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 1211 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: STMN1, TUBA1A, GAP43, FN1, S100B 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: COQ9, DGUOK, NDUFA12, UQCRH, COX7A2 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 13 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.009 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: TUBA1A, GPM6A, EDNRB, MSN, TGFBR2 
+   Analyzing PRKN vs PARK2 - cluster cluster_4 ( 8 of 13 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 1387 , CRISPRi terms: 8077 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 116 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 1216 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: RPL32, RPS13, RPL34, RPS23, RPL18A 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: ADCYAP1, FGF1, UTS2, IL7, NRG1 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 69 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.055 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: RPL32, RPS13, RPL34, RPS23, RPL18A 
+   Analyzing PRKN vs PARK2 - cluster cluster_5 ( 9 of 13 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 23 , CRISPRi terms: 2167 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 17 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 68 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: VAMP2, CALCA, SNCG, PENK, NEFL 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: TXNDC5, QSOX1, TXNDC12, GLRX2, IDI1 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0 
+   Analyzing PRKN vs PARK2 - cluster cluster_6 ( 10 of 13 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 268 , CRISPRi terms: 3108 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 14 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 394 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: POU3F2, INSM1, TUBA1A, TUBB2B, STMN1 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: SNRPB2, RSRP1, CDC40, SRSF2, PSIP1 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0 
+   Analyzing PRKN vs PARK2 - cluster cluster_7 ( 11 of 13 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 262 , CRISPRi terms: 1739 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 10 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 45 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: ANXA2, S100A10, S100A11, CDHR3, GALNT3 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: ATF4, CDH18, IL1RAPL1, FYN, ZMYM3 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0 
+   Analyzing PRKN vs PARK2 - cluster cluster_8 ( 12 of 13 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 104 , CRISPRi terms: 3419 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 14 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 67 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: FABP5, CALCA, PENK, CHL1, FAAH 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: NHP2, ACTB, SF3B5, RPLP2, MRPL20 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0 
+   Analyzing PRKN vs PARK2 - cluster cluster_9 ( 13 of 13 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 0 , CRISPRi terms: 2354 
+[CLUSTER DEBUG] cluster_9 - SKIPPED: Missing data for one method
+   Completed PRKN vs PARK2 
+   Analyzing SNCA_combined vs SNCA 
+   Analyzing SNCA_combined vs SNCA - Analyzing SNCA_combined vs SNCA 
+[GENE PAIR DEBUG] Gene pair: SNCA_combined vs SNCA 
+[GENE PAIR DEBUG] MAST data found: 39523 rows
+[GENE PAIR DEBUG] CRISPRi data found: 36109 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_12, cluster_13, cluster_14, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_8, cluster_9, cluster_10, cluster_11, cluster_7 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_8, cluster_9 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_0 ( 1 of 15 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 6374 , CRISPRi terms: 4467 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 2447 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 556 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: VGF, GLRA2, MAP1B, RTN4, SNCB 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: RPLP0, EIF3L, RPL5, EIF3B, RPS3 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 171 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.06 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: GLRA2, HMGCR, BDNF, SYT4, CDH8 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_1 ( 2 of 15 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 2320 , CRISPRi terms: 2485 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 594 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 9 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: NDN, MATN2, RTN4, EPHA4, COL3A1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: LRRFIP2, ZXDC, DAPK3, MRTFA, PMF1 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_12 ( 3 of 15 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 3578 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing SNCA_combined vs SNCA - cluster cluster_13 ( 4 of 15 ) 
+[CLUSTER DEBUG] cluster_13 - MAST terms: 124 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_13 - SKIPPED: Missing data for one method
+   Analyzing SNCA_combined vs SNCA - cluster cluster_14 ( 5 of 15 ) 
+[CLUSTER DEBUG] cluster_14 - MAST terms: 1238 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_14 - SKIPPED: Missing data for one method
+   Analyzing SNCA_combined vs SNCA - cluster cluster_2 ( 6 of 15 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 3428 , CRISPRi terms: 4078 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 1119 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 287 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: ZIC1, C1QL1, FOS, CHL1, SYT4 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: GPR173, DCC, NSMF, SH3RF1, CDKL5 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 54 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.04 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: CHL1, PTPRZ1, PTN, BCHE, PREX2 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_3 ( 7 of 15 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 1006 , CRISPRi terms: 1888 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 147 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 22 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: 347733, 7846, 10381, 4074, 3075 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: CTNNB1, GRB2, STX17, BOD1, KIF3A 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_4 ( 8 of 15 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 4382 , CRISPRi terms: 7138 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 649 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 789 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: RPS13, RPS3A, RPL32, RPL34, RPL10 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: UBA52, RPL29, RPL15, RPL23A, RPL38 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 142 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.11 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: RPL32, RPL34, RPL6, RPS15, RPL18A 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_5 ( 9 of 15 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 5283 , CRISPRi terms: 3803 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 515 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 160 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: MAP1B, MAPT, NEFL, NCAM1, TUBB2B 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: NT5C2, RPS6KC1, PRKG1, PIP5K1B, TBK1 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 4 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.006 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: WNK3, XBP1, FOXP1, PRKG1 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_6 ( 10 of 15 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 2248 , CRISPRi terms: 1356 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 326 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 17 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: RPL10, RPL34, RPS15A, RPL28, RPL11 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: MLEC, TUSC3, STT3A, RPN1, 5599 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 1 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0.003 
+[OVERLAP DEBUG] cluster_6 - Overlapping genes: 7431 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_8 ( 11 of 15 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 1301 , CRISPRi terms: 6047 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 422 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 989 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: CHL1, COL3A1, 1281, 100131187, 10752 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: ATP6V1E1, ATP5MC1, ATP6V1C1, DMAC2L, ATP5PF 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 72 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0.054 
+[OVERLAP DEBUG] cluster_8 - Overlapping genes: 100131187, CDH2, RHOA, VIM, TSPAN2 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_9 ( 12 of 15 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 935 , CRISPRi terms: 1947 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 93 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 110 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: 5730, 4697, RPLP1, RPL23A, RPS13 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: LRP6, SMARCA4, CXCR4, VEGFA, HSPH1 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 3 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0.015 
+[OVERLAP DEBUG] cluster_9 - Overlapping genes: SPARCL1, 6204, 1938 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_10 ( 13 of 15 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 6 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing SNCA_combined vs SNCA - cluster cluster_11 ( 14 of 15 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 1320 , CRISPRi terms: 2900 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 203 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 448 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: RPLP1, RPS23, RPS27, RPL23A, RPL41 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: GPSM2, PDE4D, HNRNPU, HK1, MTLN 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 34 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0.055 
+[OVERLAP DEBUG] cluster_11 - Overlapping genes: RPLP1, RPL41, RPL37, RPL39, RPL31 
+   Analyzing SNCA_combined vs SNCA - cluster cluster_7 ( 15 of 15 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 5980 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_7 - SKIPPED: Missing data for one method
+   Completed SNCA_combined vs SNCA 
+   Analyzing VPS13C_combined vs VPS13C 
+   Analyzing VPS13C_combined vs VPS13C - Analyzing VPS13C_combined vs VPS13C 
+[GENE PAIR DEBUG] Gene pair: VPS13C_combined vs VPS13C 
+[GENE PAIR DEBUG] MAST data found: 43557 rows
+[GENE PAIR DEBUG] CRISPRi data found: 38159 rows
+[GENE PAIR DEBUG] MAST clusters: cluster_0, cluster_1, cluster_10, cluster_11, cluster_12, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9, cluster_13 
+[GENE PAIR DEBUG] CRISPRi clusters: cluster_0, cluster_1, cluster_11, cluster_2, cluster_3, cluster_4, cluster_5, cluster_6, cluster_7, cluster_8, cluster_9 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_0 ( 1 of 14 ) 
+[CLUSTER DEBUG] cluster_0 - MAST terms: 4289 , CRISPRi terms: 1675 
+[CLUSTER DEBUG] cluster_0 - Extracted MAST genes: 4285 
+[CLUSTER DEBUG] cluster_0 - Extracted CRISPRi genes: 44 
+[CLUSTER DEBUG] cluster_0 - Sample MAST genes: SPARC, CHRNB1, ACTB, SYN1, CBLN1 
+[CLUSTER DEBUG] cluster_0 - Sample CRISPRi genes: 3480, 5210, 5562, 5519, 3680 
+[OVERLAP DEBUG] cluster_0 - Overlap count: 9 
+[OVERLAP DEBUG] cluster_0 - Jaccard index: 0.002 
+[OVERLAP DEBUG] cluster_0 - Overlapping genes: 1278, 1284, 2260, 3680, 1956 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_1 ( 2 of 14 ) 
+[CLUSTER DEBUG] cluster_1 - MAST terms: 2507 , CRISPRi terms: 3856 
+[CLUSTER DEBUG] cluster_1 - Extracted MAST genes: 1114 
+[CLUSTER DEBUG] cluster_1 - Extracted CRISPRi genes: 41 
+[CLUSTER DEBUG] cluster_1 - Sample MAST genes: ELN, SULF1, NDNF, ANXA2, AEBP1 
+[CLUSTER DEBUG] cluster_1 - Sample CRISPRi genes: NFKBIL1, ID4, NFKBIA, ZNF451, SIN3A 
+[OVERLAP DEBUG] cluster_1 - Overlap count: 8 
+[OVERLAP DEBUG] cluster_1 - Jaccard index: 0.007 
+[OVERLAP DEBUG] cluster_1 - Overlapping genes: 5332, 39, 5566, 6622, 3157 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_10 ( 3 of 14 ) 
+[CLUSTER DEBUG] cluster_10 - MAST terms: 554 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_10 - SKIPPED: Missing data for one method
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_11 ( 4 of 14 ) 
+[CLUSTER DEBUG] cluster_11 - MAST terms: 3086 , CRISPRi terms: 2059 
+[CLUSTER DEBUG] cluster_11 - Extracted MAST genes: 4178 
+[CLUSTER DEBUG] cluster_11 - Extracted CRISPRi genes: 184 
+[CLUSTER DEBUG] cluster_11 - Sample MAST genes: FBLN1, COL1A2, TIMP1, LGALS1, SERPINE2 
+[CLUSTER DEBUG] cluster_11 - Sample CRISPRi genes: YWHAH, NCAM1, NLGN1, SYT1, APBB2 
+[OVERLAP DEBUG] cluster_11 - Overlap count: 85 
+[OVERLAP DEBUG] cluster_11 - Jaccard index: 0.02 
+[OVERLAP DEBUG] cluster_11 - Overlapping genes: SEPTIN6, CHL1, CALY, SYT5, DVL1 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_12 ( 5 of 14 ) 
+[CLUSTER DEBUG] cluster_12 - MAST terms: 3848 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_12 - SKIPPED: Missing data for one method
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_2 ( 6 of 14 ) 
+[CLUSTER DEBUG] cluster_2 - MAST terms: 6172 , CRISPRi terms: 3841 
+[CLUSTER DEBUG] cluster_2 - Extracted MAST genes: 1560 
+[CLUSTER DEBUG] cluster_2 - Extracted CRISPRi genes: 63 
+[CLUSTER DEBUG] cluster_2 - Sample MAST genes: SULF1, POU3F4, TWIST1, GPC3, SOX9 
+[CLUSTER DEBUG] cluster_2 - Sample CRISPRi genes: CTR9, NSMF, ASH2L, RUVBL2, HSF1 
+[OVERLAP DEBUG] cluster_2 - Overlap count: 7 
+[OVERLAP DEBUG] cluster_2 - Jaccard index: 0.004 
+[OVERLAP DEBUG] cluster_2 - Overlapping genes: SPARC, PLEC, ZMYM3, CACNG4, ACSL4 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_3 ( 7 of 14 ) 
+[CLUSTER DEBUG] cluster_3 - MAST terms: 6325 , CRISPRi terms: 2021 
+[CLUSTER DEBUG] cluster_3 - Extracted MAST genes: 3167 
+[CLUSTER DEBUG] cluster_3 - Extracted CRISPRi genes: 107 
+[CLUSTER DEBUG] cluster_3 - Sample MAST genes: LRRC17, HHIP, SULF1, TWIST1, FST 
+[CLUSTER DEBUG] cluster_3 - Sample CRISPRi genes: EFNA5, SEMA3A, MANF, HSPA8, PTN 
+[OVERLAP DEBUG] cluster_3 - Overlap count: 34 
+[OVERLAP DEBUG] cluster_3 - Jaccard index: 0.01 
+[OVERLAP DEBUG] cluster_3 - Overlapping genes: SFRP1, COL6A1, STC1, PTN, SEMA3A 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_4 ( 8 of 14 ) 
+[CLUSTER DEBUG] cluster_4 - MAST terms: 6145 , CRISPRi terms: 9488 
+[CLUSTER DEBUG] cluster_4 - Extracted MAST genes: 852 
+[CLUSTER DEBUG] cluster_4 - Extracted CRISPRi genes: 1996 
+[CLUSTER DEBUG] cluster_4 - Sample MAST genes: RPL24, RPS8, RPL39, RPL34, RPS6 
+[CLUSTER DEBUG] cluster_4 - Sample CRISPRi genes: ITM2B, ARF1, ST8SIA4, ATP6V0C, ATP6V1D 
+[OVERLAP DEBUG] cluster_4 - Overlap count: 246 
+[OVERLAP DEBUG] cluster_4 - Jaccard index: 0.095 
+[OVERLAP DEBUG] cluster_4 - Overlapping genes: RPL24, RPS8, RPL39, RPL34, RPS6 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_5 ( 9 of 14 ) 
+[CLUSTER DEBUG] cluster_5 - MAST terms: 2338 , CRISPRi terms: 2514 
+[CLUSTER DEBUG] cluster_5 - Extracted MAST genes: 678 
+[CLUSTER DEBUG] cluster_5 - Extracted CRISPRi genes: 69 
+[CLUSTER DEBUG] cluster_5 - Sample MAST genes: COL1A2, SRPX, CLU, LGALS1, COL6A2 
+[CLUSTER DEBUG] cluster_5 - Sample CRISPRi genes: ANTXR1, FGD4, BAIAP2, IQGAP2, NLGN1 
+[OVERLAP DEBUG] cluster_5 - Overlap count: 9 
+[OVERLAP DEBUG] cluster_5 - Jaccard index: 0.012 
+[OVERLAP DEBUG] cluster_5 - Overlapping genes: FGF13, CTNNB1, CD81, GNA12, SNAP25 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_6 ( 10 of 14 ) 
+[CLUSTER DEBUG] cluster_6 - MAST terms: 2598 , CRISPRi terms: 2374 
+[CLUSTER DEBUG] cluster_6 - Extracted MAST genes: 258 
+[CLUSTER DEBUG] cluster_6 - Extracted CRISPRi genes: 87 
+[CLUSTER DEBUG] cluster_6 - Sample MAST genes: TMSB4X, ENO1, NDUFA12, ATP5F1A, ATP5PO 
+[CLUSTER DEBUG] cluster_6 - Sample CRISPRi genes: ORC2, SIRT1, BAZ2A, FLYWCH1, TNKS1BP1 
+[OVERLAP DEBUG] cluster_6 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_6 - Jaccard index: 0 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_7 ( 11 of 14 ) 
+[CLUSTER DEBUG] cluster_7 - MAST terms: 1959 , CRISPRi terms: 4949 
+[CLUSTER DEBUG] cluster_7 - Extracted MAST genes: 1553 
+[CLUSTER DEBUG] cluster_7 - Extracted CRISPRi genes: 196 
+[CLUSTER DEBUG] cluster_7 - Sample MAST genes: LBH, ZNF322, SMARCB1, BCL7B, ARID4A 
+[CLUSTER DEBUG] cluster_7 - Sample CRISPRi genes: 4756, 655, 1808, 2043, 25 
+[OVERLAP DEBUG] cluster_7 - Overlap count: 28 
+[OVERLAP DEBUG] cluster_7 - Jaccard index: 0.016 
+[OVERLAP DEBUG] cluster_7 - Overlapping genes: PDCD6, RACK1, VAPA, SDCBP, EMC7 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_8 ( 12 of 14 ) 
+[CLUSTER DEBUG] cluster_8 - MAST terms: 54 , CRISPRi terms: 3612 
+[CLUSTER DEBUG] cluster_8 - Extracted MAST genes: 14 
+[CLUSTER DEBUG] cluster_8 - Extracted CRISPRi genes: 110 
+[CLUSTER DEBUG] cluster_8 - Sample MAST genes: BCAP31, SLIT1, RNF217, DNAL4, 5376 
+[CLUSTER DEBUG] cluster_8 - Sample CRISPRi genes: NCAM1, SIPA1L1, PALLD, ARHGEF28, RTN4 
+[OVERLAP DEBUG] cluster_8 - Overlap count: 0 
+[OVERLAP DEBUG] cluster_8 - Jaccard index: 0 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_9 ( 13 of 14 ) 
+[CLUSTER DEBUG] cluster_9 - MAST terms: 3544 , CRISPRi terms: 1770 
+[CLUSTER DEBUG] cluster_9 - Extracted MAST genes: 1752 
+[CLUSTER DEBUG] cluster_9 - Extracted CRISPRi genes: 99 
+[CLUSTER DEBUG] cluster_9 - Sample MAST genes: RPS28, RPL41, RPLP1, RPS8, RPL39 
+[CLUSTER DEBUG] cluster_9 - Sample CRISPRi genes: MAOB, ABITRAM, KIF5B, DYRK1A, ALCAM 
+[OVERLAP DEBUG] cluster_9 - Overlap count: 16 
+[OVERLAP DEBUG] cluster_9 - Jaccard index: 0.009 
+[OVERLAP DEBUG] cluster_9 - Overlapping genes: ATP6AP2, EPHA4, PCDH17, NRXN3, ALCAM 
+   Analyzing VPS13C_combined vs VPS13C - cluster cluster_13 ( 14 of 14 ) 
+[CLUSTER DEBUG] cluster_13 - MAST terms: 138 , CRISPRi terms: 0 
+[CLUSTER DEBUG] cluster_13 - SKIPPED: Missing data for one method
+   Completed VPS13C_combined vs VPS13C 
+   Computing signature strength scores... 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_0 - overlap_stats: count= 23 , jaccard= 0.01609517 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01609517 , overlap_count: 23 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01609517 , count= 23 , score= 4.407087 
+[SCORE DEBUG] Overlap score: 4.407 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.322 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_1 - overlap_stats: count= 64 , jaccard= 0.03995006 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03995006 , overlap_count: 64 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03995006 , count= 64 , score= 6.217541 
+[SCORE DEBUG] Overlap score: 6.218 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.865 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_11 - overlap_stats: count= 1 , jaccard= 0.001904762 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.001904762 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.001904762 , count= 1 , score= 0.03809524 
+[SCORE DEBUG] Overlap score: 0.038 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.011 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_2 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_3 - overlap_stats: count= 2 , jaccard= 0.004514673 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.004514673 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.004514673 , count= 2 , score= 0.9933834 
+[SCORE DEBUG] Overlap score: 0.993 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.298 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_4 - overlap_stats: count= 74 , jaccard= 0.03030303 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03030303 , overlap_count: 74 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03030303 , count= 74 , score= 6.213756 
+[SCORE DEBUG] Overlap score: 6.214 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.864 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_5 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_6 - overlap_stats: count= 73 , jaccard= 0.06523682 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.06523682 , overlap_count: 73 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.06523682 , count= 73 , score= 6.894705 
+[SCORE DEBUG] Overlap score: 6.895 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.068 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_7 - overlap_stats: count= 3 , jaccard= 0.003128259 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003128259 , overlap_count: 3 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003128259 , count= 3 , score= 1.493929 
+[SCORE DEBUG] Overlap score: 1.494 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.448 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_8 - overlap_stats: count= 2 , jaccard= 0.009708738 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.009708738 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.009708738 , count= 2 , score= 1.097265 
+[SCORE DEBUG] Overlap score: 1.097 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.329 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_9 - overlap_stats: count= NULL , jaccard= NULL , fisher_p= NULL 
+[RANKING DEBUG] ATP13A2_vs_ATP13A2 - cluster_9 - SKIPPED: overlap_stats has error
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_0 - overlap_stats: count= 1 , jaccard= 0.002832861 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.002832861 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.002832861 , count= 1 , score= 0.05665722 
+[SCORE DEBUG] Overlap score: 0.057 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.017 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_1 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_11 - overlap_stats: count= NULL , jaccard= NULL , fisher_p= NULL 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_11 - SKIPPED: overlap_stats has error
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_2 - overlap_stats: count= 38 , jaccard= 0.0702403 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.0702403 , overlap_count: 38 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.0702403 , count= 38 , score= 6.144157 
+[SCORE DEBUG] Overlap score: 6.144 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.843 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_3 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_4 - overlap_stats: count= 2 , jaccard= 0.003039514 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003039514 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003039514 , count= 2 , score= 0.9638803 
+[SCORE DEBUG] Overlap score: 0.964 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.289 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_5 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_7 - overlap_stats: count= NULL , jaccard= NULL , fisher_p= NULL 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_7 - SKIPPED: overlap_stats has error
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_8 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_9 - overlap_stats: count= NULL , jaccard= NULL , fisher_p= NULL 
+[RANKING DEBUG] DNAJC6_vs_DNAJC6 - cluster_9 - SKIPPED: overlap_stats has error
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_0 - overlap_stats: count= 97 , jaccard= 0.02852102 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.02852102 , overlap_count: 97 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.02852102 , count= 97 , score= 6.530736 
+[SCORE DEBUG] Overlap score: 6.531 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.959 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_1 - overlap_stats: count= 77 , jaccard= 0.03948718 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03948718 , overlap_count: 77 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03948718 , count= 77 , score= 6.449216 
+[SCORE DEBUG] Overlap score: 6.449 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.935 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_11 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_2 - overlap_stats: count= 330 , jaccard= 0.0741573 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.0741573 , overlap_count: 330 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.0741573 , count= 330 , score= 9.038688 
+[SCORE DEBUG] Overlap score: 9.039 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.712 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_3 - overlap_stats: count= 217 , jaccard= 0.04655653 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.04655653 , overlap_count: 217 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.04655653 , count= 217 , score= 7.94051 
+[SCORE DEBUG] Overlap score: 7.941 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.382 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_4 - overlap_stats: count= 100 , jaccard= 0.05605381 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05605381 , overlap_count: 100 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05605381 , count= 100 , score= 7.121076 
+[SCORE DEBUG] Overlap score: 7.121 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.136 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_5 - overlap_stats: count= 106 , jaccard= 0.04497242 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.04497242 , overlap_count: 106 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.04497242 , count= 106 , score= 6.975366 
+[SCORE DEBUG] Overlap score: 6.975 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.093 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_6 - overlap_stats: count= 37 , jaccard= 0.03122363 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03122363 , overlap_count: 37 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03122363 , count= 37 , score= 5.329078 
+[SCORE DEBUG] Overlap score: 5.329 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.599 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_7 - overlap_stats: count= 5 , jaccard= 0.007598784 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.007598784 , overlap_count: 5 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.007598784 , count= 5 , score= 2.248886 
+[SCORE DEBUG] Overlap score: 2.249 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.675 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_8 - overlap_stats: count= 13 , jaccard= 0.02313167 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.02313167 , overlap_count: 13 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.02313167 , count= 13 , score= 3.804464 
+[SCORE DEBUG] Overlap score: 3.804 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.141 
+[RANKING DEBUG] FBXO7_vs_FBXO7 - cluster_9 - overlap_stats: count= 1 , jaccard= 0.001140251 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.001140251 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.001140251 , count= 1 , score= 0.02280502 
+[SCORE DEBUG] Overlap score: 0.023 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.007 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_0 - overlap_stats: count= 8 , jaccard= 0.0137457 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.0137457 , overlap_count: 8 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.0137457 , count= 8 , score= 2.984184 
+[SCORE DEBUG] Overlap score: 2.984 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.895 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_1 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_11 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_2 - overlap_stats: count= 17 , jaccard= 0.01705115 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01705115 , overlap_count: 17 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01705115 , count= 17 , score= 4.03237 
+[SCORE DEBUG] Overlap score: 4.032 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.21 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_3 - overlap_stats: count= 1 , jaccard= 0.003154574 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003154574 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003154574 , count= 1 , score= 0.06309148 
+[SCORE DEBUG] Overlap score: 0.063 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.019 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_4 - overlap_stats: count= 182 , jaccard= 0.05735897 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05735897 , overlap_count: 182 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05735897 , count= 182 , score= 7.927393 
+[SCORE DEBUG] Overlap score: 7.927 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.378 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_5 - overlap_stats: count= 8 , jaccard= 0.02185792 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.02185792 , overlap_count: 8 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.02185792 , count= 8 , score= 3.146428 
+[SCORE DEBUG] Overlap score: 3.146 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.944 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_6 - overlap_stats: count= 2 , jaccard= 0.003992016 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003992016 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003992016 , count= 2 , score= 0.9829303 
+[SCORE DEBUG] Overlap score: 0.983 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.295 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_7 - overlap_stats: count= 59 , jaccard= 0.03432228 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03432228 , overlap_count: 59 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03432228 , count= 59 , score= 5.999002 
+[SCORE DEBUG] Overlap score: 5.999 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.8 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_8 - overlap_stats: count= 2 , jaccard= 0.004830918 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.004830918 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.004830918 , count= 2 , score= 0.9997083 
+[SCORE DEBUG] Overlap score: 1 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.3 
+[RANKING DEBUG] LRRK2_vs_LRRK2 - cluster_9 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_0 - overlap_stats: count= 60 , jaccard= 0.03255562 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03255562 , overlap_count: 60 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03255562 , count= 60 , score= 5.985566 
+[SCORE DEBUG] Overlap score: 5.986 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.796 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_1 - overlap_stats: count= 55 , jaccard= 0.0297619 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.0297619 , overlap_count: 55 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.0297619 , count= 55 , score= 5.816326 
+[SCORE DEBUG] Overlap score: 5.816 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.745 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_11 - overlap_stats: count= 22 , jaccard= 0.008248969 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.008248969 , overlap_count: 22 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.008248969 , count= 22 , score= 4.192247 
+[SCORE DEBUG] Overlap score: 4.192 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.258 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_2 - overlap_stats: count= 23 , jaccard= 0.009858551 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.009858551 , overlap_count: 23 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.009858551 , count= 23 , score= 4.282355 
+[SCORE DEBUG] Overlap score: 4.282 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.285 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_3 - overlap_stats: count= 14 , jaccard= 0.003810561 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003810561 , overlap_count: 14 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003810561 , count= 14 , score= 3.514595 
+[SCORE DEBUG] Overlap score: 3.515 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.054 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_4 - overlap_stats: count= 27 , jaccard= 0.007848837 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.007848837 , overlap_count: 27 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.007848837 , count= 27 , score= 4.451068 
+[SCORE DEBUG] Overlap score: 4.451 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.335 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_5 - overlap_stats: count= 10 , jaccard= 0.01362398 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01362398 , overlap_count: 10 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01362398 , count= 10 , score= 3.27248 
+[SCORE DEBUG] Overlap score: 3.272 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.982 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_6 - overlap_stats: count= 7 , jaccard= 0.005076142 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.005076142 , overlap_count: 7 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.005076142 , count= 7 , score= 2.636817 
+[SCORE DEBUG] Overlap score: 2.637 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.791 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_7 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_8 - overlap_stats: count= 11 , jaccard= 0.009174312 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.009174312 , overlap_count: 11 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.009174312 , count= 11 , score= 3.307664 
+[SCORE DEBUG] Overlap score: 3.308 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.992 
+[RANKING DEBUG] PARK7_vs_PARK7 - cluster_9 - overlap_stats: count= 3 , jaccard= 0.00952381 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.00952381 , overlap_count: 3 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.00952381 , count= 3 , score= 1.62184 
+[SCORE DEBUG] Overlap score: 1.622 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.487 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_0 - overlap_stats: count= 8 , jaccard= 0.009661836 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.009661836 , overlap_count: 8 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.009661836 , count= 8 , score= 2.902507 
+[SCORE DEBUG] Overlap score: 2.903 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.871 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_1 - overlap_stats: count= 1 , jaccard= 0.001204819 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.001204819 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.001204819 , count= 1 , score= 0.02409639 
+[SCORE DEBUG] Overlap score: 0.024 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.007 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_11 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_2 - overlap_stats: count= 8 , jaccard= 0.01324503 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01324503 , overlap_count: 8 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01324503 , count= 8 , score= 2.974171 
+[SCORE DEBUG] Overlap score: 2.974 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.892 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_3 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_4 - overlap_stats: count= 5 , jaccard= 0.003477051 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003477051 , overlap_count: 5 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003477051 , count= 5 , score= 2.166451 
+[SCORE DEBUG] Overlap score: 2.166 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.65 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_5 - overlap_stats: count= 1 , jaccard= 0.006944444 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.006944444 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.006944444 , count= 1 , score= 0.1388889 
+[SCORE DEBUG] Overlap score: 0.139 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.042 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_6 - overlap_stats: count= 2 , jaccard= 0.001863933 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.001863933 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.001863933 , count= 2 , score= 0.9403686 
+[SCORE DEBUG] Overlap score: 0.94 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.282 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_7 - overlap_stats: count= 4 , jaccard= 0.005873715 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.005873715 , overlap_count: 4 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.005873715 , count= 4 , score= 1.923654 
+[SCORE DEBUG] Overlap score: 1.924 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.577 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_8 - overlap_stats: count= 2 , jaccard= 0.005586592 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.005586592 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.005586592 , count= 2 , score= 1.014822 
+[SCORE DEBUG] Overlap score: 1.015 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.304 
+[RANKING DEBUG] PINK1_vs_PINK1 - cluster_9 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_0 - overlap_stats: count= 32 , jaccard= 0.03350785 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03350785 , overlap_count: 32 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03350785 , count= 32 , score= 5.185607 
+[SCORE DEBUG] Overlap score: 5.186 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.556 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_1 - overlap_stats: count= 12 , jaccard= 0.01960784 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01960784 , overlap_count: 12 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01960784 , count= 12 , score= 3.629701 
+[SCORE DEBUG] Overlap score: 3.63 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.089 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_11 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_2 - overlap_stats: count= 52 , jaccard= 0.03687943 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03687943 , overlap_count: 52 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03687943 , count= 52 , score= 5.885599 
+[SCORE DEBUG] Overlap score: 5.886 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.766 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_3 - overlap_stats: count= 1 , jaccard= 0.00591716 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.00591716 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.00591716 , count= 1 , score= 0.1183432 
+[SCORE DEBUG] Overlap score: 0.118 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.036 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_4 - overlap_stats: count= 144 , jaccard= 0.05906481 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05906481 , overlap_count: 144 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05906481 , count= 144 , score= 7.656384 
+[SCORE DEBUG] Overlap score: 7.656 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.297 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_5 - overlap_stats: count= 2 , jaccard= 0.003838772 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003838772 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003838772 , count= 2 , score= 0.9798654 
+[SCORE DEBUG] Overlap score: 0.98 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.294 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_6 - overlap_stats: count= 2 , jaccard= 0.002604167 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.002604167 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.002604167 , count= 2 , score= 0.9551733 
+[SCORE DEBUG] Overlap score: 0.955 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.287 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_7 - overlap_stats: count= 202 , jaccard= 0.03435374 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03435374 , overlap_count: 202 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03435374 , count= 202 , score= 7.603129 
+[SCORE DEBUG] Overlap score: 7.603 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.281 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_8 - overlap_stats: count= 16 , jaccard= 0.03278689 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03278689 , overlap_count: 16 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03278689 , count= 16 , score= 4.268098 
+[SCORE DEBUG] Overlap score: 4.268 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.28 
+[RANKING DEBUG] SYNJ1_vs_SYNJ1 - cluster_9 - overlap_stats: count= 2 , jaccard= 0.00877193 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.00877193 , overlap_count: 2 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.00877193 , count= 2 , score= 1.078529 
+[SCORE DEBUG] Overlap score: 1.079 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.324 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_0 - overlap_stats: count= 79 , jaccard= 0.04977946 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.04977946 , overlap_count: 79 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.04977946 , count= 79 , score= 6.68847 
+[SCORE DEBUG] Overlap score: 6.688 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.007 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_1 - overlap_stats: count= 3 , jaccard= 0.003108808 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.003108808 , overlap_count: 3 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.003108808 , count= 3 , score= 1.49354 
+[SCORE DEBUG] Overlap score: 1.494 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.448 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_11 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_2 - overlap_stats: count= 39 , jaccard= 0.02413366 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.02413366 , overlap_count: 39 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.02413366 , count= 39 , score= 5.255867 
+[SCORE DEBUG] Overlap score: 5.256 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.577 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_3 - overlap_stats: count= 13 , jaccard= 0.00933908 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.00933908 , overlap_count: 13 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.00933908 , count= 13 , score= 3.528612 
+[SCORE DEBUG] Overlap score: 3.529 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.059 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_4 - overlap_stats: count= 69 , jaccard= 0.05463183 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05463183 , overlap_count: 69 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05463183 , count= 69 , score= 6.609184 
+[SCORE DEBUG] Overlap score: 6.609 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.983 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_5 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_6 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_7 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] PRKN_vs_PARK2 - cluster_8 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_0 - overlap_stats: count= 171 , jaccard= 0.06038136 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.06038136 , overlap_count: 171 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.06038136 , count= 171 , score= 7.906615 
+[SCORE DEBUG] Overlap score: 7.907 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.372 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_1 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_2 - overlap_stats: count= 54 , jaccard= 0.03994083 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.03994083 , overlap_count: 54 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.03994083 , count= 54 , score= 5.995998 
+[SCORE DEBUG] Overlap score: 5.996 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.799 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_3 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_4 - overlap_stats: count= 142 , jaccard= 0.1095679 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.1095679 , overlap_count: 142 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.1095679 , count= 142 , score= 8.648223 
+[SCORE DEBUG] Overlap score: 8.648 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.594 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_5 - overlap_stats: count= 4 , jaccard= 0.005961252 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.005961252 , overlap_count: 4 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.005961252 , count= 4 , score= 1.925405 
+[SCORE DEBUG] Overlap score: 1.925 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.578 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_6 - overlap_stats: count= 1 , jaccard= 0.002923977 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.002923977 , overlap_count: 1 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.002923977 , count= 1 , score= 0.05847953 
+[SCORE DEBUG] Overlap score: 0.058 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.018 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_8 - overlap_stats: count= 72 , jaccard= 0.05377147 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05377147 , overlap_count: 72 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05377147 , count= 72 , score= 6.647427 
+[SCORE DEBUG] Overlap score: 6.647 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.994 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_9 - overlap_stats: count= 3 , jaccard= 0.015 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.015 , overlap_count: 3 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.015 , count= 3 , score= 1.731364 
+[SCORE DEBUG] Overlap score: 1.731 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.519 
+[RANKING DEBUG] SNCA_combined_vs_SNCA - cluster_11 - overlap_stats: count= 34 , jaccard= 0.05510535 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.05510535 , overlap_count: 34 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.05510535 , count= 34 , score= 5.696544 
+[SCORE DEBUG] Overlap score: 5.697 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.709 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_0 - overlap_stats: count= 9 , jaccard= 0.002083333 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.002083333 , overlap_count: 9 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.002083333 , count= 9 , score= 2.904394 
+[SCORE DEBUG] Overlap score: 2.904 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.871 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_1 - overlap_stats: count= 8 , jaccard= 0.006974717 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.006974717 , overlap_count: 8 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.006974717 , count= 8 , score= 2.848764 
+[SCORE DEBUG] Overlap score: 2.849 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.855 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_11 - overlap_stats: count= 85 , jaccard= 0.01987374 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01987374 , overlap_count: 85 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01987374 , count= 85 , score= 6.185732 
+[SCORE DEBUG] Overlap score: 6.186 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.856 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_2 - overlap_stats: count= 7 , jaccard= 0.004331683 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.004331683 , overlap_count: 7 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.004331683 , count= 7 , score= 2.621928 
+[SCORE DEBUG] Overlap score: 2.622 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.787 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_3 - overlap_stats: count= 34 , jaccard= 0.01049383 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01049383 , overlap_count: 34 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01049383 , count= 34 , score= 4.804313 
+[SCORE DEBUG] Overlap score: 4.804 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.441 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_4 - overlap_stats: count= 246 , jaccard= 0.09454266 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.09454266 , overlap_count: 246 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.09454266 , count= 246 , score= 9.063659 
+[SCORE DEBUG] Overlap score: 9.064 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 2.719 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_5 - overlap_stats: count= 9 , jaccard= 0.01219512 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01219512 , overlap_count: 9 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01219512 , count= 9 , score= 3.10663 
+[SCORE DEBUG] Overlap score: 3.107 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0.932 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_6 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_7 - overlap_stats: count= 28 , jaccard= 0.01626961 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.01626961 , overlap_count: 28 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.01626961 , count= 28 , score= 4.666866 
+[SCORE DEBUG] Overlap score: 4.667 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.4 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_8 - overlap_stats: count= 0 , jaccard= 0 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0 , overlap_count: 0 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0 , count= 0 , score= 0 
+[SCORE DEBUG] Overlap score: 0 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 0 
+[RANKING DEBUG] VPS13C_combined_vs_VPS13C - cluster_9 - overlap_stats: count= 16 , jaccard= 0.008719346 , fisher_p= 1 
+[SCORE FIX DEBUG] overlap_stats available, jaccard: 0.008719346 , overlap_count: 16 , fisher_p: 1 
+[SCORE FIX DEBUG] Using Jaccard+count scoring: jaccard= 0.008719346 , count= 16 , score= 3.786747 
+[SCORE DEBUG] Overlap score: 3.787 , Correlation: 0 , Direction: 0 , Pathway: 0 , Composite: 1.136 
+   Identifying pan-cluster signatures... 
+   Identifying cluster-specific signatures... 
+   Analysis complete! 
+
+📊 SIGNATURE RESULTS STRUCTURE
+===============================
+All signatures found: 103 
+All signatures columns: gene_pair, mast_gene, crispri_gene, cluster, signature_strength, gene_overlap_count, gene_fisher_p, gene_jaccard, pathway_overlap_count, pathway_fisher_p, mast_term_count, crispri_term_count, rank 
+
+First signature row structure:
+   gene_pair : VPS13C_combined_vs_VPS13C 
+   mast_gene : VPS13C_combined 
+   crispri_gene : VPS13C 
+   cluster : cluster_4 
+   signature_strength : 2.719098 
+   gene_overlap_count : 246 
+   gene_fisher_p : 1 
+   gene_jaccard : 0.09454266 
+   pathway_overlap_count : 987 
+   pathway_fisher_p : 1 
+   mast_term_count : 6145 
+   crispri_term_count : 9488 
+   rank : 1 
+
+Pan-cluster signatures found: 10 
+Pan-cluster columns: gene_pair, cluster_count, mean_signature_strength, max_signature_strength, total_gene_overlaps, total_pathway_overlaps, pan_cluster_rank 
+
+First pan-cluster signature structure:
+   gene_pair : FBXO7_vs_FBXO7 
+   cluster_count : 11 
+   mean_signature_strength : 1.512568 
+   max_signature_strength : 2.711606 
+   total_gene_overlaps : 983 
+   total_pathway_overlaps : 5015 
+   pan_cluster_rank : 1 
+
+🔬 TESTING PD ANALYSIS WITH DIFFERENT DATA TYPES
+=================================================
+
+Test 1: PD analysis with individual signatures
+----------------------------------------------
+Test signature columns: gene_pair, mast_gene, crispri_gene, cluster, signature_strength, gene_overlap_count, gene_fisher_p, gene_jaccard, pathway_overlap_count, pathway_fisher_p, mast_term_count, crispri_term_count, rank 
+Has mast_gene column: TRUE 
+Has crispri_gene column: TRUE 
+mast_gene value: VPS13C_combined 
+crispri_gene value: VPS13C 
+
+Test 2: PD analysis with pan-cluster signatures
+-----------------------------------------------
+Pan-cluster signature columns: gene_pair, cluster_count, mean_signature_strength, max_signature_strength, total_gene_overlaps, total_pathway_overlaps, pan_cluster_rank 
+Has mast_gene column: FALSE 
+Has crispri_gene column: FALSE 
+Has gene_pair column: TRUE 
+gene_pair value: FBXO7_vs_FBXO7 
+Parsed mast_gene: FBXO7 
+Parsed crispri_gene: FBXO7 
+
+🧪 ATTEMPTING ACTUAL PD ANALYSIS
+================================
+Attempting analyze_pd_signatures with pan-cluster data...
+[PD ANALYSIS] Starting PD-focused signature interpretation...
+[PD ANALYSIS] Focusing on 10 pan-cluster signatures
+[PD ANALYSIS] Analyzing signature 1 : FBXO7_vs_FBXO7 
+❌ PD analysis failed with error: argument is of length zero 
+Error details: Error in if (signature$mast_gene == "SNCA_combined") {: argument is of length zero
+ 
+
+💡 DIAGNOSIS AND SOLUTION
+=========================
+The issue is clear:
+1. Individual signatures have mast_gene/crispri_gene columns
+2. Pan-cluster signatures only have gene_pair column
+3. PD analysis expects mast_gene/crispri_gene columns
+4. Solution: Parse gene_pair when individual columns missing
+
+Recommended fix:
+- Add helper function to extract gene names from either format
+- Update extract_signature_biological_context() to use helper
+- Update get_signature_enrichment_terms() to use helper
+
