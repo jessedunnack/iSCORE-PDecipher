@@ -191,20 +191,10 @@ mod_signature_nomination_ui <- function(id) {
                 plotlyOutput(ns("pd_categories_plot"), height = "350px")
               ),
               
-              # Manuscript-ready summary
-              div(style = "margin-top: 20px;",
-                h5("Manuscript Summary", style = "color: #2c3e50;"),
-                wellPanel(style = "background-color: #f8f9fa;",
-                  verbatimTextOutput(ns("manuscript_summary"))
-                )
-              ),
-              
               # Download PD analysis results
               div(class = "text-center", style = "margin: 15px 0;",
                 downloadButton(ns("download_pd_analysis"), "Download PD Analysis (CSV)", 
-                              class = "btn-warning btn-sm"),
-                downloadButton(ns("download_manuscript"), "Download Manuscript Summary (TXT)", 
-                              class = "btn-primary btn-sm", style = "margin-left: 10px;")
+                              class = "btn-warning btn-sm")
               )
             )
           ),
@@ -473,18 +463,36 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         # Run PD-focused biological interpretation
         pd_analysis <- NULL
+        cat("[PD ANALYSIS] Checking analysis scope...\n")
+        cat("[PD ANALYSIS] Analysis scope:", paste(input$analysis_scope, collapse = ", "), "\n")
+        
         if ("pd_focus" %in% input$analysis_scope) {
+          cat("[PD ANALYSIS] PD focus enabled, starting analysis...\n")
           tryCatch({
-            pd_analysis <- analyze_pd_signatures(
-              signature_results = signature_results,
-              enrichment_data = filtered_data,
-              focus_on_pan_cluster = TRUE
-            )
-            cat("[PD ANALYSIS] Successfully completed PD biological interpretation\n")
+            # Check if function exists
+            if (!exists("analyze_pd_signatures", mode = "function")) {
+              cat("[PD ANALYSIS] ERROR: analyze_pd_signatures function not found!\n")
+              pd_analysis <- NULL
+            } else {
+              cat("[PD ANALYSIS] Function found, running analysis...\n")
+              pd_analysis <- analyze_pd_signatures(
+                signature_results = signature_results,
+                enrichment_data = filtered_data,
+                focus_on_pan_cluster = TRUE
+              )
+              cat("[PD ANALYSIS] Analysis completed, checking results...\n")
+              if (!is.null(pd_analysis)) {
+                cat("[PD ANALYSIS] Success! Enhanced signatures:", length(pd_analysis$enhanced_signatures), "\n")
+              } else {
+                cat("[PD ANALYSIS] Warning: Analysis returned NULL\n")
+              }
+            }
           }, error = function(e) {
             cat("[PD ANALYSIS] Error in PD analysis:", e$message, "\n")
             pd_analysis <<- NULL
           })
+        } else {
+          cat("[PD ANALYSIS] PD focus not in analysis scope, skipping\n")
         }
         
         # Combine results
@@ -900,19 +908,6 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       ggplotly(p, tooltip = c("x", "y"))
     })
     
-    # Manuscript summary
-    output$manuscript_summary <- renderText({
-      req(values$analysis_results)
-      req(values$analysis_results$pd_analysis)
-      
-      pd_analysis <- values$analysis_results$pd_analysis
-      
-      if (is.null(pd_analysis$pd_summary$manuscript_summary)) {
-        return("Manuscript summary not available.")
-      }
-      
-      pd_analysis$pd_summary$manuscript_summary
-    })
     
     # Download handlers for PD analysis
     output$download_pd_analysis <- downloadHandler(
@@ -952,15 +947,6 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       }
     )
     
-    output$download_manuscript <- downloadHandler(
-      filename = function() {
-        paste0("manuscript_summary_", Sys.Date(), ".txt")
-      },
-      content = function(file) {
-        req(values$analysis_results$pd_analysis)
-        writeLines(values$analysis_results$pd_analysis$pd_summary$manuscript_summary, file)
-      }
-    )
     
     # Helper function for empty plotly plots
     plotly_empty <- function(message) {

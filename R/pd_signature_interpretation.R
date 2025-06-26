@@ -464,14 +464,10 @@ create_pd_signature_summary <- function(enhanced_signatures, analysis_type) {
   # Create biological insights summary
   biological_insights <- generate_overall_biological_insights(all_categories, summary_stats)
   
-  # Create manuscript-ready summary
-  manuscript_summary <- generate_manuscript_summary(summary_stats, biological_insights, enhanced_signatures)
-  
   return(list(
     summary_stats = summary_stats,
     biological_categories = all_categories,
     biological_insights = biological_insights,
-    manuscript_summary = manuscript_summary,
     enhanced_signatures = enhanced_signatures
   ))
 }
@@ -548,85 +544,6 @@ generate_cross_signature_interpretation <- function(top_categories) {
   return(interpretation)
 }
 
-#' Generate manuscript-ready summary
-#'
-#' @param summary_stats Summary statistics
-#' @param biological_insights Biological insights
-#' @param enhanced_signatures Enhanced signature data
-#' @return Manuscript-ready summary text
-generate_manuscript_summary <- function(summary_stats, biological_insights, enhanced_signatures) {
-  
-  manuscript_text <- paste0(
-    "=== MANUSCRIPT-READY SIGNATURE ANALYSIS SUMMARY ===\n\n",
-    
-    "CROSS-METHOD COMPARISON RESULTS\n",
-    "Analysis Type: ", str_to_title(summary_stats$analysis_type), " signatures\n",
-    "Signatures Analyzed: ", summary_stats$total_signatures, "\n",
-    "Mean PD Relevance Score: ", round(summary_stats$mean_pd_relevance, 2), "\n",
-    "Top Biological Category: ", str_to_title(gsub("_", " ", summary_stats$top_biological_category)), "\n",
-    "Most PD-Relevant Signature: ", summary_stats$most_relevant_signature, "\n\n",
-    
-    "BIOLOGICAL INSIGHTS\n",
-    biological_insights, "\n",
-    
-    "MANUSCRIPT IMPLICATIONS\n",
-    generate_manuscript_implications(summary_stats, enhanced_signatures), "\n",
-    
-    "RECOMMENDED FOLLOW-UP\n",
-    generate_follow_up_recommendations(summary_stats, enhanced_signatures)
-  )
-  
-  return(manuscript_text)
-}
-
-#' Generate manuscript implications
-#'
-#' @param summary_stats Summary statistics
-#' @param enhanced_signatures Enhanced signature data
-#' @return Manuscript implications text
-generate_manuscript_implications <- function(summary_stats, enhanced_signatures) {
-  
-  implications <- paste0(
-    "• Cross-method validation between genetic mutations and CRISPR knockdowns provides robust evidence ",
-    "for shared biological mechanisms in Parkinson's disease.\n",
-    
-    "• Convergent pathway disruption across different perturbation approaches suggests these represent ",
-    "core disease mechanisms rather than method-specific artifacts.\n"
-  )
-  
-  if (summary_stats$mean_pd_relevance > 2) {
-    implications <- paste0(implications,
-      "• High PD relevance scores indicate strong alignment with known disease biology, ",
-      "supporting the translational relevance of these findings.\n")
-  }
-  
-  # Add specific insights based on top signatures
-  top_sig <- enhanced_signatures[[which.max(sapply(enhanced_signatures, function(x) x$pd_relevance_score))]]
-  if (!is.null(top_sig)) {
-    implications <- paste0(implications,
-      "• The strongest signature (", top_sig$signature$gene_pair, ") demonstrates ",
-      "that mutation and knockdown of orthologous genes produce highly similar pathway disruptions.\n")
-  }
-  
-  return(implications)
-}
-
-#' Generate follow-up recommendations
-#'
-#' @param summary_stats Summary statistics
-#' @param enhanced_signatures Enhanced signature data
-#' @return Follow-up recommendations text
-generate_follow_up_recommendations <- function(summary_stats, enhanced_signatures) {
-  
-  recommendations <- paste0(
-    "1. Focus functional validation experiments on top-ranking signatures with highest PD relevance\n",
-    "2. Investigate ", summary_stats$top_biological_category, " pathways in greater mechanistic detail\n",
-    "3. Design rescue experiments targeting the most consistently disrupted biological processes\n",
-    "4. Consider ", summary_stats$most_relevant_signature, " as a priority target for therapeutic intervention\n"
-  )
-  
-  return(recommendations)
-}
 
 # Helper function for string manipulation
 str_to_title <- function(x) {
