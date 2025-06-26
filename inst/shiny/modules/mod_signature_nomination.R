@@ -70,7 +70,12 @@ mod_signature_nomination_ui <- function(id) {
               actionButton(ns("run_analysis"), 
                           "Discover Signatures", 
                           class = "btn-primary btn-lg",
-                          icon = icon("rocket"))
+                          icon = icon("rocket")),
+              br(), br(),
+              actionButton(ns("run_quick_test"), 
+                          "Quick Test (2 clusters)", 
+                          class = "btn-warning btn-sm",
+                          icon = icon("zap"))
             )
           ),
           
@@ -342,8 +347,15 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       progress$set(message = "Initializing signature analysis...", value = 0)
       on.exit(progress$close())
       
+      # Initialize timing
+      start_time <- Sys.time()
+      last_update <- start_time
+      
       # Filter data based on user selections
       selected_clusters <- input$cluster_selection
+      
+      cat("[SIGNATURE] Starting analysis at", format(start_time), "\n")
+      cat("[SIGNATURE] Selected clusters:", paste(selected_clusters, collapse = ", "), "\n")
       
       # Filter enrichment data
       filtered_data <- app_data$consolidated_data
@@ -356,7 +368,18 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       # Filter by methods (MAST vs CRISPRi only - no CRISPRa)
       filtered_data <- filtered_data[filtered_data$method %in% c("MAST", "MixScale"), ]
       
-      progress$set(message = "Running signature discovery...", value = 0.2)
+      cat("[SIGNATURE] Filtered data:", nrow(filtered_data), "enrichment terms\n")
+      
+      progress$set(message = paste("Processing", nrow(filtered_data), "enrichment terms..."), value = 0.1)
+      
+      # Calculate total work for accurate progress
+      total_gene_pairs <- nrow(values$gene_pairs)
+      total_clusters <- length(selected_clusters)
+      total_combinations <- total_gene_pairs * total_clusters
+      
+      cat("[SIGNATURE] Total work:", total_gene_pairs, "gene pairs ×", total_clusters, "clusters =", total_combinations, "combinations\n")
+      
+      progress$set(message = paste("Analyzing", total_gene_pairs, "gene pairs across", total_clusters, "clusters..."), value = 0.2)
       
       # Run signature discovery
       tryCatch({
@@ -365,11 +388,32 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           top_n = input$top_signatures %||% 20,
           min_cluster_breadth = input$min_cluster_breadth %||% 8,
           combine_variants = input$combine_snca && input$combine_vps13c,
-          progress_callback = function(msg, value = NULL) {
+          progress_callback = function(msg, value = NULL, detail = NULL) {
+            current_time <- Sys.time()
+            elapsed <- as.numeric(difftime(current_time, start_time, units = "mins"))
+            
+            # Enhanced progress message with timing
             if (!is.null(value)) {
-              progress$set(message = msg, value = 0.2 + (value * 0.7))
+              remaining_work <- (1 - value) / max(value, 0.01) * elapsed
+              full_msg <- paste0(msg, 
+                                sprintf(" (%.1f min elapsed", elapsed),
+                                if(!is.null(detail)) paste0(", ", detail) else "",
+                                if(value > 0.1) sprintf(", ~%.1f min remaining", remaining_work) else "",
+                                ")")
+              progress$set(message = full_msg, value = 0.2 + (value * 0.7))
+              
+              cat("[SIGNATURE]", format(current_time, "%H:%M:%S"), "-", msg, 
+                  sprintf("(%.1f%% complete)\n", value * 100))
             } else {
-              progress$set(message = msg)
+              full_msg <- paste0(msg, sprintf(" (%.1f min elapsed)", elapsed))
+              progress$set(message = full_msg)
+              cat("[SIGNATURE]", format(current_time, "%H:%M:%S"), "-", msg, "\n")
+            }
+            
+            # Force UI update every 30 seconds
+            if (difftime(current_time, last_update, units = "secs") >= 30) {
+              last_update <<- current_time
+              Sys.sleep(0.1)  # Brief pause to allow UI update
             }
           }
         )
@@ -408,6 +452,42 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       } else {
         values$analysis_running <- FALSE
         showNotification("Analysis failed. Please check your settings and try again.", type = "error")
+      }
+    })
+    
+    # Quick test with limited clusters
+    observeEvent(input$run_quick_test, {
+      # Temporarily override cluster selection for quick test
+      original_clusters <- input$cluster_selection
+      quick_clusters <- head(values$available_clusters, 2)  # Just first 2 clusters
+      
+      values$analysis_running <- TRUE
+      
+      # Show progress
+      output$analysis_progress <- renderText({
+        "Running quick test with 2 clusters..."
+      })
+      
+      # Temporarily update cluster selection for this analysis
+      updateCheckboxGroupInput(session, "cluster_selection", selected = quick_clusters)
+      
+      # Perform analysis
+      results <- perform_signature_analysis()
+      
+      # Restore original cluster selection
+      updateCheckboxGroupInput(session, "cluster_selection", selected = original_clusters)
+      
+      if (!is.null(results)) {
+        values$analysis_results <- results
+        values$analysis_running <- FALSE
+        
+        # Update UI elements with results
+        update_results_ui()
+        
+        showNotification(paste("Quick test completed! Used clusters:", paste(quick_clusters, collapse = ", ")), type = "message")
+      } else {
+        values$analysis_running <- FALSE
+        showNotification("Quick test failed. Please check your settings and try again.", type = "error")
       }
     })
     

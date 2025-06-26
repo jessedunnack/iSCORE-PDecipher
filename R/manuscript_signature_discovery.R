@@ -39,25 +39,50 @@ discover_top_signatures <- function(enrichment_data, top_n = 10, min_cluster_bre
   # Analyze each gene pair
   all_signatures <- list()
   
+  # Calculate total work for progress tracking
+  total_work <- nrow(gene_pairs)
+  
   for (i in seq_len(nrow(gene_pairs))) {
     gene_pair <- gene_pairs[i, ]
     
     if (!is.null(progress_callback)) {
       progress_callback(
         paste("Analyzing", gene_pair$mast_gene, "vs", gene_pair$crispri_gene), 
-        value = 0.2 + (i / nrow(gene_pairs)) * 0.5
+        value = 0.2 + (i / nrow(gene_pairs)) * 0.5,
+        detail = paste("Gene pair", i, "of", total_work)
       )
     }
     
     # Analyze this gene pair across all clusters
+    pair_start_time <- Sys.time()
+    
     pair_analysis <- analyze_gene_pair_signatures(
       list(mast_gene = gene_pair$mast_gene, crispri_gene = gene_pair$crispri_gene),
       enrichment_data,
-      include_pathways = TRUE
+      include_pathways = TRUE,
+      progress_callback = function(msg) {
+        if (!is.null(progress_callback)) {
+          pair_elapsed <- as.numeric(difftime(Sys.time(), pair_start_time, units = "secs"))
+          progress_callback(
+            paste("Analyzing", gene_pair$mast_gene, "vs", gene_pair$crispri_gene, "-", msg),
+            value = 0.2 + ((i - 1 + 0.5) / nrow(gene_pairs)) * 0.5,
+            detail = paste("Gene pair", i, "of", total_work, sprintf("(%.0fs)", pair_elapsed))
+          )
+        }
+      }
     )
     
     if (!"error" %in% names(pair_analysis)) {
       all_signatures[[paste(gene_pair$mast_gene, gene_pair$crispri_gene, sep = "_vs_")]] <- pair_analysis
+    }
+    
+    if (!is.null(progress_callback)) {
+      pair_elapsed <- as.numeric(difftime(Sys.time(), pair_start_time, units = "secs"))
+      progress_callback(
+        paste("Completed", gene_pair$mast_gene, "vs", gene_pair$crispri_gene), 
+        value = 0.2 + (i / nrow(gene_pairs)) * 0.5,
+        detail = paste("Gene pair", i, "of", total_work, sprintf("completed in %.0fs", pair_elapsed))
+      )
     }
   }
   

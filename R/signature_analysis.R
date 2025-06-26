@@ -355,7 +355,13 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
   cluster_results <- list()
   all_clusters <- unique(c(mast_data$cluster, crispri_data$cluster))
   
-  for (cluster in all_clusters) {
+  for (j in seq_along(all_clusters)) {
+    cluster <- all_clusters[j]
+    
+    if (!is.null(progress_callback)) {
+      progress_callback(paste("cluster", cluster, "(", j, "of", length(all_clusters), ")"))
+    }
+    
     cluster_mast <- mast_data[mast_data$cluster == cluster, ]
     cluster_crispri <- crispri_data[crispri_data$cluster == cluster, ]
     
