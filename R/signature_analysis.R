@@ -51,7 +51,7 @@ calculate_gene_overlap_significance <- function(mast_genes, crispri_genes,
     # Contingency table for Fisher's test
     mast_only <- length(mast_genes) - overlap_count
     crispri_only <- length(crispri_genes) - overlap_count  
-    neither <- length(background_genes) - length(mast_genes) - crispri_only
+    neither <- length(background_genes) - length(mast_genes) - length(crispri_genes) + overlap_count
     
     if (mast_only >= 0 && crispri_only >= 0 && neither >= 0) {
       contingency_matrix <- matrix(
@@ -235,12 +235,17 @@ calculate_composite_signature_score <- function(overlap_stats, correlation_stats
   pathway_score <- 0
   
   # Overlap component (based on Fisher's p-value and Jaccard index)
-  if (!is.null(overlap_stats) && !is.na(overlap_stats$fisher_p)) {
-    # Convert p-value to score (higher score for lower p-value)
-    overlap_score <- -log10(max(overlap_stats$fisher_p, 1e-10)) * overlap_stats$jaccard_index
-  } else if (!is.null(overlap_stats)) {
-    # Use Jaccard index alone if no p-value
-    overlap_score <- overlap_stats$jaccard_index * 5  # Scale to be comparable
+  if (!is.null(overlap_stats)) {
+    if (!is.null(overlap_stats$fisher_p) && !is.na(overlap_stats$fisher_p)) {
+      # Convert p-value to score (higher score for lower p-value)
+      overlap_score <- -log10(max(overlap_stats$fisher_p, 1e-10)) * overlap_stats$jaccard_index
+    } else {
+      # Use Jaccard index alone if no p-value (more robust fallback)
+      jaccard_val <- overlap_stats$jaccard_index %||% 0
+      overlap_count <- overlap_stats$overlap_count %||% 0
+      # Score based on both Jaccard similarity and absolute overlap count
+      overlap_score <- (jaccard_val * 10) + (log10(max(overlap_count, 1)) * 2)
+    }
   }
   
   # Correlation component
@@ -265,6 +270,13 @@ calculate_composite_signature_score <- function(overlap_stats, correlation_stats
                      correlation_score * weights$correlation +
                      direction_score * weights$direction +
                      pathway_score * weights$pathway)
+  
+  # Debug output for scoring
+  cat("[SCORE DEBUG] Overlap score:", round(overlap_score, 3), 
+      ", Correlation:", round(correlation_score, 3),
+      ", Direction:", round(direction_score, 3), 
+      ", Pathway:", round(pathway_score, 3),
+      ", Composite:", round(composite_score, 3), "\n")
   
   return(list(
     composite_score = composite_score,
@@ -332,9 +344,21 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
     progress_callback(paste("Analyzing", gene_pair$mast_gene, "vs", gene_pair$crispri_gene))
   }
   
-  # Filter data for this gene pair
-  mast_data <- enrichment_data[enrichment_data$method == "MAST" & 
-                              enrichment_data$mutation_perturbation == gene_pair$mast_gene, ]
+  # Filter data for this gene pair (handle variant combining)
+  if (gene_pair$mast_gene == "SNCA_combined") {
+    # Combine SNCA variants
+    mast_data <- enrichment_data[enrichment_data$method == "MAST" & 
+                                enrichment_data$mutation_perturbation %in% c("SNCA_A30P", "SNCA_A53T"), ]
+  } else if (gene_pair$mast_gene == "VPS13C_combined") {
+    # Combine VPS13C variants  
+    mast_data <- enrichment_data[enrichment_data$method == "MAST" & 
+                                enrichment_data$mutation_perturbation %in% c("VPS13C_A444P", "VPS13C_W395C"), ]
+  } else {
+    # Regular single gene lookup
+    mast_data <- enrichment_data[enrichment_data$method == "MAST" & 
+                                enrichment_data$mutation_perturbation == gene_pair$mast_gene, ]
+  }
+  
   crispri_data <- enrichment_data[enrichment_data$method == "MixScale" & 
                                  enrichment_data$mutation_perturbation == gene_pair$crispri_gene, ]
   
