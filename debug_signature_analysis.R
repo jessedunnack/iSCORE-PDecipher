@@ -6,13 +6,36 @@ source("R/signature_analysis.R")
 source("R/manuscript_signature_discovery.R") 
 source("R/gene_harmonization.R")
 
-# Load your data
-if (file.exists("all_enrichment_padj005_complete_with_direction.rds")) {
-  enrichment_data <- readRDS("all_enrichment_padj005_complete_with_direction.rds")
-  cat("✅ Data loaded:", nrow(enrichment_data), "enrichment terms\n\n")
-} else {
-  stop("❌ Data file not found: all_enrichment_padj005_complete_with_direction.rds")
+# Load your data - check multiple possible locations
+data_paths <- c(
+  "all_enrichment_padj005_complete_with_direction.rds",  # Current directory
+  "../iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds",  # Dataset 2
+  "../../iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds"  # Alternative
+)
+
+data_file <- NULL
+for (path in data_paths) {
+  if (file.exists(path)) {
+    data_file <- path
+    break
+  }
 }
+
+if (is.null(data_file)) {
+  cat("❌ Data file not found in expected locations:\n")
+  for (path in data_paths) {
+    cat("  ", path, "\n")
+  }
+  cat("\n💡 Please navigate to the correct directory or specify the path:\n")
+  cat("setwd('/path/to/iSCORE-PD_plus_CRISPRi')\n")
+  cat("# OR\n")
+  cat("enrichment_data <- readRDS('/full/path/to/all_enrichment_padj005_complete_with_direction.rds')\n")
+  stop("Data file not found")
+}
+
+enrichment_data <- readRDS(data_file)
+cat("✅ Data loaded from:", data_file, "\n")
+cat("✅ Data size:", nrow(enrichment_data), "enrichment terms\n\n")
 
 # Test with a small subset to understand the issue
 cat("🔍 DEBUGGING SIGNATURE ANALYSIS\n")

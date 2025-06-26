@@ -9,8 +9,28 @@ source("R/gene_harmonization.R")
 source("R/pd_signature_interpretation.R")
 
 # Function to run complete PD-focused analysis
-run_pd_signature_analysis <- function(data_file = "all_enrichment_padj005_complete_with_direction.rds",
+run_pd_signature_analysis <- function(data_file = NULL,
                                      output_dir = "pd_signature_analysis_results") {
+  
+  # Auto-detect data file if not specified
+  if (is.null(data_file)) {
+    possible_files <- c(
+      "all_enrichment_padj005_complete_with_direction.rds",  # Current directory
+      "../iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds",  # Dataset 2
+      "../../iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds"  # Alternative
+    )
+    
+    for (file in possible_files) {
+      if (file.exists(file)) {
+        data_file <- file
+        break
+      }
+    }
+    
+    if (is.null(data_file)) {
+      stop("Could not find data file. Please specify the path to all_enrichment_padj005_complete_with_direction.rds")
+    }
+  }
   
   cat("=== PARKINSON'S DISEASE SIGNATURE ANALYSIS ===\n\n")
   
