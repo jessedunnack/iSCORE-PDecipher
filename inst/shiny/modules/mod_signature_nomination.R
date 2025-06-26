@@ -441,13 +441,28 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       results <- values$analysis_results
       summary_stats <- results$analysis_summary
       
+      # Defensive programming - check if summary_stats exists and has required fields
+      if (is.null(summary_stats)) {
+        return(div(
+          h4("Analysis Error"),
+          p("Summary statistics not available. Please try running the analysis again.")
+        ))
+      }
+      
+      # Provide default values for missing fields
+      total_signatures <- summary_stats$total_signatures %||% 0
+      pan_cluster_count <- summary_stats$pan_cluster_count %||% 0
+      total_gene_pairs <- summary_stats$total_gene_pairs %||% 0
+      cluster_specific_count <- summary_stats$cluster_specific_count %||% 0
+      strongest_gene_pair <- summary_stats$strongest_gene_pair %||% "None"
+      
       tagList(
         div(class = "row",
           div(class = "col-md-3",
             div(class = "info-box bg-blue",
               div(class = "info-box-content",
                 span(class = "info-box-text", "Total Signatures"),
-                span(class = "info-box-number", summary_stats$total_signatures)
+                span(class = "info-box-number", total_signatures)
               )
             )
           ),
@@ -455,7 +470,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             div(class = "info-box bg-green",
               div(class = "info-box-content",
                 span(class = "info-box-text", "Pan-Cluster"),
-                span(class = "info-box-number", summary_stats$pan_cluster_count)
+                span(class = "info-box-number", pan_cluster_count)
               )
             )
           ),
@@ -463,7 +478,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             div(class = "info-box bg-yellow",
               div(class = "info-box-content",
                 span(class = "info-box-text", "Gene Pairs"),
-                span(class = "info-box-number", summary_stats$total_gene_pairs)
+                span(class = "info-box-number", total_gene_pairs)
               )
             )
           ),
@@ -471,7 +486,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             div(class = "info-box bg-red",
               div(class = "info-box-content",
                 span(class = "info-box-text", "Clusters"),
-                span(class = "info-box-number", summary_stats$cluster_specific_count)
+                span(class = "info-box-number", cluster_specific_count)
               )
             )
           )
@@ -479,8 +494,10 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         div(style = "margin-top: 20px;",
           h5("Top Finding:"),
-          p(if(summary_stats$strongest_gene_pair != "None") {
-            paste("Strongest signature:", summary_stats$strongest_gene_pair)
+          p(if(!is.null(strongest_gene_pair) && 
+               length(strongest_gene_pair) > 0 && 
+               strongest_gene_pair != "None") {
+            paste("Strongest signature:", strongest_gene_pair)
           } else {
             "No significant signatures found with current parameters."
           })
