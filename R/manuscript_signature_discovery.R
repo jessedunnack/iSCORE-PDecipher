@@ -124,7 +124,9 @@ discover_top_signatures <- function(enrichment_data, top_n = 10, min_cluster_bre
       total_gene_pairs = nrow(gene_pairs),
       total_signatures = nrow(signature_rankings),
       pan_cluster_count = nrow(pan_cluster_signatures),
-      cluster_specific_count = length(cluster_specific_signatures)
+      cluster_specific_count = length(cluster_specific_signatures),
+      strongest_gene_pair = if(nrow(signature_rankings) > 0) signature_rankings$gene_pair[1] else "None",
+      top_signature_strength = if(nrow(signature_rankings) > 0) max(signature_rankings$signature_strength) else 0
     )
   )
   

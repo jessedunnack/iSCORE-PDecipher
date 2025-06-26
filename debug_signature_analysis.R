@@ -39,7 +39,7 @@ cat("✅ Data size:", nrow(enrichment_data), "enrichment terms\n\n")
 
 # Test with a small subset to understand the issue
 cat("🔍 DEBUGGING SIGNATURE ANALYSIS\n")
-cat("="*50, "\n\n")
+cat(paste(rep("=", 50), collapse=""), "\n\n")
 
 # Filter data similar to what the app does
 test_data <- enrichment_data[enrichment_data$method %in% c("MAST", "MixScale"), ]
@@ -56,7 +56,7 @@ print(gene_pairs[, c("mast_gene", "crispri_gene")])
 
 # Run discovery with lower thresholds
 cat("\n🧪 RUNNING TEST ANALYSIS\n")
-cat("="*30, "\n")
+cat(paste(rep("=", 30), collapse=""), "\n")
 
 signature_results <- discover_top_signatures(
   enrichment_data = test_data,
@@ -69,7 +69,7 @@ signature_results <- discover_top_signatures(
 )
 
 cat("\n📊 ANALYSIS RESULTS STRUCTURE\n")
-cat("="*35, "\n")
+cat(paste(rep("=", 35), collapse=""), "\n")
 
 cat("Results components:", paste(names(signature_results), collapse = ", "), "\n\n")
 
@@ -95,7 +95,7 @@ if ("all_signatures" %in% names(signature_results)) {
 if ("analysis_summary" %in% names(signature_results)) {
   summary_stats <- signature_results$analysis_summary
   cat("\n📈 ANALYSIS SUMMARY\n")
-  cat("="*20, "\n")
+  cat(paste(rep("=", 20), collapse=""), "\n")
   
   for (stat_name in names(summary_stats)) {
     cat(paste0(stat_name, ": ", summary_stats[[stat_name]]), "\n")
@@ -108,7 +108,7 @@ if ("analysis_summary" %in% names(signature_results)) {
 if ("pan_cluster_signatures" %in% names(signature_results)) {
   pan_cluster <- signature_results$pan_cluster_signatures
   cat("\n🌐 PAN-CLUSTER SIGNATURES\n")
-  cat("="*25, "\n")
+  cat(paste(rep("=", 25), collapse=""), "\n")
   cat("Pan-cluster signatures found:", nrow(pan_cluster), "\n")
   
   if (nrow(pan_cluster) > 0) {
@@ -122,7 +122,7 @@ if ("pan_cluster_signatures" %in% names(signature_results)) {
 if ("cluster_specific_signatures" %in% names(signature_results)) {
   cluster_specific <- signature_results$cluster_specific_signatures
   cat("\n🎯 CLUSTER-SPECIFIC SIGNATURES\n")
-  cat("="*30, "\n")
+  cat(paste(rep("=", 30), collapse=""), "\n")
   cat("Cluster-specific signature groups:", length(cluster_specific), "\n")
   
   if (length(cluster_specific) > 0) {
@@ -135,7 +135,7 @@ if ("cluster_specific_signatures" %in% names(signature_results)) {
 }
 
 cat("\n🔧 RECOMMENDATIONS\n")
-cat("="*15, "\n")
+cat(paste(rep("=", 15), collapse=""), "\n")
 
 if (exists("all_sigs") && nrow(all_sigs) > 0) {
   max_strength <- max(all_sigs$signature_strength, na.rm = TRUE)
@@ -155,6 +155,6 @@ cat("1. Install updated package with: remotes::install_github('jessedunnack/iSCO
 cat("2. Lower cluster-specific threshold in app settings\n")
 cat("3. Focus on pan-cluster results which show meaningful patterns\n")
 
-cat("\n" , "="*50, "\n")
+cat("\n", paste(rep("=", 50), collapse=""), "\n")
 cat("DEBUG ANALYSIS COMPLETE\n")
-cat("="*50, "\n")
+cat(paste(rep("=", 50), collapse=""), "\n")
