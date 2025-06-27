@@ -2,19 +2,9 @@
 # This script provides a standardized workflow for performing enrichment analysis
 # across both differential expression analysis methods.
 
-# Load required libraries
-library(clusterProfiler)
-library(enrichplot)
-library(org.Hs.eg.db)
-library(DOSE)
-library(ReactomePA)
-library(pathview)
-library(ggplot2)
-library(dplyr)
-library(stringr)
-library(STRINGdb)
-library(msigdbr)
-library(fgsea)
+# Required libraries (loaded via namespace imports, not library() calls)
+# Dependencies: clusterProfiler, enrichplot, org.Hs.eg.db, DOSE, ReactomePA, 
+# pathview, ggplot2, dplyr, stringr, STRINGdb, msigdbr, fgsea
 
 # Custom function for consistent message formatting
 print_header <- function(title, level = 1) {
@@ -2080,11 +2070,11 @@ run_gsea <- function(ranked_list, min_genes = 5, padj_method = "BH") {
   return(gsea_results)
 }
 
-# Example usage:
- run_enrichment_analysis(
-   input_file = "full_DE_results.rds",
-   lfc_threshold = 0.25,
-   padj_threshold = 0.05,
-   output_dir = "./enrichment_results/",
-   run_methods = c("GO", "GSEA", "KEGG", "Reactome", "WikiPathways", "STRING")
- )
+# Example usage (commented out to prevent execution during package loading):
+# run_enrichment_analysis(
+#   input_file = "full_DE_results.rds",
+#   lfc_threshold = 0.25,
+#   padj_threshold = 0.05,
+#   output_dir = "./enrichment_results/",
+#   run_methods = c("GO", "GSEA", "KEGG", "Reactome", "WikiPathways", "STRING")
+# )

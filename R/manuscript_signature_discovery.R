@@ -3,11 +3,8 @@
 #' This module implements rapid signature discovery prioritized for manuscript development,
 #' focusing on the strongest shared signatures between MAST and CRISPRi methods.
 
-# Required packages
-if (!requireNamespace("dplyr", quietly = TRUE)) {
-  stop("dplyr package is required for signature analysis")
-}
-library(dplyr)
+# Required packages (loaded via namespace imports)
+# Dependencies: dplyr
 
 #' Discover top signatures for manuscript prioritization
 #'
