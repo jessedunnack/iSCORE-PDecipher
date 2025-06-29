@@ -537,8 +537,22 @@ generate_biological_significance <- function(top_categories, signature) {
     significance <- "Multiple PD-relevant pathways affected, suggesting complex disease mechanisms. "
   }
   
-  # Add context about signature strength
-  strength <- signature$signature_strength
+  # Add context about signature strength using safe access
+  strength <- if ("signature_strength" %in% colnames(signature)) {
+    signature$signature_strength
+  } else if ("mean_signature_strength" %in% colnames(signature)) {
+    signature$mean_signature_strength  
+  } else if ("max_signature_strength" %in% colnames(signature)) {
+    signature$max_signature_strength
+  } else {
+    2  # Default moderate strength to avoid comparison errors
+  }
+  
+  # Ensure strength is numeric and handle potential NA values
+  if (is.na(strength) || !is.numeric(strength)) {
+    strength <- 2  # Default to moderate
+  }
+  
   if (strength > 3) {
     significance <- paste0(significance, "High signature strength suggests robust cross-method agreement.")
   } else if (strength > 2) {
