@@ -141,9 +141,26 @@ create_static_heatmap <- function(heatmap_data,
   n_genes <- length(unique(col_annotation$Gene))
   n_clusters <- length(unique(col_annotation$Cluster))
   
+  # Safe color generation with fallbacks
+  cluster_colors <- tryCatch({
+    if (n_clusters <= 12) {
+      RColorBrewer::brewer.pal(max(3, n_clusters), "Set3")
+    } else {
+      # Use colorRampPalette for unlimited colors when > 12 clusters
+      base_colors <- RColorBrewer::brewer.pal(12, "Set3")
+      colorRampPalette(base_colors)(n_clusters)
+    }
+  }, error = function(e) {
+    # Fallback to rainbow colors if any RColorBrewer issues
+    rainbow(n_clusters)
+  }, warning = function(w) {
+    # Handle palette warnings by using rainbow
+    rainbow(n_clusters)
+  })
+  
   ann_colors <- list(
     Gene = setNames(rainbow(n_genes), unique(col_annotation$Gene)),
-    Cluster = setNames(brewer.pal(min(n_clusters, 12), "Set3"), unique(col_annotation$Cluster)[1:min(n_clusters, 12)]),
+    Cluster = setNames(cluster_colors[1:n_clusters], unique(col_annotation$Cluster)[1:n_clusters]),
     Direction = c("UP" = "red", "DOWN" = "blue", "ALL" = "gray")
   )
   

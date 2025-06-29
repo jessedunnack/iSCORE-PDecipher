@@ -499,9 +499,21 @@ create_unified_enrichment_heatmap <- function(data_full,
         if (length(breaks_adaptive) < 2) {
           breaks_adaptive <- c(0, max(1, max(significant_values_for_scale, 0, na.rm=TRUE)))
         }
-        num_colors_needed_adaptive <- length(breaks_adaptive)
+        num_colors_needed_adaptive <- max(3, min(9, length(breaks_adaptive)))  # Ensure valid range
         palette_name <- "YlOrRd"
-        base_palette_colors <- RColorBrewer::brewer.pal(max(3, min(9, num_colors_needed_adaptive)), palette_name)
+        
+        # Safe color palette generation with error handling
+        base_palette_colors <- tryCatch({
+          RColorBrewer::brewer.pal(num_colors_needed_adaptive, palette_name)
+        }, error = function(e) {
+          cat("[COLOR WARNING] brewer.pal failed, using fallback colors\n")
+          # Fallback to safe YlOrRd colors
+          c("#FFFFCC", "#FFEDA0", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#BD0026", "#800026")[1:num_colors_needed_adaptive]
+        }, warning = function(w) {
+          cat("[COLOR WARNING] brewer.pal warning:", w$message, "\n")
+          # Try with fewer colors if warning
+          RColorBrewer::brewer.pal(max(3, min(num_colors_needed_adaptive, 6)), palette_name)
+        })
         if (num_colors_needed_adaptive > length(base_palette_colors)) {
           colors_for_breaks_adaptive <- colorRampPalette(base_palette_colors)(num_colors_needed_adaptive)
         } else {

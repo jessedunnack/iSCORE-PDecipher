@@ -381,13 +381,33 @@ mod_heatmap_unified_server <- function(id, app_data, global_selection) {
         return(NULL)
       }
       
-      # Color scale
+      # Safe color scale generation with fallbacks
       if (metric == "gsea") {
-        colors <- RColorBrewer::brewer.pal(11, "RdBu")
-        breaks <- seq(-max(abs(mat), na.rm = TRUE), max(abs(mat), na.rm = TRUE), length.out = 12)
+        # Use colorRampPalette for robust diverging colors
+        base_colors <- tryCatch({
+          RColorBrewer::brewer.pal(11, "RdBu")
+        }, error = function(e) {
+          # Fallback to safe number of colors
+          RColorBrewer::brewer.pal(9, "RdBu")
+        }, warning = function(w) {
+          # Handle palette size warnings
+          RColorBrewer::brewer.pal(9, "RdBu")
+        })
+        colors <- colorRampPalette(base_colors)(50)  # Generate 50 smooth color transitions
+        breaks <- seq(-max(abs(mat), na.rm = TRUE), max(abs(mat), na.rm = TRUE), length.out = 51)
       } else {
-        colors <- RColorBrewer::brewer.pal(9, "YlOrRd")
-        breaks <- seq(0, max(mat, na.rm = TRUE), length.out = 10)
+        # Use colorRampPalette for robust sequential colors
+        base_colors <- tryCatch({
+          RColorBrewer::brewer.pal(9, "YlOrRd")
+        }, error = function(e) {
+          # Fallback to safe colors
+          c("#FFFFCC", "#FFEDA0", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#BD0026", "#800026")
+        }, warning = function(w) {
+          # Handle palette size warnings
+          RColorBrewer::brewer.pal(6, "YlOrRd")
+        })
+        colors <- colorRampPalette(base_colors)(50)  # Generate 50 smooth color transitions
+        breaks <- seq(0, max(mat, na.rm = TRUE), length.out = 51)
       }
       
       # Create title
