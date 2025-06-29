@@ -103,8 +103,8 @@ mod_signature_nomination_ui <- function(id) {
             
             # Variant handling
             div(style = "margin-bottom: 15px;",
-              checkboxInput(ns("combine_snca"), "Combine SNCA variants (A30P + A53T)", value = TRUE),
-              checkboxInput(ns("combine_vps13c"), "Combine VPS13C variants (A444P + W395C)", value = TRUE)
+              checkboxInput(ns("combine_snca"), "Combine SNCA variants (A30P + A53T)", value = FALSE),
+              checkboxInput(ns("combine_vps13c"), "Combine VPS13C variants (A444P + W395C)", value = FALSE)
             ),
             
             # Run analysis button
@@ -380,17 +380,16 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Update cluster selection UI
         cluster_choices <- setNames(unique_clusters, paste("Cluster", gsub("cluster_", "", unique_clusters)))
         
-        # Mark dopaminergic clusters (typically lower numbered clusters in PD data)
-        # You may need to adjust this based on your specific cluster annotations
-        dopaminergic_clusters <- unique_clusters[1:min(4, length(unique_clusters))]  # First 4 clusters often dopaminergic
+        # Select ALL clusters by default for comprehensive analysis
+        all_clusters <- unique_clusters  # All available clusters selected by default
         
         updateCheckboxGroupInput(session, "cluster_selection",
                                 choices = cluster_choices,
-                                selected = dopaminergic_clusters)
+                                selected = all_clusters)
         
-        # Initialize gene pair options
-        gene_pairs <- get_comparable_gene_pairs(combine_snca_variants = TRUE,
-                                               combine_vps13c_variants = TRUE,
+        # Initialize gene pair options - analyze variants independently by default
+        gene_pairs <- get_comparable_gene_pairs(combine_snca_variants = FALSE,
+                                               combine_vps13c_variants = FALSE,
                                                include_mast_only = FALSE)
         values$gene_pairs <- gene_pairs
         
@@ -405,6 +404,30 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                          choices = gene_choices,
                          selected = "all")
       }
+    })
+    
+    # Update gene pairs when variant combination checkboxes change
+    observeEvent(c(input$combine_snca, input$combine_vps13c), {
+      req(app_data$data_loaded)
+      
+      # Regenerate gene pairs based on current checkbox states
+      gene_pairs <- get_comparable_gene_pairs(
+        combine_snca_variants = input$combine_snca %||% FALSE,
+        combine_vps13c_variants = input$combine_vps13c %||% FALSE,
+        include_mast_only = FALSE
+      )
+      values$gene_pairs <- gene_pairs
+      
+      # Update gene selection UI with new pairs
+      gene_choices <- c("All available pairs" = "all")
+      for (i in seq_len(nrow(gene_pairs))) {
+        pair_name <- paste(gene_pairs$mast_gene[i], "vs", gene_pairs$crispri_gene[i])
+        gene_choices[[pair_name]] <- paste0(gene_pairs$mast_gene[i], "_vs_", gene_pairs$crispri_gene[i])
+      }
+      
+      updateSelectInput(session, "gene_selection",
+                       choices = gene_choices,
+                       selected = "all")
     })
     
     # Toggle advanced settings
