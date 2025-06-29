@@ -3,9 +3,10 @@
 #' This module provides enhanced visualizations for signature nomination results,
 #' focusing on clear and straightforward presentation of cross-method comparisons.
 
-library(ggplot2)
-library(plotly)
-library(dplyr)
+# Dependencies handled via DESCRIPTION file imports
+# library(ggplot2)
+# library(plotly) 
+# library(dplyr)
 
 #' Create Gene vs Pathway P-value Scatter Plot
 #'
@@ -146,9 +147,9 @@ create_interactive_signature_heatmap <- function(signature_data,
   
   # Create matrix for heatmap
   heatmap_matrix <- plot_data %>%
-    select(gene_pair, cluster_info, metric_value) %>%
+    dplyr::select(gene_pair, cluster_info, metric_value) %>%
     tidyr::pivot_wider(names_from = cluster_info, values_from = metric_value, values_fill = 0) %>%
-    column_to_rownames("gene_pair") %>%
+    tibble::column_to_rownames("gene_pair") %>%
     as.matrix()
   
   if (nrow(heatmap_matrix) == 0) {

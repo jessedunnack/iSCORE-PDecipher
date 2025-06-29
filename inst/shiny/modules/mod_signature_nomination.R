@@ -1269,6 +1269,81 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     
     # === HEATMAP OUTPUTS ===
     
+    # Interactive signature heatmap (MISSING IMPLEMENTATION - This was causing the loading wheel!)
+    output$signature_heatmap <- renderPlotly({
+      req(values$analysis_results)
+      req(values$analysis_results$all_signatures)
+      
+      cat("[SIGNATURE HEATMAP] Generating heatmap with metric:", input$heatmap_metric, "\n")
+      
+      # Get signature data
+      signature_data <- values$analysis_results$all_signatures
+      
+      if (nrow(signature_data) == 0) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, text = "No signature data available for heatmap",
+                               textfont = list(size = 16, color = "gray")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      tryCatch({
+        # Create heatmap using the visualization function
+        heatmap_plot <- create_interactive_signature_heatmap(
+          signature_data = signature_data,
+          metric = input$heatmap_metric %||% "signature_strength",
+          cluster_filter = NULL  # Include all clusters
+        )
+        
+        # Apply color scale if different from default
+        if (!is.null(input$color_scale) && input$color_scale != "viridis") {
+          color_scale <- switch(input$color_scale,
+            "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+            "Reds" = "Reds",
+            "Blues" = "Blues",
+            "viridis"  # default fallback
+          )
+          heatmap_plot <- heatmap_plot %>% 
+            plotly::layout(coloraxis = list(colorscale = color_scale))
+        }
+        
+        cat("[SIGNATURE HEATMAP] Heatmap generated successfully\n")
+        return(heatmap_plot)
+        
+      }, error = function(e) {
+        cat("[SIGNATURE HEATMAP] Error generating heatmap:", e$message, "\n")
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = paste("Error generating heatmap:", e$message),
+                               textfont = list(size = 14, color = "red")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      })
+    })
+    
+    # Download handler for interactive heatmap
+    output$download_heatmap_html <- downloadHandler(
+      filename = function() {
+        paste0("signature_heatmap_", Sys.Date(), ".html")
+      },
+      content = function(file) {
+        req(values$analysis_results$all_signatures)
+        
+        # Create heatmap
+        heatmap_plot <- create_interactive_signature_heatmap(
+          signature_data = values$analysis_results$all_signatures,
+          metric = input$heatmap_metric %||% "signature_strength"
+        )
+        
+        # Save as HTML
+        htmlwidgets::saveWidget(heatmap_plot, file, selfcontained = TRUE)
+      }
+    )
+    
     # Pan-cluster visualization - replace confusing heatmap with informative bar chart
     output$pan_cluster_heatmap <- renderPlotly({
       req(values$analysis_results)
