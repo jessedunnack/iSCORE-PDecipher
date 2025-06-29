@@ -43,11 +43,28 @@ mod_signature_nomination_ui <- function(id) {
       # Left panel: Analysis constraints and controls
       column(4,
         wellPanel(
-          h4("Signature Nomination Analysis", icon("search")),
+          h4("Cross-Method Signature Discovery", icon("search")),
+          p("Find shared effects between genetic mutations (MAST) and gene knockdowns (CRISPRi)", 
+            style = "font-size: 12px; color: #666;"),
+          
+          # Statistical explanation (collapsible)
+          actionLink(ns("show_stats_info"), "What's being tested?", icon = icon("info-circle")),
+          conditionalPanel(
+            condition = "input.show_stats_info % 2 == 1",
+            ns = ns,
+            div(class = "alert alert-info", style = "margin-top: 10px; font-size: 12px;",
+              h5("Statistical Methods", style = "margin-top: 0;"),
+              tags$ul(
+                tags$li(tags$b("Overlap Significance:"), " Fisher's exact test on 2x2 table of DE genes (significant in both/MAST only/CRISPRi only/neither)"),
+                tags$li(tags$b("Signature Score:"), " Combined metric of gene overlap count + pathway overlap + statistical significance"),
+                tags$li(tags$b("Pan-cluster:"), " Signatures appearing in ≥8 clusters (>60% consistency)")
+              )
+            )
+          ),
           
           # Simple analysis panel (always visible)
-          div(id = ns("simple_panel"),
-            h5("Quick Analysis", style = "color: #3c8dbc;"),
+          div(id = ns("simple_panel"), style = "margin-top: 15px;",
+            h5("Analysis Settings", style = "color: #3c8dbc;"),
             
             # Gene selection with priority indicators
             selectInput(ns("gene_selection"),
@@ -687,7 +704,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       )
     })
     
-    # Render pan-cluster table
+    # Render pan-cluster table with improved column names and tooltips
     output$pan_cluster_table <- DT::renderDataTable({
       req(values$analysis_results)
       req(values$analysis_results$pan_cluster_signatures)
@@ -695,14 +712,51 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       pan_cluster_data <- values$analysis_results$pan_cluster_signatures
       
       if (nrow(pan_cluster_data) > 0) {
-        display_data <- pan_cluster_data[, c("gene_pair", "cluster_count", "mean_signature_strength", 
-                                           "total_gene_overlaps", "total_pathway_overlaps")]
-        colnames(display_data) <- c("Gene Pair", "Clusters", "Mean Strength", "Gene Overlaps", "Pathway Overlaps")
+        # Add Fisher's p-value if available
+        display_cols <- c("gene_pair", "cluster_count", "mean_signature_strength", 
+                         "total_gene_overlaps", "total_pathway_overlaps")
+        if ("mean_fisher_p" %in% colnames(pan_cluster_data)) {
+          display_cols <- c(display_cols, "mean_fisher_p")
+        }
+        
+        display_data <- pan_cluster_data[, display_cols, drop = FALSE]
+        
+        # Better column names
+        new_names <- c("Gene Pair (MAST vs CRISPRi)", 
+                      "Shared Clusters", 
+                      "Avg Signature Score", 
+                      "Overlapping DE Genes",
+                      "Shared Pathways")
+        if ("mean_fisher_p" %in% colnames(pan_cluster_data)) {
+          new_names <- c(new_names, "Overlap Significance")
+        }
+        colnames(display_data) <- new_names
+        
+        # Add interpretation column for significance
+        if ("Overlap Significance" %in% colnames(display_data)) {
+          display_data$Interpretation <- ifelse(
+            display_data$`Overlap Significance` < 0.001, "***",
+            ifelse(display_data$`Overlap Significance` < 0.01, "**",
+                   ifelse(display_data$`Overlap Significance` < 0.05, "*", "ns"))
+          )
+        }
         
         DT::datatable(display_data, 
-                     options = list(pageLength = 10, scrollX = TRUE),
-                     rownames = FALSE) %>%
-          DT::formatRound(c("Mean Strength"), digits = 2)
+                     options = list(
+                       pageLength = 10, 
+                       scrollX = TRUE,
+                       columnDefs = list(
+                         list(targets = "_all", 
+                              title = htmltools::tags$span(
+                                style = "cursor: help;",
+                                title = "Click column headers for detailed explanations"
+                              ))
+                       )
+                     ),
+                     rownames = FALSE,
+                     caption = "Pan-cluster signatures: Gene pairs showing consistent effects across multiple cell types. *** p<0.001, ** p<0.01, * p<0.05, ns = not significant") %>%
+          DT::formatRound(c("Avg Signature Score"), digits = 2) %>%
+          DT::formatRound(c("Overlap Significance"), digits = 4)
       } else {
         DT::datatable(data.frame(Message = "No pan-cluster signatures found"),
                      options = list(dom = 't'), rownames = FALSE)
@@ -792,11 +846,31 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       for (i in seq_along(pd_analysis$enhanced_signatures)) {
         sig <- pd_analysis$enhanced_signatures[[i]]
         
+        # Handle different column names for signature strength
+        sig_strength <- if (!is.null(sig$signature$signature_strength)) {
+          sig$signature$signature_strength
+        } else if (!is.null(sig$signature$mean_signature_strength)) {
+          sig$signature$mean_signature_strength
+        } else if (!is.null(sig$signature$max_signature_strength)) {
+          sig$signature$max_signature_strength
+        } else {
+          NA
+        }
+        
+        # Handle missing cluster info for pan-cluster signatures
+        cluster_info <- if (!is.null(sig$signature$cluster)) {
+          sig$signature$cluster
+        } else if (!is.null(sig$signature$cluster_count)) {
+          paste0("Pan-cluster (", sig$signature$cluster_count, " clusters)")
+        } else {
+          "Pan-cluster"
+        }
+        
         row_data <- data.frame(
           Rank = i,
           Gene_Pair = sig$signature$gene_pair,
-          Cluster = sig$signature$cluster,
-          Signature_Strength = round(sig$signature$signature_strength, 2),
+          Cluster = cluster_info,
+          Signature_Strength = if(!is.na(sig_strength)) round(sig_strength, 2) else NA,
           PD_Relevance = round(sig$pd_relevance_score, 2),
           Shared_PD_Pathways = nrow(sig$shared_pd_pathways),
           Mitochondrial = sig$biological_categories$mitochondrial,
@@ -932,13 +1006,30 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       if (nrow(cluster_data) > 0) {
         display_data <- cluster_data[, c("gene_pair", "signature_strength", "gene_overlap_count", 
                                        "pathway_overlap_count", "gene_fisher_p")]
-        colnames(display_data) <- c("Gene Pair", "Signature Strength", "Gene Overlaps", 
-                                   "Pathway Overlaps", "Fisher P-value")
+        colnames(display_data) <- c("Gene Pair (MAST vs CRISPRi)", 
+                                   "Signature Score", 
+                                   "Shared DE Genes", 
+                                   "Shared Pathways", 
+                                   "DE Overlap p-value")
+        
+        # Add significance interpretation
+        display_data$Significance <- ifelse(
+          display_data$`DE Overlap p-value` < 0.001, "***",
+          ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
+                 ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns"))
+        )
         
         DT::datatable(display_data,
-                     options = list(pageLength = 10, scrollX = TRUE),
-                     rownames = FALSE) %>%
-          DT::formatRound(c("Signature Strength", "Fisher P-value"), digits = 3)
+                     options = list(
+                       pageLength = 10, 
+                       scrollX = TRUE,
+                       order = list(list(1, 'desc'))  # Sort by signature score
+                     ),
+                     rownames = FALSE,
+                     caption = paste("Cluster", gsub("cluster_", "", selected_cluster), 
+                                   "signatures. DE Overlap p-value tests if shared DE genes exceed chance (Fisher's exact test).")) %>%
+          DT::formatRound(c("Signature Score"), digits = 2) %>%
+          DT::formatSignif(c("DE Overlap p-value"), digits = 3)
       } else {
         DT::datatable(data.frame(Message = "No signatures found for this cluster"),
                      options = list(dom = 't'), rownames = FALSE)
@@ -965,15 +1056,50 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
       
       if (nrow(pair_data) > 0) {
-        display_data <- pair_data[, c("cluster", "signature_strength", "gene_overlap_count",
-                                     "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")]
-        colnames(display_data) <- c("Cluster", "Signature Strength", "Gene Overlaps",
-                                   "Pathway Overlaps", "Fisher P-value", "Jaccard Index")
+        # Handle different column names for signature strength
+        strength_col <- if ("signature_strength" %in% colnames(pair_data)) {
+          "signature_strength"
+        } else if ("mean_signature_strength" %in% colnames(pair_data)) {
+          "mean_signature_strength"
+        } else if ("max_signature_strength" %in% colnames(pair_data)) {
+          "max_signature_strength"
+        } else {
+          NULL
+        }
+        
+        # Build display columns dynamically
+        display_cols <- c("cluster")
+        col_names <- c("Cluster")
+        
+        if (!is.null(strength_col)) {
+          display_cols <- c(display_cols, strength_col)
+          col_names <- c(col_names, "Signature Score")
+        }
+        
+        display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")
+        col_names <- c(col_names, "Shared DE Genes", "Shared Pathways", "DE Overlap p-value", "Jaccard Index")
+        
+        display_data <- pair_data[, display_cols, drop = FALSE]
+        colnames(display_data) <- col_names
+        
+        # Add significance interpretation
+        display_data$Significance <- ifelse(
+          display_data$`DE Overlap p-value` < 0.001, "***",
+          ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
+                 ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns"))
+        )
         
         DT::datatable(display_data,
-                     options = list(pageLength = 10, scrollX = TRUE),
-                     rownames = FALSE) %>%
-          DT::formatRound(c("Signature Strength", "Fisher P-value", "Jaccard Index"), digits = 3)
+                     options = list(
+                       pageLength = 10, 
+                       scrollX = TRUE,
+                       order = list(list(1, 'desc'))  # Sort by signature score if available
+                     ),
+                     rownames = FALSE,
+                     caption = paste("Gene pair analysis for", selected_pair, 
+                                   "- showing cross-method signatures across clusters")) %>%
+          DT::formatRound(c("Signature Score", "Jaccard Index"), digits = 2) %>%
+          DT::formatSignif(c("DE Overlap p-value"), digits = 3)
       } else {
         DT::datatable(data.frame(Message = "No data found for this gene pair"),
                      options = list(dom = 't'), rownames = FALSE)
@@ -982,34 +1108,68 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     
     # === HEATMAP OUTPUTS ===
     
-    # Pan-cluster heatmap (fix the infinite loading)
+    # Pan-cluster visualization - replace confusing heatmap with informative bar chart
     output$pan_cluster_heatmap <- renderPlotly({
       req(values$analysis_results)
       
       pan_cluster_data <- values$analysis_results$pan_cluster_signatures
       
       if (is.null(pan_cluster_data) || nrow(pan_cluster_data) == 0) {
-        return(plotly_empty("No pan-cluster signatures available for heatmap"))
+        return(plotly_empty("No pan-cluster signatures available for visualization"))
       }
       
-      # Create simple heatmap from pan-cluster data
-      heatmap_matrix <- as.matrix(pan_cluster_data[, c("mean_signature_strength", "max_signature_strength", 
-                                                      "cluster_count")])
-      rownames(heatmap_matrix) <- pan_cluster_data$gene_pair
+      # Create stacked bar chart showing cluster distribution
+      # First, get detailed cluster information if available
+      all_sigs <- values$analysis_results$all_signatures
       
-      plot_ly(
-        z = ~heatmap_matrix,
-        x = colnames(heatmap_matrix),
-        y = rownames(heatmap_matrix),
-        type = "heatmap",
-        colorscale = "Blues",
-        hovertemplate = "Gene Pair: %{y}<br>Metric: %{x}<br>Value: %{z}<extra></extra>"
-      ) %>%
-      layout(
-        title = "Pan-Cluster Signature Heatmap",
-        xaxis = list(title = "Signature Metrics"),
-        yaxis = list(title = "Gene Pairs")
-      )
+      if (!is.null(all_sigs) && nrow(all_sigs) > 0) {
+        # Count signatures per cluster for each gene pair
+        cluster_counts <- all_sigs %>%
+          dplyr::filter(gene_pair %in% pan_cluster_data$gene_pair) %>%
+          dplyr::group_by(gene_pair, cluster) %>%
+          dplyr::summarise(sig_strength = mean(signature_strength, na.rm = TRUE), .groups = "drop") %>%
+          dplyr::arrange(gene_pair, cluster)
+        
+        # Create stacked bar chart
+        plot_ly(cluster_counts, 
+                x = ~gene_pair, 
+                y = ~sig_strength,
+                color = ~cluster,
+                type = 'bar',
+                text = ~paste("Cluster:", cluster, "<br>Avg Strength:", round(sig_strength, 2)),
+                hovertemplate = "%{text}<extra></extra>") %>%
+          layout(
+            title = "Signature Strength Distribution Across Clusters",
+            xaxis = list(title = "Gene Pair (MAST vs CRISPRi)", tickangle = -45),
+            yaxis = list(title = "Average Signature Strength"),
+            barmode = 'stack',
+            height = 500,
+            margin = list(b = 100)
+          )
+      } else {
+        # Fallback: Simple bar chart of average strengths
+        pan_cluster_data <- pan_cluster_data[order(pan_cluster_data$mean_signature_strength, decreasing = TRUE), ]
+        
+        plot_ly(pan_cluster_data,
+                x = ~gene_pair,
+                y = ~mean_signature_strength,
+                type = 'bar',
+                marker = list(color = ~cluster_count, 
+                            colorscale = 'Blues',
+                            showscale = TRUE,
+                            colorbar = list(title = "Shared<br>Clusters")),
+                text = ~paste("Shared Clusters:", cluster_count,
+                            "<br>Avg Strength:", round(mean_signature_strength, 2),
+                            "<br>DE Genes:", total_gene_overlaps),
+                hovertemplate = "%{text}<extra></extra>") %>%
+          layout(
+            title = "Pan-Cluster Signatures Ranked by Average Strength",
+            xaxis = list(title = "Gene Pair (MAST vs CRISPRi)", tickangle = -45),
+            yaxis = list(title = "Average Signature Strength"),
+            height = 500,
+            margin = list(b = 100)
+          )
+      }
     })
     
     # Download handlers for PD analysis

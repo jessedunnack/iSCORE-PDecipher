@@ -1196,7 +1196,7 @@ server <- function(input, output, session) {
   # Signature Trends Analysis module
   signature_trends_results <- mod_signature_trends_server(
     "signature_trends_module",
-    analysis_results = reactive({ signature_results() }),
+    analysis_results = reactive({ signature_results }),
     enrichment_data = reactive({ app_data$consolidated_data })
   )
   

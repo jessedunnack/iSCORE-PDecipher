@@ -79,6 +79,22 @@ analyze_signature_trends <- function(signature_results, enrichment_data,
   })
 }
 
+#' Helper function to get signature strength from various column names
+#'
+#' @param df Data frame with signature data
+#' @return Vector of signature strength values
+get_signature_strength <- function(df) {
+  if ("signature_strength" %in% colnames(df)) {
+    return(df$signature_strength)
+  } else if ("mean_signature_strength" %in% colnames(df)) {
+    return(df$mean_signature_strength)
+  } else if ("max_signature_strength" %in% colnames(df)) {
+    return(df$max_signature_strength)
+  } else {
+    return(rep(NA, nrow(df)))
+  }
+}
+
 #' Validate inputs for trends analysis with comprehensive checking
 #'
 #' @param signature_results Signature discovery results
@@ -108,12 +124,18 @@ validate_trends_inputs <- function(signature_results, enrichment_data) {
     return(list(valid = FALSE, message = "No enrichment data available"))
   }
   
-  # Check required columns in signatures
-  required_sig_cols <- c("gene_pair", "signature_strength")
-  missing_sig_cols <- setdiff(required_sig_cols, colnames(signature_results$all_signatures))
-  if (length(missing_sig_cols) > 0) {
+  # Check required columns in signatures - accept either signature_strength or mean_signature_strength
+  has_gene_pair <- "gene_pair" %in% colnames(signature_results$all_signatures)
+  has_strength <- any(c("signature_strength", "mean_signature_strength", "max_signature_strength") %in% 
+                     colnames(signature_results$all_signatures))
+  
+  if (!has_gene_pair) {
+    return(list(valid = FALSE, message = "Missing required column: gene_pair"))
+  }
+  
+  if (!has_strength) {
     return(list(valid = FALSE, 
-               message = paste("Missing signature columns:", paste(missing_sig_cols, collapse = ", "))))
+               message = "Missing signature strength column (signature_strength, mean_signature_strength, or max_signature_strength)"))
   }
   
   return(list(valid = TRUE, message = "Validation passed"))
@@ -145,12 +167,14 @@ compute_signature_frequency_analysis <- function(all_signatures, pan_cluster_sig
     # Add signature strength statistics for frequent pairs
     frequency_summary$mean_signature_strength <- sapply(frequency_summary$gene_pair, function(pair) {
       pair_sigs <- all_signatures[all_signatures$gene_pair == pair, ]
-      mean(pair_sigs$signature_strength, na.rm = TRUE)
+      strength_values <- get_signature_strength(pair_sigs)
+      mean(strength_values, na.rm = TRUE)
     })
     
     frequency_summary$max_signature_strength <- sapply(frequency_summary$gene_pair, function(pair) {
       pair_sigs <- all_signatures[all_signatures$gene_pair == pair, ]
-      max(pair_sigs$signature_strength, na.rm = TRUE)
+      strength_values <- get_signature_strength(pair_sigs)
+      max(strength_values, na.rm = TRUE)
     })
     
     # Calculate frequency score (normalized)
@@ -203,14 +227,22 @@ compute_signature_frequency_analysis <- function(all_signatures, pan_cluster_sig
 compute_signature_impact_analysis <- function(all_signatures, pan_cluster_signatures, top_n) {
   
   tryCatch({
+    # Get signature strength values
+    strength_values <- get_signature_strength(all_signatures)
+    
+    # Add strength column if it doesn't exist
+    if (!"signature_strength" %in% colnames(all_signatures)) {
+      all_signatures$signature_strength <- strength_values
+    }
+    
     # Rank individual signatures by strength
-    individual_ranked <- all_signatures[order(all_signatures$signature_strength, decreasing = TRUE), ]
+    individual_ranked <- all_signatures[order(strength_values, decreasing = TRUE), ]
     top_individual <- head(individual_ranked, top_n)
     
     # Add impact score (normalized signature strength)
     if (nrow(individual_ranked) > 0) {
-      max_strength <- max(individual_ranked$signature_strength, na.rm = TRUE)
-      top_individual$impact_score <- top_individual$signature_strength / max_strength
+      max_strength <- max(strength_values, na.rm = TRUE)
+      top_individual$impact_score <- get_signature_strength(top_individual) / max_strength
     } else {
       top_individual$impact_score <- numeric(0)
     }
@@ -230,19 +262,27 @@ compute_signature_impact_analysis <- function(all_signatures, pan_cluster_signat
     }
     
     # Calculate impact distribution
-    strength_breaks <- seq(0, max(all_signatures$signature_strength, na.rm = TRUE), length.out = 10)
-    impact_distribution <- data.frame(
-      strength_bin = head(strength_breaks, -1),
-      signature_count = as.numeric(table(cut(all_signatures$signature_strength, breaks = strength_breaks))),
-      stringsAsFactors = FALSE
-    )
+    if (length(strength_values) > 0 && !all(is.na(strength_values))) {
+      strength_breaks <- seq(0, max(strength_values, na.rm = TRUE), length.out = 10)
+      impact_distribution <- data.frame(
+        strength_bin = head(strength_breaks, -1),
+        signature_count = as.numeric(table(cut(strength_values, breaks = strength_breaks))),
+        stringsAsFactors = FALSE
+      )
+      max_individual_strength <- max(strength_values, na.rm = TRUE)
+      mean_individual_strength <- mean(strength_values, na.rm = TRUE)
+    } else {
+      impact_distribution <- data.frame()
+      max_individual_strength <- 0
+      mean_individual_strength <- 0
+    }
     
     return(list(
       top_impact_signatures = top_individual,
       top_pan_cluster_impact = top_pan_cluster,
       impact_distribution = impact_distribution,
-      max_individual_strength = max(all_signatures$signature_strength, na.rm = TRUE),
-      mean_individual_strength = mean(all_signatures$signature_strength, na.rm = TRUE)
+      max_individual_strength = max_individual_strength,
+      mean_individual_strength = mean_individual_strength
     ))
     
   }, error = function(e) {
