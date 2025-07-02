@@ -161,6 +161,12 @@ function manageSidebarForTab() {
     
     console.log('[SIDEBAR] Current tab:', currentTab, '| Should expand:', shouldExpand);
     
+    // Disable auto-management on Overview page to prevent conflicts with sticky note
+    if (currentTab === 'overview') {
+        console.log('[SIDEBAR] On Overview page - auto-management disabled');
+        return;  // Don't auto-manage on overview page
+    }
+    
     // Only auto-manage if user hasn't manually toggled recently
     if (!sidebarState.userManualToggle) {
         const needsChange = (shouldExpand && sidebarState.isCollapsed) || 
@@ -174,14 +180,19 @@ function manageSidebarForTab() {
 
 // Initialize sidebar toggle functionality
 $(document).ready(function() {
+    // Ensure sidebar toggle button is clickable
+    console.log('[SIDEBAR] Initializing sidebar functionality');
+    
     // Set initial collapsed state
     toggleSidebar(false, true);  // Start collapsed
     
-    // Manual toggle button click handler
+    // Manual toggle button click handler - ensure it always works
     $(document).on('click', '.sidebar-toggle', function(e) {
         e.preventDefault();
+        e.stopPropagation();  // Prevent event bubbling
         console.log('[SIDEBAR] Manual toggle clicked');
         toggleSidebar();  // Manual toggle
+        return false;  // Extra prevention of default behavior
     });
     
     // Monitor main tab changes

@@ -137,18 +137,22 @@ landingPageWithUmapUI <- function(id) {
     div(id = ns("welcome_sticky_note"), class = "welcome-sticky-note",
       h4(icon("lightbulb"), " Welcome to iSCORE-PDecipher!"),
       
-      p("This app analyzes ", strong("Parkinson's disease"), " mutations and perturbations to discover shared biological signatures."),
+      p("This app evaluates the ", strong("effects of gene mutations and perturbations"), " in Parkinson's disease by analyzing changes at both the ", 
+        span(class = "highlight", "differential gene expression (DEG)"), " level and the ", 
+        span(class = "highlight", "functional enrichment"), " level to identify convergent biological signatures across methods."),
       
       div(
         p(strong("🎯 Main Analysis Sections:")),
         tags$ul(
-          tags$li(span(class = "highlight", "DE Genes"), " - View differential expression results with UMAP and volcano plots"),
-          tags$li(span(class = "highlight", "Functional Enrichment"), " - Explore pathway enrichment with interactive visualizations")
+          tags$li(span(class = "highlight", "DE Genes"), " - Compare gene expression changes between mutations/knockdowns and controls"),
+          tags$li(span(class = "highlight", "Functional Enrichment"), " - Discover affected pathways and biological processes")
         )
       ),
       
       div(
-        p(strong("⚙️ How to Use Global Settings:")),
+        p(strong("⚙️ Global Settings Panel (Left Sidebar):")),
+        p(style = "font-size: 13px; margin-bottom: 10px;", 
+          em("The sidebar is ", span(class = "highlight", "collapsible"), " - click the hamburger menu (☰) to expand/collapse!")),
         tags$ul(
           tags$li("Select your ", span(class = "highlight", "gene/mutation"), " of interest"),
           tags$li("Choose a ", span(class = "highlight", "cluster"), " to focus on"),
