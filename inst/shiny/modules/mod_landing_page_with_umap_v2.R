@@ -152,7 +152,7 @@ landingPageWithUmapUI <- function(id) {
       div(
         p(strong("⚙️ Global Settings Panel (Left Sidebar):")),
         p(style = "font-size: 13px; margin-bottom: 10px;", 
-          em("The sidebar is ", span(class = "highlight", "collapsible"), " - click the hamburger menu (☰) to expand/collapse!")),
+          em("The sidebar is ", span(class = "highlight", "collapsible"), " - click the arrow button (◀▶) at the top-right of the sidebar to expand/collapse!")),
         tags$ul(
           tags$li("Select your ", span(class = "highlight", "gene/mutation"), " of interest"),
           tags$li("Choose a ", span(class = "highlight", "cluster"), " to focus on"),

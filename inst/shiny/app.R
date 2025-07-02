@@ -222,9 +222,14 @@ ui <- fluidPage(
       .sidebar-fixed.collapsed .collapse-icon {
         display: block;
         text-align: center;
-        margin: 10px 0;
-        font-size: 20px;
+        margin: 15px 0;
+        font-size: 18px;
         color: #337ab7;
+        padding-top: 5px;  /* Add space from top to avoid toggle button */
+      }
+      
+      .sidebar-fixed.collapsed .collapse-icon:first-of-type {
+        margin-top: 45px;  /* Extra space for first icon to clear toggle button */
       }
       
       .sidebar-fixed .collapse-icon {
@@ -234,20 +239,37 @@ ui <- fluidPage(
       /* Toggle button */
       .sidebar-toggle {
         position: absolute;
-        top: 10px;
-        right: 10px;
-        background: none;
-        border: none;
-        font-size: 20px;
+        top: 5px;
+        right: 5px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #337ab7;
+        border-radius: 4px;
+        font-size: 16px;
         color: #337ab7;
         cursor: pointer;
         z-index: 1001;
-        transition: transform 0.3s ease;
+        transition: all 0.3s ease;
+        padding: 4px 6px;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .sidebar-toggle:hover {
+        background: rgba(51, 122, 183, 0.1);
+        transform: scale(1.1);
       }
       
       .sidebar-fixed.collapsed .sidebar-toggle {
         transform: rotate(180deg);
-        right: 15px;
+        right: 11px;  /* Center within 50px collapsed width */
+        top: 5px;
+      }
+      
+      .sidebar-fixed.collapsed .sidebar-toggle:hover {
+        transform: rotate(180deg) scale(1.1);
       }
       
       /* Main content offset with transition */
