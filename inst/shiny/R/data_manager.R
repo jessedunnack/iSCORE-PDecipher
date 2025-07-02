@@ -91,10 +91,29 @@ get_available_genes <- function() {
 
 #' Get Available Clusters  
 #' @return Vector of available clusters
+#' Natural Sort Clusters
+#' @description Sort cluster names naturally so cluster_10 comes after cluster_9
+#' @param clusters Character vector of cluster names
+#' @return Naturally sorted cluster names
+natural_sort_clusters <- function(clusters) {
+  if (length(clusters) == 0) return(clusters)
+  
+  # Extract numeric parts from cluster names
+  numeric_parts <- as.numeric(gsub(".*_", "", clusters))
+  
+  # If all clusters follow the cluster_X pattern, sort by numeric value
+  if (!any(is.na(numeric_parts))) {
+    return(clusters[order(numeric_parts)])
+  }
+  
+  # Otherwise, fall back to regular sort
+  return(sort(clusters))
+}
+
 get_available_clusters <- function() {
   data <- get_enrichment_data()
   if (is.null(data)) return(character())
-  return(sort(unique(data$cluster)))
+  return(natural_sort_clusters(unique(data$cluster)))
 }
 
 #' Get Data Summary

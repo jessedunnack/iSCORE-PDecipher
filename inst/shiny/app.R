@@ -909,7 +909,7 @@ server <- function(input, output, session) {
         filtered_data <- data.frame()
       }
       
-      clusters <- sort(unique(filtered_data$cluster))
+      clusters <- natural_sort_clusters(unique(filtered_data$cluster))
       
       # Set default if available
       selected <- NULL

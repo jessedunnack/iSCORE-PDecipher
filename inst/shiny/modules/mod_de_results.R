@@ -303,9 +303,15 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       # Determine which dataset to load based on app data
       has_crispri <- any(grepl("MixScale", app_data$consolidated_data$method))
       has_mutations <- any(grepl("MAST", app_data$consolidated_data$method))
+      has_crispa <- any(grepl("CRISPRa", app_data$consolidated_data$method))
       
-      if (has_crispri && has_mutations) {
+      cat("[DE Results] MAST:", has_mutations, "CRISPRi:", has_crispri, "CRISPRa:", has_crispa, "\n")
+      
+      # Fixed logic: distinguish dataset 2 from dataset 3 using CRISPRa
+      if (has_crispri && has_mutations && has_crispa) {
         dataset_to_load <- "Full_Dataset"
+      } else if (has_crispri && has_mutations) {
+        dataset_to_load <- "iSCORE_PD_CRISPRi"
       } else if (has_crispri) {
         dataset_to_load <- "iSCORE_PD_CRISPRi"
       } else {
@@ -337,7 +343,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       if (load_umap_data(dataset_name(), input$pc_selection)) {
         # Force plot redraw by updating cluster choices
         if (!is.null(values$umap_data)) {
-          clusters <- sort(unique(values$umap_data$cluster))
+          clusters <- natural_sort_clusters(unique(values$umap_data$cluster))
           cluster_choices <- setNames(clusters, paste("Cluster", gsub("cluster_", "", clusters)))
           
           updateSelectInput(session, "cluster_selector",
@@ -487,7 +493,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     observe({
       req(values$umap_data)
       
-      clusters <- sort(unique(values$umap_data$cluster))
+      clusters <- natural_sort_clusters(unique(values$umap_data$cluster))
       cluster_choices <- setNames(clusters, paste("Cluster", gsub("cluster_", "", clusters)))
       
       updateSelectInput(session, "cluster_selector",
@@ -524,14 +530,15 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     output$umap_plot <- renderPlot({
       req(values$umap_data)
       
-      # Get cluster colors
-      clusters <- sort(unique(values$umap_data$cluster))
+      # Get cluster colors with proper ordering
+      clusters <- natural_sort_clusters(unique(values$umap_data$cluster))
       n_clusters <- length(clusters)
       ditto_colors <- get_ditto_colors(n_clusters)
       names(ditto_colors) <- clusters
       
-      # Create display data with highlighting
+      # Create display data with highlighting and proper factor ordering
       plot_data <- values$umap_data
+      plot_data$cluster <- factor(plot_data$cluster, levels = clusters)
       
       if (!is.null(input$cluster_selector) && input$cluster_selector != "") {
         # Create display categories

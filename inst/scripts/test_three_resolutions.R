@@ -74,7 +74,9 @@ check_de_clusters <- function(dataset_name) {
     # Get unique clusters from first gene
     if ("iSCORE_PD_MAST" %in% names(de_data) && length(de_data$iSCORE_PD_MAST) > 0) {
       first_gene <- names(de_data$iSCORE_PD_MAST)[1]
-      clusters <- names(de_data$iSCORE_PD_MAST[[first_gene]])
+      all_clusters <- names(de_data$iSCORE_PD_MAST[[first_gene]])
+      # EXCLUDE metadata entry from cluster count
+      clusters <- all_clusters[all_clusters != "metadata"]
       cat("Expected clusters:", length(clusters), "\n")
       cat("Clusters:", paste(clusters, collapse=", "), "\n")
       return(length(clusters))
@@ -82,7 +84,9 @@ check_de_clusters <- function(dataset_name) {
     
     if ("CRISPRi_Mixscale" %in% names(de_data) && length(de_data$CRISPRi_Mixscale) > 0) {
       first_gene <- names(de_data$CRISPRi_Mixscale)[1]
-      clusters <- names(de_data$CRISPRi_Mixscale[[first_gene]])
+      all_clusters <- names(de_data$CRISPRi_Mixscale[[first_gene]])
+      # EXCLUDE metadata entry from cluster count
+      clusters <- all_clusters[all_clusters != "metadata"]
       cat("Expected clusters:", length(clusters), "\n")
       cat("Clusters:", paste(clusters, collapse=", "), "\n")
       return(length(clusters))

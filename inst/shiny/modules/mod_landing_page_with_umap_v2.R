@@ -260,14 +260,23 @@ landingPageWithUmapServer <- function(id, data) {
       # Check for specific markers in the data
       has_crispri <- any(grepl("MixScale", data$consolidated_data$method))
       has_mutations <- any(grepl("MAST", data$consolidated_data$method))
+      has_crispa <- any(grepl("CRISPRa", data$consolidated_data$method))
       
-      # Determine which dataset to load
-      if (has_crispri && has_mutations) {
+      cat("[DATASET DETECTION] MAST:", has_mutations, "CRISPRi:", has_crispri, "CRISPRa:", has_crispa, "\n")
+      
+      # Determine which dataset to load based on actual content
+      if (has_crispri && has_mutations && has_crispa) {
         dataset_to_load <- "Full_Dataset"
+        cat("[DATASET DETECTION] Loading Full_Dataset (all 3 modalities)\n")
+      } else if (has_crispri && has_mutations) {
+        dataset_to_load <- "iSCORE_PD_CRISPRi"
+        cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (MAST + CRISPRi only)\n")
       } else if (has_crispri) {
         dataset_to_load <- "iSCORE_PD_CRISPRi"
+        cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (CRISPRi only)\n")
       } else {
         dataset_to_load <- "iSCORE_PD"
+        cat("[DATASET DETECTION] Loading iSCORE_PD (MAST only)\n")
       }
       
       umap_data$dataset_name <- dataset_to_load
@@ -300,9 +309,18 @@ landingPageWithUmapServer <- function(id, data) {
       for (path in possible_paths) {
         if (file.exists(path)) {
           tryCatch({
+            cat("  [UMAP DEBUG] Attempting to load from:", path, "\n")
             umap_data$sce <- readRDS(path)
+            
+            # Debug: Check cluster count
+            if (!is.null(umap_data$sce$cluster)) {
+              n_clusters <- length(unique(umap_data$sce$cluster))
+              cat("  [UMAP DEBUG] Loaded data has", n_clusters, "clusters\n")
+              cat("  [UMAP DEBUG] Cluster names:", paste(head(sort(unique(umap_data$sce$cluster)), 10), collapse=", "), "...\n")
+            }
+            
             umap_data$loaded <- TRUE
-            message("Loaded UMAP (", pc_count, " PCs) for ", dataset_name)
+            message("Loaded UMAP (", pc_count, " PCs) for ", dataset_name, " from: ", path)
             
             # Load markers if this is the first load
             if (is.null(umap_data$markers)) {
@@ -363,8 +381,13 @@ landingPageWithUmapServer <- function(id, data) {
       
       # Create UMAP plot colored by clusters - OPTIMIZED FOR LARGER DISPLAY
       tryCatch({
+        # Fix cluster ordering: ensure numeric order instead of alphabetical
+        sce_copy <- umap_data$sce
+        cluster_levels <- natural_sort_clusters(unique(sce_copy$seurat_clusters))
+        sce_copy$seurat_clusters <- factor(sce_copy$seurat_clusters, levels = cluster_levels)
+        
         p <- dittoDimPlot(
-          umap_data$sce,
+          sce_copy,
           var = "seurat_clusters",
           reduction.use = "UMAP",
           size = 0.7,  # Increased point size for better visibility

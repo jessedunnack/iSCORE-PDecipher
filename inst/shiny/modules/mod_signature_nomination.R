@@ -374,7 +374,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       # Get available clusters from the data
       if (!is.null(app_data$consolidated_data)) {
         unique_clusters <- unique(app_data$consolidated_data$cluster)
-        unique_clusters <- sort(unique_clusters[!is.na(unique_clusters)])
+        unique_clusters <- natural_sort_clusters(unique_clusters[!is.na(unique_clusters)])
         values$available_clusters <- unique_clusters
         
         # Update cluster selection UI

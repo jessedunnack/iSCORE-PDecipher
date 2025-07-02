@@ -78,7 +78,10 @@ check_de_clusters <- function(de_file) {
   if ("iSCORE_PD_MAST" %in% names(de_results)) {
     mast_clusters <- c()
     for (gene in names(de_results$iSCORE_PD_MAST)) {
-      mast_clusters <- union(mast_clusters, names(de_results$iSCORE_PD_MAST[[gene]]))
+      all_clusters <- names(de_results$iSCORE_PD_MAST[[gene]])
+      # EXCLUDE metadata from cluster count
+      gene_clusters <- all_clusters[all_clusters != "metadata"]
+      mast_clusters <- union(mast_clusters, gene_clusters)
     }
     clusters$MAST <- sort(mast_clusters)
   }
@@ -87,7 +90,10 @@ check_de_clusters <- function(de_file) {
   if ("CRISPRi_Mixscale" %in% names(de_results)) {
     mixscale_clusters <- c()
     for (gene in names(de_results$CRISPRi_Mixscale)) {
-      mixscale_clusters <- union(mixscale_clusters, names(de_results$CRISPRi_Mixscale[[gene]]))
+      all_clusters <- names(de_results$CRISPRi_Mixscale[[gene]])
+      # EXCLUDE metadata from cluster count
+      gene_clusters <- all_clusters[all_clusters != "metadata"]
+      mixscale_clusters <- union(mixscale_clusters, gene_clusters)
     }
     clusters$MixScale_CRISPRi <- sort(mixscale_clusters)
   }
@@ -96,7 +102,10 @@ check_de_clusters <- function(de_file) {
   if ("CRISPRa_Mixscale" %in% names(de_results)) {
     crispa_clusters <- c()
     for (gene in names(de_results$CRISPRa_Mixscale)) {
-      crispa_clusters <- union(crispa_clusters, names(de_results$CRISPRa_Mixscale[[gene]]))
+      all_clusters <- names(de_results$CRISPRa_Mixscale[[gene]])
+      # EXCLUDE metadata from cluster count
+      gene_clusters <- all_clusters[all_clusters != "metadata"]
+      crispa_clusters <- union(crispa_clusters, gene_clusters)
     }
     clusters$MixScale_CRISPRa <- sort(crispa_clusters)
   }
