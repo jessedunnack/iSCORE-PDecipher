@@ -172,7 +172,7 @@ mod_de_results_ui <- function(id) {
           div(style = "margin-bottom: 15px;",
             radioButtons(ns("plot_type"),
                         "Plot Type:",
-                        choices = c("Static (Publication)" = "static",
+                        choices = c("Static" = "static",
                                   "Interactive" = "interactive"),
                         selected = "static",
                         inline = TRUE)
@@ -718,7 +718,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     })
     
     # Generate volcano plot function - BULLETPROOF: Always returns valid plotly object
-    generate_volcano_plot <- function(de_data, analysis_type, selected_cluster, color_by) {
+    generate_volcano_plot <- function(de_data, analysis_type, selected_cluster, color_by, current_gene = NULL, experiment_info = NULL) {
       # Wrap entire function in tryCatch to ensure we always return a plotly object
       tryCatch({
         
@@ -743,10 +743,35 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       # Filter by cluster if selected - CLEANED: Removed interfering cat() statements
       if (!is.null(selected_cluster) && selected_cluster != "All") {
         plot_data <- de_data[de_data$cluster == selected_cluster, ]
-        title_suffix <- paste("- Cluster", gsub("cluster_", "", selected_cluster))
+        cluster_label <- gsub("cluster_", "", selected_cluster)
       } else {
         plot_data <- de_data
-        title_suffix <- "- All Clusters"
+        cluster_label <- "All Clusters"
+      }
+      
+      # Generate descriptive title (same logic as static plots)
+      if (analysis_type == "MAST") {
+        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+          plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls (MAST) - Cluster ", cluster_label)
+        } else {
+          plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls - Cluster ", cluster_label)
+        }
+      } else if (analysis_type == "MixScale") {
+        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+          if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
+            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+          } else {
+            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+          }
+        } else {
+          if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
+            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+          } else {
+            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+          }
+        }
+      } else {
+        plot_title <- paste(analysis_type, "- Cluster", cluster_label)
       }
       
       if (nrow(plot_data) == 0) {
@@ -822,12 +847,22 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         hoverinfo = "text"
       ) %>%
         layout(
-          title = list(text = paste(analysis_type, "Volcano Plot", title_suffix), 
+          title = list(text = plot_title, 
                       font = list(size = 14)),
           xaxis = list(title = "Log2 Fold Change", zeroline = TRUE),
           yaxis = list(title = "-Log10 P-value", zeroline = FALSE),
           showlegend = TRUE,
-          legend = list(orientation = "v", x = 1.02, y = 0.5)
+          legend = list(
+            orientation = "h", 
+            x = 0.5, 
+            y = -0.15,
+            xanchor = "center",
+            bgcolor = "rgba(255, 255, 255, 0.8)",
+            bordercolor = "rgba(0, 0, 0, 0.1)",
+            borderwidth = 1,
+            font = list(size = 10)
+          ),
+          margin = list(b = 80)  # Add bottom margin for horizontal legend
         )
       
       # Add threshold lines using layout shapes instead of add_trace to avoid vector length issues
@@ -936,26 +971,30 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           }
         }
         
-        # Generate descriptive title
-        title_parts <- c()
-        
-        if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-          title_parts <- c(title_parts, current_gene)
-        }
-        
+        # Generate highly descriptive title
         if (analysis_type == "MAST") {
-          title_parts <- c(title_parts, "vs batch-specific eWT (MAST)")
-        } else if (analysis_type == "MixScale") {
-          if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
-            title_parts <- c(title_parts, paste("CRISPRi knockdown (MixScale -", experiment_info, ")"))
+          if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+            plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls (MAST) - Cluster ", cluster_label)
           } else {
-            title_parts <- c(title_parts, "CRISPRi knockdown (MixScale)")
+            plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls - Cluster ", cluster_label)
           }
+        } else if (analysis_type == "MixScale") {
+          if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+            if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
+              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+            } else {
+              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+            }
+          } else {
+            if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
+              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+            } else {
+              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+            }
+          }
+        } else {
+          plot_title <- paste(analysis_type, "- Cluster", cluster_label)
         }
-        
-        title_parts <- c(title_parts, paste("Cluster", cluster_label))
-        
-        plot_title <- paste(title_parts, collapse = " ")
         
         # Select top significant genes for labeling (up to 20)
         plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 1
@@ -999,9 +1038,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           labFace = 'bold',
           boxedLabels = TRUE,
           colAlpha = 0.7,
-          legendPosition = 'right',
-          legendLabSize = 10,
-          legendIconSize = 4.0,
+          legendPosition = 'bottom',
+          legendLabSize = 8,
+          legendIconSize = 3.0,
           drawConnectors = TRUE,
           widthConnectors = 0.3,
           colConnectors = 'black',
@@ -1046,8 +1085,8 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     # Render MAST volcano plot container - Controls plot type (static vs interactive)
     output$mast_volcano_container <- renderUI({
       if (input$plot_type == "static") {
-        # Static plot using ggplot/EnhancedVolcano
-        plotOutput(session$ns("mast_volcano_static"), height = "400px")
+        # Static plot using ggplot/EnhancedVolcano with explicit dimensions
+        plotOutput(session$ns("mast_volcano_static"), height = "400px", width = "100%")
       } else {
         # Interactive plot using plotly
         plotlyOutput(session$ns("mast_volcano_interactive"), height = "400px")
@@ -1066,7 +1105,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           h4("MixScale Results"),
           shinycssloaders::withSpinner(
             if (input$plot_type == "static") {
-              plotOutput(session$ns("mixscale_volcano_static"), height = "400px")
+              plotOutput(session$ns("mixscale_volcano_static"), height = "400px", width = "100%")
             } else {
               plotlyOutput(session$ns("mixscale_volcano_interactive"), height = "400px")
             },
@@ -1080,28 +1119,40 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     # Render MAST static volcano plot
     output$mast_volcano_static <- renderPlot({
       tryCatch({
+        cat("[STATIC PLOT] Starting MAST volcano plot generation\n")
+        
         # Load DE data on demand when volcano plot is first rendered
         load_de_data()
         
         # Check if cluster is selected
         if (is.null(values$selected_cluster) || values$selected_cluster == "") {
-          ggplot() +
-            annotate("text", x = 0, y = 0, 
-                    label = "Click on a cluster in the UMAP\nto view its differential expression results", 
-                    size = 5, color = "#3c8dbc", hjust = 0.5, vjust = 0.5) +
-            theme_void() +
-            labs(title = "MAST Volcano Plot")
+          cat("[STATIC PLOT] No cluster selected\n")
+          return(
+            ggplot() +
+              annotate("text", x = 0, y = 0, 
+                      label = "Click on a cluster in the UMAP\nto view its differential expression results", 
+                      size = 5, color = "#3c8dbc", hjust = 0.5, vjust = 0.5) +
+              theme_void() +
+              labs(title = "MAST Volcano Plot") +
+              theme(plot.background = element_rect(fill = "white", color = NA))
+          )
         } else if (is.null(values$de_data_mast)) {
-          ggplot() +
-            annotate("text", x = 0, y = 0, 
-                    label = "MAST DE results not available.\nPlease ensure full_DE_results.rds is present.", 
-                    size = 5, color = "gray50", hjust = 0.5, vjust = 0.5) +
-            theme_void() +
-            labs(title = "MAST Volcano Plot - No Data")
+          cat("[STATIC PLOT] No MAST data available\n")
+          return(
+            ggplot() +
+              annotate("text", x = 0, y = 0, 
+                      label = "MAST DE results not available.\nPlease ensure full_DE_results.rds is present.", 
+                      size = 5, color = "gray50", hjust = 0.5, vjust = 0.5) +
+              theme_void() +
+              labs(title = "MAST Volcano Plot - No Data") +
+              theme(plot.background = element_rect(fill = "white", color = NA))
+          )
         } else {
           # Filter by global gene selection
           current_gene <- global_selection()$gene
           current_experiment <- global_selection()$experiment
+          
+          cat("[STATIC PLOT] Current gene:", current_gene, "| Cluster:", values$selected_cluster, "\n")
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             filtered_data <- values$de_data_mast[values$de_data_mast$gene == current_gene, ]
@@ -1109,17 +1160,37 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             filtered_data <- values$de_data_mast
           }
           
-          generate_static_volcano_plot(filtered_data, "MAST", values$selected_cluster, current_gene, current_experiment)
+          cat("[STATIC PLOT] Filtered data rows:", nrow(filtered_data), "\n")
+          
+          # Test with simple plot first if EnhancedVolcano fails
+          if (!enhancedvolcano_available) {
+            cat("[STATIC PLOT] EnhancedVolcano not available, creating simple plot\n")
+            return(
+              ggplot() +
+                annotate("text", x = 0, y = 0, 
+                        label = "EnhancedVolcano package required for static plots\nPlease install with: BiocManager::install('EnhancedVolcano')", 
+                        size = 4, color = "red", hjust = 0.5, vjust = 0.5) +
+                theme_void() +
+                labs(title = "MAST Volcano Plot - Package Missing") +
+                theme(plot.background = element_rect(fill = "white", color = NA))
+            )
+          }
+          
+          result_plot <- generate_static_volcano_plot(filtered_data, "MAST", values$selected_cluster, current_gene, current_experiment)
+          cat("[STATIC PLOT] Generated static plot, class:", class(result_plot), "\n")
+          return(result_plot)
         }
       }, error = function(e) {
+        cat("[STATIC PLOT] Error:", e$message, "\n")
         ggplot() +
           annotate("text", x = 0, y = 0, 
                   label = paste("Error generating plot:", e$message), 
                   size = 4, color = "red", hjust = 0.5, vjust = 0.5) +
           theme_void() +
-          labs(title = "MAST Volcano Plot - Error")
+          labs(title = "MAST Volcano Plot - Error") +
+          theme(plot.background = element_rect(fill = "white", color = NA))
       })
-    })
+    }, width = 600, height = 400)
     
     # Render MixScale static volcano plot
     output$mixscale_volcano_static <- renderPlot({
@@ -1214,6 +1285,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         } else {
           # Filter by global gene selection - CLEANED: Removed cat() statements
           current_gene <- global_selection()$gene
+          current_experiment <- global_selection()$experiment
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             filtered_data <- values$de_data_mast[values$de_data_mast$gene == current_gene, ]
@@ -1221,7 +1293,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             filtered_data <- values$de_data_mast
           }
           
-          generate_volcano_plot(filtered_data, "MAST", values$selected_cluster, input$color_by)
+          generate_volcano_plot(filtered_data, "MAST", values$selected_cluster, input$color_by, current_gene, current_experiment)
         }
       }, error = function(e) {
         # BULLETPROOF: Return a simple error plot instead of plotly_empty()
@@ -1282,6 +1354,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         } else {
           # Filter by global gene selection - CLEANED: Removed cat() statements
           current_gene <- global_selection()$gene
+          current_experiment <- global_selection()$experiment
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == current_gene, ]
@@ -1289,7 +1362,16 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             filtered_data <- values$de_data_mixscale
           }
           
-          generate_volcano_plot(filtered_data, "MixScale", values$selected_cluster, input$color_by)
+          # Get experiment info for title
+          experiment_info <- if (!is.null(current_experiment) && current_experiment != "default" && current_experiment != "") {
+            current_experiment
+          } else if ("experiment" %in% colnames(filtered_data) && length(unique(filtered_data$experiment)) == 1) {
+            unique(filtered_data$experiment)[1]
+          } else {
+            NULL
+          }
+          
+          generate_volcano_plot(filtered_data, "MixScale", values$selected_cluster, input$color_by, current_gene, experiment_info)
         }
       }, error = function(e) {
         # BULLETPROOF: Return a simple error plot instead of plotly_empty()
