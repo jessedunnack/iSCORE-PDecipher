@@ -187,14 +187,6 @@ ui <- fluidPage(
       $(document).on('shiny:idle', function(event) {
         $('#loadingOverlay').removeClass('active');
       });
-      
-      // Sidebar toggle functionality
-      $(document).ready(function() {
-        $('.sidebar-toggle').click(function() {
-          $('.sidebar-fixed').toggleClass('collapsed');
-          $('.main-content').toggleClass('expanded');
-        });
-      });
     ")),
     tags$style(HTML("
       /* Sidebar styling with collapse support */
