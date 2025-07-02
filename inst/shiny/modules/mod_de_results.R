@@ -482,7 +482,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       # If MixScale data available, use standard height (350px)
       plot_height <- if (has_mixscale) "350px" else "700px"
       
-      plotlyOutput(ns("mast_volcano"), height = plot_height, width = "100%")
+      div(style = "width: 100%;",  # Consistent container styling
+        div(style = paste0("width: 100%; height: ", plot_height, ";"),  # Explicit sizing container
+          plotlyOutput(ns("mast_volcano"), height = plot_height, width = "100%")
+        )
+      )
     })
     
     # Dynamic MixScale volcano plot container - ONLY renders if data available
@@ -492,12 +496,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       
       # Only render MixScale plot if data is available
       if (has_mixscale) {
-        div(style = "width: 100%;",
+        div(style = "width: 100%; margin-top: 10px;",
           h4("MixScale Results"),
-          shinycssloaders::withSpinner(
-            plotlyOutput(ns("mixscale_volcano"), height = "350px", width = "100%"),
-            type = 6,
-            color = "#3c8dbc"
+          div(style = "width: 100%; height: 350px;",  # Explicit sizing container
+            shinycssloaders::withSpinner(
+              plotlyOutput(ns("mixscale_volcano"), height = "350px", width = "100%"),
+              type = 6,
+              color = "#3c8dbc"
+            )
           )
         )
       } else {
@@ -674,7 +680,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       p
     }, height = 600, width = 600)
     
-    # Render cluster information
+    # Render cluster information with cell type breakdown and top markers
     output$cluster_info <- renderUI({
       req(input$cluster_selector)
       req(values$umap_data)
@@ -685,36 +691,131 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       n_cells <- nrow(cluster_cells)
       pct_cells <- round(100 * n_cells / nrow(values$umap_data), 1)
       
-      # Get DE summary if available
-      de_summary <- "Calculating..."
-      if (!is.null(values$de_data_mast) || !is.null(values$de_data_mixscale)) {
-        mast_de <- if (!is.null(values$de_data_mast)) {
-          sum(values$de_data_mast$cluster == input$cluster_selector & 
-              values$de_data_mast$pvalue < 0.05)
-        } else 0
+      # Enhanced cell type breakdown
+      cell_type_info <- tagList()
+      
+      # Try to detect cell types based on metadata columns
+      if ("mutation_tidy" %in% colnames(cluster_cells)) {
+        # MAST data - mutation vs eWT
+        mut_cells <- cluster_cells %>% filter(mutation_tidy != "eWT")
+        ewt_cells <- cluster_cells %>% filter(mutation_tidy == "eWT")
         
-        mixscale_de <- if (!is.null(values$de_data_mixscale)) {
-          sum(values$de_data_mixscale$cluster == input$cluster_selector & 
-              values$de_data_mixscale$pvalue < 0.05)
-        } else 0
+        cell_type_info <- tagList(
+          tags$div(style = "margin-bottom: 8px;",
+            tags$div(style = "display: flex; justify-content: space-between;",
+              tags$div(
+                tags$strong("Mutant iSCORE-PD: "),
+                tags$span(format(nrow(mut_cells), big.mark = ","), 
+                         paste0(" (", round(100 * nrow(mut_cells) / n_cells, 1), "%)"))
+              ),
+              tags$div(
+                tags$strong("Control (eWT): "),
+                tags$span(format(nrow(ewt_cells), big.mark = ","),
+                         paste0(" (", round(100 * nrow(ewt_cells) / n_cells, 1), "%)"))
+              )
+            )
+          )
+        )
+      } else if ("scMAGeCK_gene_assignment" %in% colnames(cluster_cells)) {
+        # CRISPRi data - perturbation vs Non-Targeting
+        pert_cells <- cluster_cells %>% filter(scMAGeCK_gene_assignment != "Non-Targeting")
+        ctrl_cells <- cluster_cells %>% filter(scMAGeCK_gene_assignment == "Non-Targeting")
         
-        de_summary <- paste(mast_de + mixscale_de, "DE genes")
+        cell_type_info <- tagList(
+          tags$div(style = "margin-bottom: 8px;",
+            tags$div(style = "display: flex; justify-content: space-between;",
+              tags$div(
+                tags$strong("CRISPRi PerturbSeq: "),
+                tags$span(format(nrow(pert_cells), big.mark = ","), 
+                         paste0(" (", round(100 * nrow(pert_cells) / n_cells, 1), "%)"))
+              ),
+              tags$div(
+                tags$strong("Control (ntCTRL): "),
+                tags$span(format(nrow(ctrl_cells), big.mark = ","),
+                         paste0(" (", round(100 * nrow(ctrl_cells) / n_cells, 1), "%)"))
+              )
+            )
+          )
+        )
       }
       
       tagList(
-        tags$div(style = "display: flex; justify-content: space-between;",
-          tags$div(
-            tags$strong("Cells: "),
-            tags$span(format(n_cells, big.mark = ","), 
-                     paste0(" (", pct_cells, "%)")
-            )
+        # Total cell count
+        tags$div(style = "margin-bottom: 8px;",
+          tags$strong("Total Cells in ", input$cluster_selector, ": "),
+          tags$span(format(n_cells, big.mark = ","), 
+                   paste0(" (", pct_cells, "% of all cells)"))
+        ),
+        
+        # Cell type breakdown
+        cell_type_info,
+        
+        # Top Cluster Markers section (replicated from Overview page)
+        tags$div(style = "margin-top: 15px;",
+          tags$h5(style = "margin-bottom: 10px; color: #3c8dbc;",
+            icon("dna"), " Top Marker Genes for ", input$cluster_selector
           ),
-          tags$div(
-            tags$strong("DE genes: "),
-            tags$span(de_summary)
+          tags$div(style = "font-size: 11px; color: #666; margin-bottom: 8px;",
+            tags$strong("Method: "), "MAST test, LFC≥0.25, min.pct=0.1, padj<0.05"
+          ),
+          div(style = "height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;",
+            withSpinner(
+              DT::dataTableOutput(ns("cluster_markers_table"), height = "285px"),
+              type = 1,
+              color = "#3c8dbc",
+              size = 0.5
+            )
           )
         )
       )
+    })
+    
+    # Render cluster markers table (replicated from Overview page)
+    output$cluster_markers_table <- DT::renderDataTable({
+      req(input$cluster_selector)
+      req(values$umap_data_obj$markers)
+      
+      # Filter markers for selected cluster
+      cluster_markers <- values$umap_data_obj$markers %>%
+        filter(cluster == input$cluster_selector) %>%
+        arrange(desc(avg_log2FC)) %>%
+        head(20) %>%  # Show top 20 markers to fit in smaller space
+        select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
+        mutate(
+          avg_log2FC = round(avg_log2FC, 3),
+          p_val_adj = formatC(p_val_adj, format = "e", digits = 2),
+          pct.1 = round(pct.1, 3),
+          pct.2 = round(pct.2, 3)
+        )
+      
+      # Create DataTable with compact settings
+      DT::datatable(
+        cluster_markers,
+        options = list(
+          pageLength = 10,  # Show fewer rows for compact space
+          scrollY = "260px",
+          scrollCollapse = TRUE,
+          dom = 't',  # Only show table (no search/pagination)
+          autoWidth = FALSE,
+          columnDefs = list(
+            list(width = '80px', targets = 0),  # Gene column
+            list(width = '60px', targets = 1),  # Log2FC
+            list(width = '70px', targets = 2),  # P-val
+            list(width = '50px', targets = 3),  # % in cluster
+            list(width = '50px', targets = 4),  # % in other
+            list(className = 'dt-center', targets = 1:4)
+          )
+        ),
+        rownames = FALSE,
+        colnames = c('Gene', 'Log2FC', 'P-adj', '% this', '% other')
+      ) %>%
+        DT::formatStyle(
+          'avg_log2FC',
+          background = DT::styleColorBar(cluster_markers$avg_log2FC, 'lightblue'),
+          backgroundSize = '100% 90%',
+          backgroundRepeat = 'no-repeat',
+          backgroundPosition = 'center'
+        )
     })
     
     # Generate volcano plot function - BULLETPROOF: Always returns valid plotly object
