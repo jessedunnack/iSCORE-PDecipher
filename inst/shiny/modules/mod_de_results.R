@@ -482,7 +482,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       # If MixScale data available, use standard height (350px)
       plot_height <- if (has_mixscale) "350px" else "700px"
       
-      plotlyOutput(ns("mast_volcano"), height = plot_height)
+      plotlyOutput(ns("mast_volcano"), height = plot_height, width = "100%")
     })
     
     # Dynamic MixScale volcano plot container - ONLY renders if data available
@@ -492,10 +492,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       
       # Only render MixScale plot if data is available
       if (has_mixscale) {
-        div(
+        div(style = "width: 100%;",
           h4("MixScale Results"),
           shinycssloaders::withSpinner(
-            plotlyOutput(ns("mixscale_volcano"), height = "350px"),
+            plotlyOutput(ns("mixscale_volcano"), height = "350px", width = "100%"),
             type = 6,
             color = "#3c8dbc"
           )
