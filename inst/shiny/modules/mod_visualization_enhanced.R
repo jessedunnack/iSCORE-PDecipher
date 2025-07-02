@@ -293,6 +293,72 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     })
     
+    # Helper function to generate descriptive plot titles
+    generate_descriptive_title <- function() {
+      selection <- global_selection()
+      
+      # Base components
+      gene_part <- if (!is.null(selection$gene) && selection$gene != "" && selection$gene != "All") {
+        selection$gene
+      } else {
+        NULL
+      }
+      
+      # Analysis type and comparison
+      if (!is.null(selection$analysis_type) && selection$analysis_type == "MAST") {
+        if (!is.null(gene_part)) {
+          comparison_part <- paste0(gene_part, " mutation vs isogenic eWT controls (MAST)")
+        } else {
+          comparison_part <- "MAST mutation analysis vs isogenic eWT controls"
+        }
+      } else if (!is.null(selection$analysis_type) && grepl("MixScale", selection$analysis_type)) {
+        experiment_info <- if (!is.null(selection$experiment) && selection$experiment != "default" && selection$experiment != "") {
+          paste0(" (", selection$experiment, ")")
+        } else {
+          ""
+        }
+        
+        if (!is.null(gene_part)) {
+          comparison_part <- paste0(gene_part, " CRISPRi knockdown vs Non-Targeting", experiment_info)
+        } else {
+          comparison_part <- paste0("CRISPRi knockdown vs Non-Targeting", experiment_info)
+        }
+      } else {
+        # Generic fallback
+        if (!is.null(gene_part)) {
+          comparison_part <- paste0(gene_part, " analysis")
+        } else {
+          comparison_part <- "Enrichment analysis"
+        }
+      }
+      
+      # Enrichment database
+      enrichment_part <- if (!is.null(selection$enrichment_type) && selection$enrichment_type != "") {
+        selection$enrichment_type
+      } else {
+        "Enrichment"
+      }
+      
+      # Direction 
+      direction_part <- if (!is.null(selection$direction) && selection$direction != "ALL") {
+        paste0(selection$direction, "-regulated genes")
+      } else {
+        "All genes"
+      }
+      
+      # Cluster
+      cluster_part <- if (!is.null(selection$cluster) && selection$cluster != "" && selection$cluster != "All") {
+        paste0("Cluster ", gsub("cluster_", "", selection$cluster))
+      } else {
+        "All clusters"
+      }
+      
+      # Combine all parts
+      title <- paste0(comparison_part, " - ", enrichment_part, " (", direction_part, ") - ", cluster_part)
+      
+      return(title)
+    }
+    
     # Create standard enrichment plots
     create_standard_plot <- function(data, plot_type) {
       # Select top terms
@@ -306,6 +372,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
                annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 5) +
                theme_void())
       }
+      
+      # Generate descriptive title
+      plot_title <- generate_descriptive_title()
       
       # Create appropriate plot based on type
       if (plot_type == "dotplot") {
@@ -379,7 +448,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
             legend.title = element_text(size = 10),
             panel.grid.minor = element_blank()
           ) +
-          labs(x = gsub("_", " ", tools::toTitleCase(gsub("_", " ", x_var))), y = "")
+          labs(x = gsub("_", " ", tools::toTitleCase(gsub("_", " ", x_var))), y = "", title = plot_title)
         
         return(p)
         
@@ -396,7 +465,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         p <- ggplot(plot_df, aes(x = neg_log10_pval, y = reorder(Description, neg_log10_pval))) +
           geom_bar(stat = "identity", fill = "steelblue") +
           theme_bw() +
-          labs(x = "-log10(adjusted p-value)", y = "")
+          labs(x = "-log10(adjusted p-value)", y = "", title = plot_title)
         
         return(p)
         
@@ -416,7 +485,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
                       color = "grey50") +
           geom_point(size = 4, color = "steelblue") +
           theme_bw() +
-          labs(x = "-log10(adjusted p-value)", y = "")
+          labs(x = "-log10(adjusted p-value)", y = "", title = plot_title)
         
         return(p)
       }
@@ -433,6 +502,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       library(enrichplot)
       
+      # Generate descriptive title
+      plot_title <- generate_descriptive_title()
+      
       if (plot_type == "gseaplot" && !is.null(input$gsea_term_select)) {
         # For gseaplot2, we need the original GSEA result object
         # Since we only have the data frame, we'll create a basic enrichment plot
@@ -448,7 +520,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         # Note: This is a simplified version since we don't have the full GSEA object
         p <- ggplot() +
           theme_bw() +
-          labs(title = paste0("GSEA Enrichment Plot\n", input$gsea_term_select),
+          labs(title = paste0(plot_title, "\nGSEA: ", input$gsea_term_select),
                subtitle = paste0("NES = ", round(term_data$NES, 3), 
                                ", p.adjust = ", format(term_data$p.adjust, scientific = TRUE, digits = 3))) +
           theme(plot.title = element_text(size = 14, face = "bold"),
@@ -473,7 +545,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           scale_color_gradient(low = "red", high = "blue") +
           scale_size_continuous(range = c(3, 10)) +
           theme_bw() +
-          labs(x = "Normalized Enrichment Score", y = "",
+          labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
                size = "Set Size", color = "Adjusted\np-value") +
           geom_vline(xintercept = 0, linetype = "dashed", color = "gray50")
         
@@ -498,7 +570,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           geom_density_ridges(aes(fill = p.adjust), alpha = 0.7) +
           scale_fill_gradient(low = "red", high = "blue") +
           theme_bw() +
-          labs(x = "Normalized Enrichment Score", y = "",
+          labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
                fill = "Adjusted\np-value")
         
         return(p)

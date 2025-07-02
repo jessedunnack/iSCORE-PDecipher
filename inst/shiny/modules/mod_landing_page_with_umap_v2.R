@@ -12,7 +12,7 @@ landingPageWithUmapUI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    # Add compact styling for the markers section
+    # Add styling for markers section and welcome sticky note
     tags$style(HTML(paste0("
       #", ns(""), " .form-group {
         margin-bottom: 8px !important;
@@ -27,9 +27,147 @@ landingPageWithUmapUI <- function(id) {
       #", ns("markers_table"), " table {
         font-size: 11px !important;
       }
+      
+      /* Welcome Sticky Note Styling */
+      .welcome-sticky-note {
+        position: fixed;
+        left: 20px;
+        top: 80px;
+        width: 280px;
+        background: linear-gradient(135deg, #fff9c4 0%, #fff3a0 100%);
+        border: 1px solid #e6d73a;
+        border-radius: 0 15px 15px 0;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 6px 20px rgba(0,0,0,0.1);
+        padding: 20px;
+        font-family: 'Kalam', 'Comic Sans MS', cursive;
+        transform: rotate(-1deg);
+        z-index: 1050;
+        transition: all 0.5s ease-in-out;
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+      
+      .welcome-sticky-note::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: 40px;
+        width: 30px;
+        height: 30px;
+        background: radial-gradient(circle, #ff6b6b 30%, transparent 31%);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      
+      .welcome-sticky-note h4 {
+        color: #d63031;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      }
+      
+      .welcome-sticky-note p {
+        color: #2d3436;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      
+      .welcome-sticky-note ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      
+      .welcome-sticky-note li {
+        color: #2d3436;
+        font-size: 13px;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+      
+      .welcome-sticky-note .btn-got-it {
+        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: block;
+        margin: 15px auto 0;
+        transition: transform 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      
+      .welcome-sticky-note .btn-got-it:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+      
+      .welcome-sticky-note .highlight {
+        background: rgba(255, 235, 59, 0.6);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      
+      /* Main content adjustment when sticky note is visible */
+      .main-content-with-note {
+        margin-left: 320px;
+        transition: margin-left 0.5s ease-in-out;
+      }
+      
+      .main-content-full {
+        margin-left: 0;
+        transition: margin-left 0.5s ease-in-out;
+      }
+      
+      /* Hide sticky note when dismissed */
+      .welcome-sticky-note.hidden {
+        transform: translateX(-100%) rotate(-1deg);
+        opacity: 0;
+      }
     "))),
-    # Main content area with two columns - OPTIMIZED LAYOUT
-    fluidRow(style = "min-height: 700px;", # Use explicit minimum height
+    
+    # Welcome Sticky Note
+    div(id = ns("welcome_sticky_note"), class = "welcome-sticky-note",
+      h4(icon("lightbulb"), " Welcome to iSCORE-PDecipher!"),
+      
+      p("This app analyzes ", strong("Parkinson's disease"), " mutations and perturbations to discover shared biological signatures."),
+      
+      div(
+        p(strong("🎯 Main Analysis Sections:")),
+        tags$ul(
+          tags$li(span(class = "highlight", "DE Genes"), " - View differential expression results with UMAP and volcano plots"),
+          tags$li(span(class = "highlight", "Functional Enrichment"), " - Explore pathway enrichment with interactive visualizations")
+        )
+      ),
+      
+      div(
+        p(strong("⚙️ How to Use Global Settings:")),
+        tags$ul(
+          tags$li("Select your ", span(class = "highlight", "gene/mutation"), " of interest"),
+          tags$li("Choose a ", span(class = "highlight", "cluster"), " to focus on"),
+          tags$li("Pick ", span(class = "highlight", "enrichment database"), " (GO, KEGG, etc.)"),
+          tags$li("Filter by ", span(class = "highlight", "direction"), " (UP/DOWN regulated genes)")
+        )
+      ),
+      
+      p(style = "font-size: 12px; font-style: italic; margin-top: 15px;", 
+        "💡 These settings affect ALL analysis tabs and update plots in real-time!"),
+      
+      actionButton(ns("dismiss_welcome"), "Got it! Take me to the app", 
+                  class = "btn-got-it")
+    ),
+    
+    # Main content area with dynamic margin adjustment
+    div(id = ns("main_content"), class = "main-content-with-note",
+      # Main content area with two columns - OPTIMIZED LAYOUT
+      fluidRow(style = "min-height: 700px;", # Use explicit minimum height
       # Left column - UMAP visualization (expanded width)
       column(8,  # Increased from 7 to 8 for more width
         div(class = "box box-primary", style = "margin-top: 0;",
@@ -234,6 +372,7 @@ landingPageWithUmapUI <- function(id) {
         )
       )
     )
+    ) # Close main content div
   )
 }
 
@@ -251,6 +390,21 @@ landingPageWithUmapServer <- function(id, data) {
       loaded = FALSE,
       markers = NULL
     )
+    
+    # Welcome sticky note dismissal
+    observeEvent(input$dismiss_welcome, {
+      # Hide the sticky note with animation
+      shinyjs::addClass(id = "welcome_sticky_note", class = "hidden")
+      
+      # After animation completes, adjust main content margins
+      shinyjs::delay(500, {
+        shinyjs::removeClass(id = "main_content", class = "main-content-with-note")
+        shinyjs::addClass(id = "main_content", class = "main-content-full")
+      })
+      
+      # Optional: Store dismissal state to prevent reappearing
+      session$userData$welcome_dismissed <- TRUE
+    })
     
     # Determine which UMAP dataset to load based on app data
     observe({
