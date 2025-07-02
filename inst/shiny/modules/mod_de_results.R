@@ -797,6 +797,24 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       # Calculate -log10 p-value
       plot_data$negLog10p <- -log10(plot_data$pvalue + 1e-300)  # Add small value to avoid log(0)
       
+      # CRITICAL FIX: Ensure gene_name contains actual gene names, not row numbers
+      if ("gene_name" %in% names(plot_data)) {
+        # Check if gene_name column contains actual names or just numbers
+        if (all(grepl("^[0-9]+$", plot_data$gene_name[1:min(10, nrow(plot_data))]))) {
+          # If gene_name contains only numbers, try to use rownames of original data
+          cat("[VOLCANO DEBUG] gene_name appears to be row numbers, attempting to fix\n")
+          # If we have proper rownames, use them; otherwise create meaningful names
+          if (!is.null(rownames(plot_data)) && !all(rownames(plot_data) == seq_len(nrow(plot_data)))) {
+            plot_data$gene_name <- rownames(plot_data)
+          } else {
+            # Create gene names from available information
+            plot_data$gene_name <- paste0("Gene_", seq_len(nrow(plot_data)))
+          }
+        }
+      } else {
+        plot_data$gene_name <- paste0("Gene_", seq_len(nrow(plot_data)))
+      }
+      
       # Determine significance
       plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 1
       
@@ -855,14 +873,17 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           legend = list(
             orientation = "h", 
             x = 0.5, 
-            y = -0.15,
+            y = -0.2,  # Moved slightly lower to ensure consistent spacing
             xanchor = "center",
-            bgcolor = "rgba(255, 255, 255, 0.8)",
+            bgcolor = "rgba(255, 255, 255, 0.9)",
             bordercolor = "rgba(0, 0, 0, 0.1)",
             borderwidth = 1,
-            font = list(size = 10)
+            font = list(size = 9),  # Slightly smaller font for compactness
+            itemsizing = "constant"  # Consistent legend item sizes
           ),
-          margin = list(b = 80)  # Add bottom margin for horizontal legend
+          margin = list(b = 100, l = 50, r = 50, t = 60),  # Consistent margins for all plots
+          autosize = TRUE,  # Enable responsive sizing
+          height = 350  # Fixed height to match container
         )
       
       # Add threshold lines using layout shapes instead of add_trace to avoid vector length issues
@@ -962,13 +983,18 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
         
         # Prepare data for EnhancedVolcano
-        # Ensure we have gene names as rownames or create them
-        if (is.null(rownames(plot_data)) || all(rownames(plot_data) == seq_len(nrow(plot_data)))) {
-          if ("gene_name" %in% colnames(plot_data)) {
-            rownames(plot_data) <- plot_data$gene_name
-          } else {
-            rownames(plot_data) <- paste0("Gene_", seq_len(nrow(plot_data)))
+        # CRITICAL FIX: Ensure gene names are proper, not row numbers
+        if ("gene_name" %in% colnames(plot_data)) {
+          # Check if gene_name contains actual names or just numbers
+          if (all(grepl("^[0-9]+$", plot_data$gene_name[1:min(10, nrow(plot_data))]))) {
+            cat("[STATIC VOLCANO DEBUG] gene_name appears to be row numbers, attempting to fix\n")
+            # If gene_name contains only numbers, create meaningful names
+            plot_data$gene_name <- paste0("Gene_", seq_len(nrow(plot_data)))
           }
+          rownames(plot_data) <- make.unique(plot_data$gene_name)  # Ensure unique rownames
+        } else {
+          plot_data$gene_name <- paste0("Gene_", seq_len(nrow(plot_data)))
+          rownames(plot_data) <- plot_data$gene_name
         }
         
         # Generate highly descriptive title
