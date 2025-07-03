@@ -448,7 +448,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
             axis.text.y = element_text(size = 10),
             axis.title = element_text(size = 12),
             legend.title = element_text(size = 10),
-            panel.grid.minor = element_blank()
+            panel.grid.minor = element_blank(),
+            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
           ) +
           labs(x = gsub("_", " ", tools::toTitleCase(gsub("_", " ", x_var))), y = "", title = plot_title)
         
@@ -467,6 +468,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         p <- ggplot(plot_df, aes(x = neg_log10_pval, y = reorder(Description, neg_log10_pval))) +
           geom_bar(stat = "identity", fill = "steelblue") +
           theme_bw() +
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
+          ) +
           labs(x = "-log10(adjusted p-value)", y = "", title = plot_title)
         
         return(p)
@@ -487,6 +491,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
                       color = "grey50") +
           geom_point(size = 4, color = "steelblue") +
           theme_bw() +
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
+          ) +
           labs(x = "-log10(adjusted p-value)", y = "", title = plot_title)
         
         return(p)
@@ -525,8 +532,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           labs(title = paste0(plot_title, "\nGSEA: ", input$gsea_term_select),
                subtitle = paste0("NES = ", round(term_data$NES, 3), 
                                ", p.adjust = ", format(term_data$p.adjust, scientific = TRUE, digits = 3))) +
-          theme(plot.title = element_text(size = 14, face = "bold"),
-                plot.subtitle = element_text(size = 12))
+          theme(plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20)),
+                plot.subtitle = element_text(hjust = 0.5, size = 10))
         
         # Add a note that full gseaplot2 requires original GSEA object
         p <- p + 
@@ -547,6 +554,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           scale_color_gradient(low = "red", high = "blue") +
           scale_size_continuous(range = c(3, 10)) +
           theme_bw() +
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
+          ) +
           labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
                size = "Set Size", color = "Adjusted\np-value") +
           geom_vline(xintercept = 0, linetype = "dashed", color = "gray50")
@@ -572,6 +582,9 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           geom_density_ridges(aes(fill = p.adjust), alpha = 0.7) +
           scale_fill_gradient(low = "red", high = "blue") +
           theme_bw() +
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
+          ) +
           labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
                fill = "Adjusted\np-value")
         
