@@ -473,7 +473,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     })
     outputOptions(output, "has_mixscale_data", suspendWhenHidden = FALSE)
     
-    # Dynamic MAST volcano plot container with adaptive height
+    # Dynamic MAST volcano plot container with adaptive height and plot type support
     output$mast_volcano_container <- renderUI({
       ns <- session$ns
       has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
@@ -484,12 +484,16 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       
       div(style = "width: 100%;",  # Consistent container styling
         div(style = paste0("width: 100%; height: ", plot_height, ";"),  # Explicit sizing container
-          plotlyOutput(ns("mast_volcano"), height = plot_height, width = "100%")
+          if (input$plot_type == "static") {
+            plotOutput(ns("mast_volcano_static"), height = plot_height, width = "100%")
+          } else {
+            plotlyOutput(ns("mast_volcano_interactive"), height = plot_height, width = "100%")
+          }
         )
       )
     })
     
-    # Dynamic MixScale volcano plot container - ONLY renders if data available
+    # Dynamic MixScale volcano plot container with plot type support - ONLY renders if data available
     output$mixscale_volcano_container <- renderUI({
       ns <- session$ns
       has_mixscale <- !is.null(values$de_data_mixscale) && nrow(values$de_data_mixscale) > 0
@@ -500,7 +504,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           h4("MixScale Results"),
           div(style = "width: 100%; height: 350px;",  # Explicit sizing container
             shinycssloaders::withSpinner(
-              plotlyOutput(ns("mixscale_volcano"), height = "350px", width = "100%"),
+              if (input$plot_type == "static") {
+                plotOutput(ns("mixscale_volcano_static"), height = "350px", width = "100%")
+              } else {
+                plotlyOutput(ns("mixscale_volcano_interactive"), height = "350px", width = "100%")
+              },
               type = 6,
               color = "#3c8dbc"
             )
@@ -1209,39 +1217,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       })
     }
     
-    # Render MAST volcano plot container - Controls plot type (static vs interactive)
-    output$mast_volcano_container <- renderUI({
-      if (input$plot_type == "static") {
-        # Static plot using ggplot/EnhancedVolcano with explicit dimensions
-        plotOutput(session$ns("mast_volcano_static"), height = "400px", width = "100%")
-      } else {
-        # Interactive plot using plotly
-        plotlyOutput(session$ns("mast_volcano_interactive"), height = "400px")
-      }
-    })
-    
-    # Render MixScale volcano plot container - Controls plot type (static vs interactive)
-    output$mixscale_volcano_container <- renderUI({
-      # Check if MixScale data is available first
-      if (is.null(values$de_data_mixscale)) {
-        return(NULL)  # Hide completely if no MixScale data
-      }
-      
-      tagList(
-        div(style = "margin-bottom: 20px;",
-          h4("MixScale Results"),
-          shinycssloaders::withSpinner(
-            if (input$plot_type == "static") {
-              plotOutput(session$ns("mixscale_volcano_static"), height = "400px", width = "100%")
-            } else {
-              plotlyOutput(session$ns("mixscale_volcano_interactive"), height = "400px")
-            },
-            type = 6,
-            color = "#3c8dbc"
-          )
-        )
-      )
-    })
+    # REMOVED DUPLICATE CONTAINER DEFINITIONS - Using the first implementations with proper width fixes
     
     # Render MAST static volcano plot
     output$mast_volcano_static <- renderPlot({
