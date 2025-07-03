@@ -6,34 +6,35 @@
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
-iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, primarily focusing on genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). It provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and professional interactive visualizations.
+iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). The package provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and interactive visualizations.
 
-## 🖥️ **Cross-Platform Compatible**
-✅ **Windows** | ✅ **Mac** | ✅ **Linux** - Full compatibility with automatic setup and data transfer tools
+## Cross-Platform Compatibility
 
-## 🧬 Primary Dataset Collections
+The package supports Windows, Mac, and Linux systems with automatic setup and data transfer utilities for seamless cross-platform deployment.
 
-### 1. **iSCORE-PD Genetic Mutations** (Primary Focus)
-- **13 PD-associated mutations** across 14 cell clusters
-- **Genes**: ATP13A2, DNAJC6, FBXO7, GBA, LRRK2, PARK7, PINK1, PRKN, SNCA variants, SYNJ1, VPS13C variants
-- **Analysis**: Mutant vs. isogenic wild-type comparisons using MAST
-- **Results**: ~211,470 enrichment terms
+## Primary Dataset Collections
 
-### 2. **CRISPRi Gene Knockdowns** (Secondary Focus)
-- **10 PD genes** across 10 cell clusters, 3 experiments
-- **Target genes**: ATP13A2, DNAJC6, FBXO7, LRRK2, PARK2, PARK7, PINK1, SNCA, SYNJ1, VPS13C
-- **Analysis**: Perturbed vs. non-targeting controls using MixScale
-- **Results**: ~450,000 enrichment terms
+### 1. iSCORE-PD Genetic Mutations
+- 13 PD-associated mutations across 14 cell clusters
+- Target genes: ATP13A2, DNAJC6, FBXO7, GBA, LRRK2, PARK7, PINK1, PRKN, SNCA variants, SYNJ1, VPS13C variants
+- Analysis methodology: Mutant vs. isogenic wild-type comparisons using MAST
+- Results: ~211,470 enrichment terms
 
-### 3. **Cross-Method Signature Analysis** ⭐ NEW v0.2.0
-- **Signature discovery** between MAST mutations and CRISPRi knockdowns
-- **PD-focused biological interpretation** with pathway categorization
-- **Pan-cluster and cluster-specific signatures** for manuscript prioritization
-- **Interactive signature nomination** interface for rapid analysis
+### 2. CRISPRi Gene Knockdowns
+- 10 PD genes across 10 cell clusters, 3 experiments
+- Target genes: ATP13A2, DNAJC6, FBXO7, LRRK2, PARK2, PARK7, PINK1, SNCA, SYNJ1, VPS13C
+- Analysis methodology: Perturbed vs. non-targeting controls using MixScale
+- Results: ~450,000 enrichment terms
 
-**Total Primary Dataset**: ~663,000+ significant enrichment terms (p.adjust < 0.05)
+### 3. Cross-Method Signature Analysis (v0.2.0)
+- Signature discovery between MAST mutations and CRISPRi knockdowns
+- PD-focused biological interpretation with pathway categorization
+- Pan-cluster and cluster-specific signatures for manuscript prioritization
+- Interactive signature nomination interface for rapid analysis
 
-*Note: CRISPRa activation data included in some analyses but de-prioritized for primary workflows*
+**Total Dataset**: ~663,000+ significant enrichment terms (p.adjust < 0.05)
+
+Note: CRISPRa activation data included in some analyses but de-prioritized for primary workflows.
 
 ## Installation
 
@@ -48,11 +49,11 @@ if (!require("remotes", quietly = TRUE))
 remotes::install_github("jessedunnack/iSCORE-PDecipher")
 ```
 
-**Cross-Platform Notes:**
-- ✅ **Windows**: Works with R 4.0+ and RTools
-- ✅ **Mac**: Works with R 4.0+ and Xcode command line tools  
-- ✅ **Linux**: Works with R 4.0+ and build-essential
-- 🔧 **First Launch**: App will prompt for data directory location and save configuration
+**Platform Requirements:**
+- Windows: R 4.0+ and RTools
+- Mac: R 4.0+ and Xcode command line tools  
+- Linux: R 4.0+ and build-essential
+- First Launch: App will prompt for data directory location and save configuration
 
 ### Prerequisites
 
@@ -111,38 +112,38 @@ source("inst/scripts/extract_umap_data.R")
 main()  # Creates interactive UMAP visualizations
 ```
 
-## 🖥️ Shiny App Features
+## Shiny App Features
 
-### **Collapsible Global Settings** ⭐ NEW
+### Collapsible Global Settings (NEW)
 - Streamlined leftward-collapsing sidebar for all settings
 - Clean interface with icon representations when collapsed
 - Synchronizes with all visualization modules
 
-### **Signature Nomination Module** ⭐ NEW v0.2.0
-- **Cross-method signature discovery** between MAST mutations and CRISPRi knockdowns
-- **PD Biology Focus tab** with biological interpretation and pathway categorization
-- **Pan-cluster signatures** showing effects across multiple cell types
-- **Cluster-specific signatures** for cell type-specific analysis
-- **Interactive heatmaps** for signature visualization and comparison
-- **Signature Trends Analysis** ⭐ NEW - Data-driven discovery of most frequent and impactful signatures without manual curation
+### Signature Nomination Module (v0.2.0)
+- Cross-method signature discovery between MAST mutations and CRISPRi knockdowns
+- PD Biology Focus tab with biological interpretation and pathway categorization
+- Pan-cluster signatures showing effects across multiple cell types
+- Cluster-specific signatures for cell type-specific analysis
+- Interactive heatmaps for signature visualization and comparison
+- Signature Trends Analysis - Data-driven discovery of most frequent and impactful signatures without manual curation
 
-### **DE Results Page** ⭐ ENHANCED
-- **Interactive UMAP**: Click clusters to update volcano plots
-- **Dual Volcano Plots**: MAST and MixScale results side-by-side
-- **Dynamic Coloring**: By significance, experiment, or gene
-- **Real-time Updates**: Instant synchronization between panels
+### DE Results Page (Enhanced)
+- Interactive UMAP: Click clusters to update volcano plots
+- Dual Volcano Plots: MAST and MixScale results side-by-side
+- Dynamic Coloring: By significance, experiment, or gene
+- Real-time Updates: Instant synchronization between panels
 
-### **Overview Dashboard**
+### Overview Dashboard
 - Interactive UMAP plots with cell cluster visualization
 - Dataset metrics and cluster marker tables
 - Method comparison charts
 
-### **Visualizations**
+### Visualizations
 - Interactive heatmaps with hierarchical clustering
 - Dot plots and bar plots for pathway enrichment
 - GSEA plots with NES visualizations
 
-### **Data Exploration**
+### Data Exploration
 - Multi-level filtering by gene, cluster, experiment, direction
 - Real-time updates and customizable statistical thresholds
 - Export options for figures and data tables
@@ -220,24 +221,24 @@ iSCORE.PDecipher:::is_first_launch()
 iSCORE.PDecipher:::get_parent_data_dir()
 ```
 
-## 📚 Documentation
+## Documentation
 
 ### Quick Start Resources
-- **[Complete Documentation Index](docs/DOCUMENTATION_INDEX.md)** - Organized guide to all documentation
-- **[Labmate Quickstart Guide](docs/LABMATE_QUICKSTART.md)** - Step-by-step setup for new users
+- [Complete Documentation Index](docs/DOCUMENTATION_INDEX.md) - Organized guide to all documentation
+- [Labmate Quickstart Guide](docs/LABMATE_QUICKSTART.md) - Step-by-step setup for new users
 
 ### Cross-Platform Setup
-- **[Mac Compatibility Guide](docs/MAC_COMPATIBILITY_GUIDE.md)** - Complete setup instructions for Mac users
-- **[Mac Setup Checklist](docs/MAC_SETUP_CHECKLIST.md)** - Quick reference for data transfer and setup
-- **[Cross-Platform Development Guidelines](docs/CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md)** - For developers contributing to the package
+- [Mac Compatibility Guide](docs/MAC_COMPATIBILITY_GUIDE.md) - Complete setup instructions for Mac users
+- [Mac Setup Checklist](docs/MAC_SETUP_CHECKLIST.md) - Quick reference for data transfer and setup
+- [Cross-Platform Development Guidelines](docs/CROSS_PLATFORM_DEVELOPMENT_GUIDELINES.md) - For developers contributing to the package
 
 ### Analysis & Features
-- **[PD Signature Analysis Guide](docs/PD_SIGNATURE_ANALYSIS_GUIDE.md)** - Guide to signature nomination and biological interpretation
-- **[Future Enhancements](docs/FUTURE_ENHANCEMENTS.md)** - Planned data-driven discovery features
+- [PD Signature Analysis Guide](docs/PD_SIGNATURE_ANALYSIS_GUIDE.md) - Guide to signature nomination and biological interpretation
+- [Future Enhancements](docs/FUTURE_ENHANCEMENTS.md) - Planned data-driven discovery features
 
 ### Advanced Documentation  
-- **[Project Documentation (CLAUDE.md)](CLAUDE.md)** - Complete project overview and implementation details
-- **[All Documentation](docs/)** - Complete documentation directory
+- [Project Documentation (CLAUDE.md)](CLAUDE.md) - Complete project overview and implementation details
+- [All Documentation](docs/) - Complete documentation directory
 
 ## Citation
 
@@ -258,48 +259,48 @@ PhD Student, Molecular and Cell Biology Department
 University of California, Berkeley  
 Hockemeyer Lab + Bateup Lab  
 
-📧 **Email:** jessedunnack@berkeley.edu | jessedunnack@gmail.com  
-🔗 **ORCID:** [0000-0002-0387-0090](https://orcid.org/0000-0002-0387-0090)  
-📍 **GitHub Issues:** [Report bugs or request features](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
+Email: jessedunnack@berkeley.edu | jessedunnack@gmail.com  
+ORCID: [0000-0002-0387-0090](https://orcid.org/0000-0002-0387-0090)  
+GitHub Issues: [Report bugs or request features](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
 
 ---
 
-## ✨ Key Features (v0.2.0)
+## Key Features (v0.2.0)
 
-### 🔬 **Cross-Method Signature Analysis** ⭐ NEW v0.2.0
-- **Shared signature discovery** between MAST mutations and CRISPRi knockdowns
-- **PD-focused biological interpretation** with automated pathway categorization
-- **Manuscript-ready prioritization** of strongest cross-method signatures
-- **Interactive signature nomination interface** for rapid hypothesis generation
-- **Data-driven signature trends analysis** with frequency rankings and impact scoring for unbiased discovery
+### Cross-Method Signature Analysis (NEW v0.2.0)
+- Shared signature discovery between MAST mutations and CRISPRi knockdowns
+- PD-focused biological interpretation with automated pathway categorization
+- Manuscript-ready prioritization of strongest cross-method signatures
+- Interactive signature nomination interface for rapid hypothesis generation
+- Data-driven signature trends analysis with frequency rankings and impact scoring for unbiased discovery
 
-### 🎯 **Interactive UMAP Visualization**
-- **Cell cluster exploration** with automatic dataset detection
-- **Cluster marker genes** with interactive tables and statistical analysis
-- **Lightweight data** (14MB vs 20-30GB Seurat objects)
-- **Publication-quality plots** using dittoSeq integration
+### Interactive UMAP Visualization
+- Cell cluster exploration with automatic dataset detection
+- Cluster marker genes with interactive tables and statistical analysis
+- Lightweight data (14MB vs 20-30GB Seurat objects)
+- Publication-quality plots using dittoSeq integration
 
-### 📊 **Advanced Interactive Heatmaps**
-- **heatmaply integration** with hierarchical clustering and dendrograms
-- **Multiple data types**: P-values, fold enrichment, z-scores, GSEA NES
-- **Direction filtering**: ALL/UP/DOWN/BOTH regulated genes
-- **Color customization**: 5 color scales with 3 scaling methods
-- **Export options**: Interactive HTML and publication PDF formats
+### Advanced Interactive Heatmaps
+- heatmaply integration with hierarchical clustering and dendrograms
+- Multiple data types: P-values, fold enrichment, z-scores, GSEA NES
+- Direction filtering: ALL/UP/DOWN/BOTH regulated genes
+- Color customization: 5 color scales with 3 scaling methods
+- Export options: Interactive HTML and publication PDF formats
 
-### 🧪 **GSEA Visualization Support**
-- **Normalized Enrichment Score (NES)** heatmaps and plots
-- **enrichplot integration** for static GSEA visualizations
-- **Interactive filtering** with NES threshold controls
-- **Ridge plots and dot plots** for gene set analysis
+### GSEA Visualization Support
+- Normalized Enrichment Score (NES) heatmaps and plots
+- enrichplot integration for static GSEA visualizations
+- Interactive filtering with NES threshold controls
+- Ridge plots and dot plots for gene set analysis
 
-### ⚡ **Performance Optimizations**
-- **50x faster startup** with centralized data management
-- **Eliminated UI flickering** through reactive optimization
-- **Memory efficient** data processing pipeline
-- **Professional error handling** with informative feedback
+### Performance Optimizations
+- 50x faster startup with centralized data management
+- Eliminated UI flickering through reactive optimization
+- Memory efficient data processing pipeline
+- Professional error handling with informative feedback
 
-### 🎨 **Enhanced User Interface**
-- **Responsive design** with optimized space utilization
-- **Professional styling** with consistent visual themes
-- **Intuitive navigation** between analysis modules
-- **Real-time feedback** and progress indicators
+### Enhanced User Interface
+- Responsive design with optimized space utilization
+- Professional styling with consistent visual themes
+- Intuitive navigation between analysis modules
+- Real-time feedback and progress indicators
