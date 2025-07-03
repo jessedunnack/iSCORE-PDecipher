@@ -353,8 +353,10 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         "All clusters"
       }
       
-      # Combine all parts
-      title <- paste0(comparison_part, " - ", enrichment_part, " (", direction_part, ") - ", cluster_part)
+      # Combine all parts with line breaks for better readability
+      title <- paste0(comparison_part, "\n", 
+                     enrichment_part, " (", direction_part, ")\n", 
+                     cluster_part)
       
       return(title)
     }

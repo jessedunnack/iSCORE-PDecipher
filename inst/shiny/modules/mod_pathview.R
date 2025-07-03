@@ -213,16 +213,48 @@ mod_pathview_server <- function(id, app_data, selected_enrichment_data, global_s
       return(TRUE)
     })
     
-    # Load KEGG pathway list
+    # Load top KEGG pathways from enrichment results based on global settings
     observe({
+      req(global_selection())
+      selection <- global_selection()
+      
+      # Only proceed if KEGG enrichment is selected
+      if (is.null(selection$enrichment_type) || selection$enrichment_type != "KEGG") {
+        updateSelectInput(session, "pathway_id", 
+                         choices = c("Please select KEGG in Global Settings" = ""),
+                         selected = "")
+        return()
+      }
+      
       if (check_pathview()) {
         tryCatch({
-          # Load KEGG pathway information using KEGGREST if available
-          if (requireNamespace("KEGGREST", quietly = TRUE)) {
-            # Get pathway list from KEGG API
-            pathway_list <- KEGGREST::keggList("pathway", input$species)
-            pathway_choices <- names(pathway_list)
-            names(pathway_choices) <- paste0(pathway_choices, ": ", substr(pathway_list, 1, 60))
+          # Get KEGG enrichment results from selected_enrichment_data
+          enrichment_data <- selected_enrichment_data()
+          
+          if (!is.null(enrichment_data) && nrow(enrichment_data) > 0) {
+            # Filter for KEGG results and get top 10
+            kegg_data <- enrichment_data %>%
+              filter(enrichment_type == "KEGG") %>%
+              arrange(p.adjust) %>%
+              head(10)
+            
+            if (nrow(kegg_data) > 0) {
+              # Extract pathway IDs and names
+              pathway_choices <- kegg_data$ID
+              names(pathway_choices) <- paste0(kegg_data$ID, ": ", kegg_data$Description)
+              
+              # Update the dropdown with top pathways
+              updateSelectInput(session, "pathway_id", 
+                               choices = pathway_choices,
+                               selected = pathway_choices[1])  # Select top pathway by default
+              
+              showNotification(paste("Loaded top", nrow(kegg_data), "KEGG pathways from enrichment results"), 
+                             type = "success")
+            } else {
+              updateSelectInput(session, "pathway_id", 
+                               choices = c("No KEGG pathways found in results" = ""),
+                               selected = "")
+            }
           } else {
             # Fallback to manual pathway list for common pathways
             common_pathways <- c(
@@ -389,13 +421,21 @@ mod_pathview_server <- function(id, app_data, selected_enrichment_data, global_s
             return()
           }
           
-          # Prepare gene data vector for pathview
+          # Prepare gene data vector for pathview with simplified approach
           if (input$gene_data_type == "logfc") {
-            gene_data <- sig_genes$log2FoldChange
-            names(gene_data) <- sig_genes$gene_symbol
+            # Use log2 fold change if available
+            if ("log2FoldChange" %in% names(sig_genes)) {
+              gene_data <- sig_genes$log2FoldChange
+            } else if ("avg_log2FC" %in% names(sig_genes)) {
+              gene_data <- sig_genes$avg_log2FC
+            } else {
+              showNotification("No fold change data available", type = "error")
+              return()
+            }
+            names(gene_data) <- rownames(sig_genes)
           } else if (input$gene_data_type == "pvalue") {
-            gene_data <- -log10(sig_genes$padj)
-            names(gene_data) <- sig_genes$gene_symbol
+            gene_data <- -log10(sig_genes$p_val_adj + 1e-300)
+            names(gene_data) <- rownames(sig_genes)
           } else if (input$gene_data_type == "binary") {
             gene_data <- ifelse(abs(sig_genes$log2FoldChange) >= input$logfc_threshold, 1, 0)
             names(gene_data) <- sig_genes$gene_symbol

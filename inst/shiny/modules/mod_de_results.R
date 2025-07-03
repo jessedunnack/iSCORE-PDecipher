@@ -858,29 +858,41 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         cluster_label <- "All Clusters"
       }
       
-      # Generate descriptive title (same logic as static plots)
+      # Generate descriptive title with multi-line format for clarity
       if (analysis_type == "MAST") {
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-          plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls (MAST) - Cluster ", cluster_label)
+          plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n", 
+                              "MAST Analysis\n",
+                              "Cluster ", cluster_label)
         } else {
-          plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls - Cluster ", cluster_label)
+          plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls\n",
+                              "All Genes\n", 
+                              "Cluster ", cluster_label)
         }
       } else if (analysis_type == "MixScale") {
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
           if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
-            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting\n",
+                                "MixScale Analysis (", experiment_info, ")\n",
+                                "Cluster ", cluster_label)
           } else {
-            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+            plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls\n",
+                                "MixScale Analysis\n",
+                                "Cluster ", cluster_label)
           }
         } else {
           if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
-            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting\n",
+                                "MixScale Analysis (", experiment_info, ")\n", 
+                                "Cluster ", cluster_label)
           } else {
-            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+            plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls\n",
+                                "MixScale Analysis\n",
+                                "Cluster ", cluster_label)
           }
         }
       } else {
-        plot_title <- paste(analysis_type, "- Cluster", cluster_label)
+        plot_title <- paste(analysis_type, "\nCluster", cluster_label)
       }
       
       if (nrow(plot_data) == 0) {
@@ -1106,29 +1118,41 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           rownames(plot_data) <- plot_data$gene_name
         }
         
-        # Generate highly descriptive title
+        # Generate highly descriptive title with multi-line format
         if (analysis_type == "MAST") {
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-            plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls (MAST) - Cluster ", cluster_label)
+            plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n", 
+                                "MAST Analysis\n",
+                                "Cluster ", cluster_label)
           } else {
-            plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls - Cluster ", cluster_label)
+            plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls\n",
+                                "All Genes\n", 
+                                "Cluster ", cluster_label)
           }
         } else if (analysis_type == "MixScale") {
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
             if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
-              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting\n",
+                                  "MixScale Analysis (", experiment_info, ")\n",
+                                  "Cluster ", cluster_label)
             } else {
-              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+              plot_title <- paste0(current_gene, " CRISPRi knockdown vs Non-Targeting controls\n",
+                                  "MixScale Analysis\n",
+                                  "Cluster ", cluster_label)
             }
           } else {
             if (!is.null(experiment_info) && experiment_info != "" && experiment_info != "default") {
-              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting (", experiment_info, ") - Cluster ", cluster_label)
+              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting\n",
+                                  "MixScale Analysis (", experiment_info, ")\n", 
+                                  "Cluster ", cluster_label)
             } else {
-              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls - Cluster ", cluster_label)
+              plot_title <- paste0("CRISPRi knockdown vs Non-Targeting controls\n",
+                                  "MixScale Analysis\n",
+                                  "Cluster ", cluster_label)
             }
           }
         } else {
-          plot_title <- paste(analysis_type, "- Cluster", cluster_label)
+          plot_title <- paste(analysis_type, "\nCluster", cluster_label)
         }
         
         # Select top significant genes for labeling (up to 20)
