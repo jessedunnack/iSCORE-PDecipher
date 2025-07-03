@@ -36,7 +36,7 @@ mod_heatmap_ui <- function(id) {
                               "Z-score" = "zscore",
                               "Gene Count" = "count",
                               "GSEA NES" = "nes"),
-                  selected = "pvalue"),
+                  selected = "zscore"),
       
       selectInput(ns("method_filter"),
                   "Analysis Method:",
@@ -45,12 +45,12 @@ mod_heatmap_ui <- function(id) {
                               "MixScale Only" = "MixScale", 
                               "Intersection" = "intersection",
                               "Union" = "union"),
-                  selected = "all"),
+                  selected = "intersection"),
       
       checkboxGroupInput(ns("enrichment_types"),
                          "Enrichment Types:",
                          choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "STRING", "GSEA"),
-                         selected = c("GO_BP", "KEGG")),
+                         selected = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome")),
       
       # GSEA-specific options
       conditionalPanel(
@@ -68,7 +68,7 @@ mod_heatmap_ui <- function(id) {
       selectInput(ns("cluster_select"),
                   "Cluster:",
                   choices = c("All Clusters" = "all", paste0("cluster_", 0:9)),
-                  selected = "all"),
+                  selected = "cluster_0"),
       
       sliderInput(ns("max_terms"),
                   "Maximum Terms:",
@@ -92,7 +92,7 @@ mod_heatmap_ui <- function(id) {
                               "Red-Blue (diverging)" = "RdBu",
                               "Viridis" = "viridis",
                               "Yellow-Orange-Red" = "YlOrRd"),
-                  selected = "red"),
+                  selected = "YlOrRd"),
       
       selectInput(ns("scale_method"),
                   "Color Scaling Method:",
@@ -103,7 +103,7 @@ mod_heatmap_ui <- function(id) {
       
       checkboxInput(ns("show_annotations"),
                     "Show Row Annotations (Type & Direction)",
-                    value = FALSE),
+                    value = TRUE),
       
       checkboxInput(ns("cluster_rows"),
                     "Cluster Rows",
