@@ -1290,24 +1290,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       }
       
       tryCatch({
-        # Create heatmap using the visualization function
-        heatmap_plot <- create_interactive_signature_heatmap(
+        # Create heatmap using the visualization function with all UI parameters
+        heatmap_plot <- create_interactive_signature_heatmap_enhanced(
           signature_data = signature_data,
           metric = input$heatmap_metric %||% "signature_strength",
-          cluster_filter = NULL  # Include all clusters
+          cluster_filter = NULL,  # Include all clusters
+          clustering = input$heatmap_clustering %||% "both",
+          color_scale = input$color_scale %||% "viridis"
         )
-        
-        # Apply color scale if different from default
-        if (!is.null(input$color_scale) && input$color_scale != "viridis") {
-          color_scale <- switch(input$color_scale,
-            "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
-            "Reds" = "Reds",
-            "Blues" = "Blues",
-            "viridis"  # default fallback
-          )
-          heatmap_plot <- heatmap_plot %>% 
-            plotly::layout(coloraxis = list(colorscale = color_scale))
-        }
         
         cat("[SIGNATURE HEATMAP] Heatmap generated successfully\n")
         return(heatmap_plot)
@@ -1333,10 +1323,13 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       content = function(file) {
         req(values$analysis_results$all_signatures)
         
-        # Create heatmap
-        heatmap_plot <- create_interactive_signature_heatmap(
+        # Create heatmap with all UI parameters
+        heatmap_plot <- create_interactive_signature_heatmap_enhanced(
           signature_data = values$analysis_results$all_signatures,
-          metric = input$heatmap_metric %||% "signature_strength"
+          metric = input$heatmap_metric %||% "signature_strength",
+          cluster_filter = NULL,
+          clustering = input$heatmap_clustering %||% "both",
+          color_scale = input$color_scale %||% "viridis"
         )
         
         # Save as HTML

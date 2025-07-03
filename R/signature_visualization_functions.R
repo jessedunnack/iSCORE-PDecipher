@@ -130,8 +130,10 @@ create_interactive_signature_heatmap <- function(signature_data,
   # Prepare data for heatmap
   plot_data <- signature_data %>%
     mutate(
-      cluster_info = get_cluster_info(.),
-      metric_value = get_signature_metric(., "strength")
+      cluster_info = ifelse("cluster" %in% colnames(signature_data), cluster, 
+                           ifelse("cluster_id" %in% colnames(signature_data), cluster_id, "Unknown")),
+      metric_value = ifelse("signature_strength" %in% colnames(signature_data), signature_strength, 
+                           ifelse("strength" %in% colnames(signature_data), strength, 1))
     )
   
   # Handle different metrics
@@ -164,6 +166,142 @@ create_interactive_signature_heatmap <- function(signature_data,
     y = rownames(heatmap_matrix),
     type = "heatmap",
     colorscale = "Viridis",
+    hovertemplate = paste0(
+      "<b>Gene Pair:</b> %{y}<br>",
+      "<b>Cluster:</b> %{x}<br>",
+      "<b>", metric_label, ":</b> %{z:.2f}<br>",
+      "<extra></extra>"
+    )
+  ) %>%
+  plotly::layout(
+    title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
+    xaxis = list(title = "Cluster"),
+    yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
+  )
+}
+
+#' Enhanced Interactive Signature Heatmap with Full UI Controls
+#'
+#' @param signature_data Data frame with signature analysis results
+#' @param metric Character, metric to display (signature_strength, gene_overlap_count, gene_fisher_p, gene_jaccard)
+#' @param cluster_filter Character vector, clusters to include (NULL for all)
+#' @param clustering Character, clustering option: "both", "row", "column", "none"
+#' @param color_scale Character, color scale: "viridis", "RdBu", "Reds", "Blues"
+#' @return plotly object
+#' @export
+create_interactive_signature_heatmap_enhanced <- function(signature_data, 
+                                                         metric = "signature_strength",
+                                                         cluster_filter = NULL,
+                                                         clustering = "both",
+                                                         color_scale = "viridis") {
+  
+  # Validate input data
+  validate_signature_data(signature_data)
+  
+  if (nrow(signature_data) == 0) {
+    return(plotly::plot_ly() %>% 
+           plotly::add_text(x = 0.5, y = 0.5, text = "No signature data available"))
+  }
+  
+  # Filter by clusters if specified
+  if (!is.null(cluster_filter)) {
+    cluster_col <- get_cluster_info(signature_data)
+    signature_data <- signature_data[cluster_col %in% cluster_filter, ]
+  }
+  
+  # Prepare data for heatmap
+  plot_data <- signature_data %>%
+    mutate(
+      cluster_info = ifelse("cluster" %in% colnames(signature_data), cluster, 
+                           ifelse("cluster_id" %in% colnames(signature_data), cluster_id, "Unknown")),
+      metric_value = ifelse("signature_strength" %in% colnames(signature_data), signature_strength, 
+                           ifelse("strength" %in% colnames(signature_data), strength, 1))
+    )
+  
+  # Handle different metrics
+  if (metric == "gene_fisher_p" && "gene_fisher_p" %in% colnames(signature_data)) {
+    plot_data$metric_value <- -log10(pmax(signature_data$gene_fisher_p, 1e-10))
+    metric_label <- "Gene Overlap -log10(p-value)"
+  } else if (metric == "pathway_fisher_p" && "pathway_fisher_p" %in% colnames(signature_data)) {
+    plot_data$metric_value <- -log10(pmax(signature_data$pathway_fisher_p, 1e-10))
+    metric_label <- "Pathway Overlap -log10(p-value)"
+  } else if (metric == "gene_jaccard" && "gene_jaccard" %in% colnames(signature_data)) {
+    plot_data$metric_value <- signature_data$gene_jaccard
+    metric_label <- "Gene Jaccard Index"
+  } else if (metric == "gene_overlap_count" && "gene_overlap_count" %in% colnames(signature_data)) {
+    plot_data$metric_value <- signature_data$gene_overlap_count
+    metric_label <- "Gene Overlap Count"
+  } else {
+    # Default to signature strength
+    if ("signature_strength" %in% colnames(signature_data)) {
+      plot_data$metric_value <- signature_data$signature_strength
+    } else if ("strength" %in% colnames(signature_data)) {
+      plot_data$metric_value <- signature_data$strength
+    } else {
+      plot_data$metric_value <- 1  # fallback value
+    }
+    metric_label <- "Signature Strength"
+  }
+  
+  # Create matrix
+  heatmap_matrix <- plot_data %>%
+    dplyr::select(gene_pair, cluster_info, metric_value) %>%
+    tidyr::pivot_wider(names_from = cluster_info, values_from = metric_value, values_fill = 0) %>%
+    tibble::column_to_rownames("gene_pair") %>%
+    as.matrix()
+  
+  if (nrow(heatmap_matrix) == 0) {
+    return(plotly::plot_ly() %>% 
+           plotly::add_text(x = 0.5, y = 0.5, text = "No data available for heatmap"))
+  }
+  
+  # Handle clustering
+  row_order <- rownames(heatmap_matrix)
+  col_order <- colnames(heatmap_matrix)
+  
+  if (clustering %in% c("both", "row")) {
+    if (nrow(heatmap_matrix) > 1) {
+      tryCatch({
+        row_dist <- dist(heatmap_matrix)
+        row_hclust <- hclust(row_dist)
+        row_order <- rownames(heatmap_matrix)[row_hclust$order]
+      }, error = function(e) {
+        cat("[HEATMAP] Row clustering failed:", e$message, "\n")
+      })
+    }
+  }
+  
+  if (clustering %in% c("both", "column")) {
+    if (ncol(heatmap_matrix) > 1) {
+      tryCatch({
+        col_dist <- dist(t(heatmap_matrix))
+        col_hclust <- hclust(col_dist)
+        col_order <- colnames(heatmap_matrix)[col_hclust$order]
+      }, error = function(e) {
+        cat("[HEATMAP] Column clustering failed:", e$message, "\n")
+      })
+    }
+  }
+  
+  # Reorder matrix
+  heatmap_matrix <- heatmap_matrix[row_order, col_order, drop = FALSE]
+  
+  # Set color scale
+  plotly_colorscale <- switch(color_scale,
+    "viridis" = "Viridis",
+    "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+    "Reds" = "Reds", 
+    "Blues" = "Blues",
+    "Viridis"  # fallback
+  )
+  
+  # Create interactive heatmap
+  plotly::plot_ly(
+    z = heatmap_matrix,
+    x = colnames(heatmap_matrix),
+    y = rownames(heatmap_matrix),
+    type = "heatmap",
+    colorscale = plotly_colorscale,
     hovertemplate = paste0(
       "<b>Gene Pair:</b> %{y}<br>",
       "<b>Cluster:</b> %{x}<br>",
