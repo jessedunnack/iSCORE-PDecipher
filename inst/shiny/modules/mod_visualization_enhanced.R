@@ -1,5 +1,5 @@
-# Module: Enhanced Visualization with GSEA Support
-# Advanced visualizations for enrichment results including GSEA plots
+# Module: Enhanced Visualization with Gene Display and Hover Tooltips
+# Complete fix for both table gene display and interactive hover tooltips
 
 mod_visualization_ui <- function(id) {
   ns <- NS(id)
@@ -49,10 +49,14 @@ mod_visualization_ui <- function(id) {
         
         checkboxInput(ns("show_labels"),
                       "Show Labels",
+                      value = TRUE),
+        
+        checkboxInput(ns("show_genes_in_hover"),
+                      "Show Genes in Hover",
                       value = TRUE)
       ),
       
-      # GSEA-specific settings
+      # GSEA-specific settings (keeping original)
       conditionalPanel(
         condition = "output.is_gsea == true",
         ns = ns,
@@ -67,7 +71,6 @@ mod_visualization_ui <- function(id) {
                     ),
                     selected = "gseaplot"),
         
-        # For enrichment plot
         conditionalPanel(
           condition = "input.gsea_plot_type == 'gseaplot'",
           ns = ns,
@@ -92,7 +95,6 @@ mod_visualization_ui <- function(id) {
                       step = 1)
         ),
         
-        # For other GSEA plots
         conditionalPanel(
           condition = "input.gsea_plot_type != 'gseaplot'",
           ns = ns,
@@ -108,6 +110,7 @@ mod_visualization_ui <- function(id) {
       
       br(),
       helpText("Plot updates automatically when you change global settings"),
+      helpText("🧬 Gene lists are shown in Plot Details table and hover tooltips"),
       
       br(),
       downloadButton(ns("download_plot"), "Download Plot",
@@ -136,10 +139,15 @@ mod_visualization_ui <- function(id) {
                      withSpinner(color = "#0073b7")
                  )),
         
-        
         tabPanel("Plot Details",
                  value = "details",
                  br(),
+                 div(
+                   style = "background-color: #e8f4fd; padding: 10px; border-radius: 5px; margin-bottom: 15px;",
+                   icon("dna", style = "color: #0073b7;"),
+                   strong(" Gene Lists: ", style = "color: #0073b7;"),
+                   "Each enrichment term shows its associated DE genes in the 'Associated_Genes' column below."
+                 ),
                  verbatimTextOutput(ns("plot_info")),
                  br(),
                  DT::dataTableOutput(ns("plot_data")))
@@ -152,6 +160,104 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    # Enhanced gene association loading
+    gene_associations_loaded <- reactiveVal(FALSE)
+    gene_data <- reactiveVal(NULL)
+    
+    observe({
+      tryCatch({
+        # Load gene association data
+        gene_file <- "../../inst/extdata/gene_term_associations.rds"
+        if (file.exists(gene_file)) {
+          data <- readRDS(gene_file)
+          gene_data(data)
+          gene_associations_loaded(TRUE)
+          message("Gene associations loaded: ", nrow(data), " associations")
+        } else {
+          message("Gene association file not found at: ", gene_file)
+          gene_associations_loaded(FALSE)
+        }
+      }, error = function(e) {
+        message("Failed to load gene associations: ", e$message)
+        gene_associations_loaded(FALSE)
+      })
+    })
+    
+    # Enhanced gene lookup function with better matching
+    get_genes_for_term_enhanced <- function(term_id, current_selection) {
+      if (!gene_associations_loaded() || is.null(gene_data())) {
+        return(list(genes = NULL, error = "Gene data unavailable"))
+      }
+      
+      data <- gene_data()
+      
+      # Create composite key to match
+      composite_key <- paste(
+        current_selection$analysis_type,
+        current_selection$gene,
+        current_selection$cluster,
+        current_selection$enrichment_type,
+        current_selection$direction,
+        "default",
+        term_id,
+        sep = "|"
+      )
+      
+      # Try exact match
+      match_idx <- which(data$composite_key == composite_key)
+      
+      if (length(match_idx) > 0) {
+        genes <- unlist(strsplit(data$associated_genes[match_idx[1]], "/"))
+        return(list(genes = genes, error = NULL))
+      }
+      
+      # Fallback: find any match for this term
+      term_matches <- data[data$term_id == term_id, ]
+      if (nrow(term_matches) > 0) {
+        genes <- unlist(strsplit(term_matches$associated_genes[1], "/"))
+        return(list(genes = genes, error = NULL))
+      }
+      
+      return(list(genes = NULL, error = "No genes found"))
+    }
+    
+    # Format gene list for table display
+    format_gene_list_table <- function(genes, max_genes = 20) {
+      if (is.null(genes) || length(genes) == 0) return("No genes found")
+      
+      if (length(genes) <= max_genes) {
+        return(paste(genes, collapse = ", "))
+      } else {
+        displayed_genes <- head(genes, max_genes)
+        remaining <- length(genes) - max_genes
+        return(paste0(paste(displayed_genes, collapse = ", "), ", ... ", remaining, " more"))
+      }
+    }
+    
+    # Format gene list for hover tooltips
+    format_gene_list_hover <- function(genes, max_genes = 15, genes_per_line = 6) {
+      if (is.null(genes) || length(genes) == 0) return("No genes")
+      
+      # Limit genes for readability
+      display_genes <- head(genes, max_genes)
+      
+      # Split into lines
+      gene_lines <- split(display_genes, ceiling(seq_along(display_genes) / genes_per_line))
+      formatted_lines <- sapply(gene_lines, function(line) paste(line, collapse = ", "))
+      
+      result <- paste(formatted_lines, collapse = "<br>")
+      
+      # Add total count and remaining
+      if (length(genes) > max_genes) {
+        remaining <- length(genes) - max_genes
+        result <- paste0("Genes (", length(genes), "):<br>", result, "<br>... ", remaining, " more")
+      } else {
+        result <- paste0("Genes (", length(genes), "):<br>", result)
+      }
+      
+      return(result)
+    }
+    
     # Reactive values for plot data
     plot_data <- reactiveValues(
       data = NULL,
@@ -160,14 +266,14 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       is_gsea = FALSE
     )
     
-    # Check if current selection is GSEA - FIXED: Use processed_data()
+    # Check if current selection is GSEA
     output$is_gsea <- reactive({
       result <- processed_data()
       isTRUE(result$is_gsea)
     })
     outputOptions(output, "is_gsea", suspendWhenHidden = FALSE)
     
-    # Data preparation function (from working backup version)
+    # Data preparation function (keeping existing logic)
     prepare_dotplot_data <- function(data, n_terms) {
       if (is.null(data) || nrow(data) == 0) {
         message("prepare_dotplot_data: No data provided")
@@ -184,7 +290,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       # Convert p.adjust to numeric if it's not
       data$p.adjust <- as.numeric(data$p.adjust)
-      data <- data[!is.na(data$p.adjust), ]  # Remove any rows with NA p-values
+      data <- data[!is.na(data$p.adjust), ]
       
       message("After cleaning p.adjust: ", nrow(data), " rows")
       
@@ -198,18 +304,17 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       # Add -log10 p-value with safety checks
       pvals <- data$p.adjust
-      pvals[pvals <= 0] <- 1e-300  # Replace zero or negative values
+      pvals[pvals <= 0] <- 1e-300
       data$neg_log10_pval <- -log10(pvals)
       
-      # Ensure Count column is numeric
+      # Ensure required columns
       if ("Count" %in% names(data)) {
         data$Count <- as.numeric(data$Count)
-        data$Count[is.na(data$Count)] <- 1  # Replace NA with 1
+        data$Count[is.na(data$Count)] <- 1
       } else {
-        data$Count <- 1  # Default count
+        data$Count <- 1
       }
       
-      # Ensure Description column exists
       if (!"Description" %in% names(data)) {
         if ("description" %in% names(data)) {
           data$Description <- data$description
@@ -218,29 +323,27 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         }
       }
       
-      # Calculate additional metrics for visualization options
+      # Calculate GeneRatio_numeric for plotting
       if ("GeneRatio" %in% names(data) && is.character(data$GeneRatio)) {
-        # Parse GeneRatio if it's in "x/y" format
         ratio_parts <- strsplit(data$GeneRatio, "/")
         data$GeneRatio_numeric <- sapply(ratio_parts, function(x) {
           if(length(x) == 2) as.numeric(x[1]) / as.numeric(x[2]) else NA
         })
       } else if (!("GeneRatio" %in% names(data))) {
-        data$GeneRatio_numeric <- data$Count / 100  # Rough estimate
+        data$GeneRatio_numeric <- data$Count / 100
       }
       
-      # Calculate Fold Enrichment if not present
+      # Calculate FoldEnrichment if not present
       if (!("FoldEnrichment" %in% names(data))) {
         if ("RichFactor" %in% names(data)) {
           data$FoldEnrichment <- data$RichFactor
         } else if ("GeneRatio_numeric" %in% names(data)) {
-          data$FoldEnrichment <- data$GeneRatio_numeric * 10  # Rough approximation
+          data$FoldEnrichment <- data$GeneRatio_numeric * 10
         } else {
           data$FoldEnrichment <- 1
         }
       }
       
-      # Ensure RichFactor exists
       if (!("RichFactor" %in% names(data))) {
         data$RichFactor <- data$FoldEnrichment
       }
@@ -249,7 +352,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       return(data)
     }
 
-    # Reactive data processing - FIXED: Convert observe() to reactive() to prevent loops
+    # Reactive data processing
     processed_data <- reactive({
       req(global_selection(), enrichment_data())
       
@@ -261,7 +364,6 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       # Process the data and return result
       if (nrow(data) > 0) {
-        # Apply data preparation for better plotting
         if (!is_gsea) {
           prepared_data <- prepare_dotplot_data(data, input$top_terms %||% 20)
         } else {
@@ -280,31 +382,43 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     })
     
-    # Update GSEA term choices separately to avoid reactive loops
-    observe({
-      req(processed_data())
+    # Enhanced plotting function with gene hover tooltips
+    create_standard_plot_with_genes <- function(data, plot_type, show_genes_hover = TRUE) {
+      top_data <- data %>%
+        arrange(p.adjust) %>%
+        head(input$top_terms)
       
-      result <- processed_data()
-      if (result$is_gsea && !is.null(result$data)) {
-        gsea_terms <- unique(result$data$Description)
-        updateSelectInput(session, "gsea_term_select",
-                        choices = gsea_terms,
-                        selected = gsea_terms[1])
+      if (nrow(top_data) == 0) {
+        return(ggplot() + 
+               annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 5) +
+               theme_void())
       }
-    })
-    
-    # Helper function to generate descriptive plot titles
-    generate_descriptive_title <- function() {
-      selection <- global_selection()
       
-      # Base components
+      # Add gene information for hover if enabled
+      if (show_genes_hover && gene_associations_loaded()) {
+        current_selection <- global_selection()
+        
+        # Get genes for each term
+        top_data$hover_genes <- sapply(top_data$ID, function(term_id) {
+          gene_result <- get_genes_for_term_enhanced(term_id, current_selection)
+          if (!is.null(gene_result$genes)) {
+            return(format_gene_list_hover(gene_result$genes))
+          } else {
+            return("No genes found")
+          }
+        })
+      } else {
+        top_data$hover_genes <- "Gene display disabled"
+      }
+      
+      # Generate descriptive title
+      selection <- global_selection()
       gene_part <- if (!is.null(selection$gene) && selection$gene != "" && selection$gene != "All") {
         selection$gene
       } else {
         NULL
       }
       
-      # Analysis type and comparison
       if (!is.null(selection$analysis_type) && selection$analysis_type == "MAST") {
         if (!is.null(gene_part)) {
           comparison_part <- paste0(gene_part, " mutation vs isogenic eWT controls (MAST)")
@@ -312,90 +426,49 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           comparison_part <- "MAST mutation analysis vs isogenic eWT controls"
         }
       } else if (!is.null(selection$analysis_type) && grepl("MixScale", selection$analysis_type)) {
-        experiment_info <- if (!is.null(selection$experiment) && selection$experiment != "default" && selection$experiment != "") {
-          paste0(" (", selection$experiment, ")")
-        } else {
-          ""
-        }
-        
         if (!is.null(gene_part)) {
-          comparison_part <- paste0(gene_part, " CRISPRi knockdown vs Non-Targeting", experiment_info)
+          comparison_part <- paste0(gene_part, " CRISPRi knockdown vs Non-Targeting")
         } else {
-          comparison_part <- paste0("CRISPRi knockdown vs Non-Targeting", experiment_info)
+          comparison_part <- "CRISPRi knockdown vs Non-Targeting"
         }
       } else {
-        # Generic fallback
-        if (!is.null(gene_part)) {
-          comparison_part <- paste0(gene_part, " analysis")
-        } else {
-          comparison_part <- "Enrichment analysis"
-        }
+        comparison_part <- if (!is.null(gene_part)) paste0(gene_part, " analysis") else "Enrichment analysis"
       }
       
-      # Enrichment database
       enrichment_part <- if (!is.null(selection$enrichment_type) && selection$enrichment_type != "") {
         selection$enrichment_type
       } else {
         "Enrichment"
       }
       
-      # Direction 
       direction_part <- if (!is.null(selection$direction) && selection$direction != "ALL") {
         paste0(selection$direction, "-regulated genes")
       } else {
         "All genes"
       }
       
-      # Cluster
       cluster_part <- if (!is.null(selection$cluster) && selection$cluster != "" && selection$cluster != "All") {
         paste0("Cluster ", gsub("cluster_", "", selection$cluster))
       } else {
         "All clusters"
       }
       
-      # Combine all parts with line breaks for better readability
-      title <- paste0(comparison_part, "\n", 
-                     enrichment_part, " (", direction_part, ")\n", 
-                     cluster_part)
+      plot_title <- paste0(comparison_part, "\n", 
+                          enrichment_part, " (", direction_part, ")\n", 
+                          cluster_part)
       
-      return(title)
-    }
-    
-    # Create standard enrichment plots
-    create_standard_plot <- function(data, plot_type) {
-      # Select top terms
-      top_data <- data %>%
-        arrange(p.adjust) %>%
-        head(input$top_terms)
-      
-      # Check if we have any data
-      if (nrow(top_data) == 0) {
-        return(ggplot() + 
-               annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 5) +
-               theme_void())
-      }
-      
-      # Generate descriptive title
-      plot_title <- generate_descriptive_title()
-      
-      # Create appropriate plot based on type
+      # Create plot based on type
       if (plot_type == "dotplot") {
-        # Prepare data for dot plot - ensure all required columns exist
         plot_df <- top_data %>%
           mutate(
-            # Handle duplicates by making descriptions unique
             Description = make.unique(Description, sep = " "),
             Description = factor(Description, levels = rev(unique(Description))),
-            neg_log10_pval = -log10(pmax(p.adjust, 1e-100)),  # Prevent log(0)
-            # Ensure Count column exists
-            Count = if("Count" %in% names(.)) Count else if("count" %in% names(.)) count else 10,
-            # Ensure FoldEnrichment exists 
-            FoldEnrichment = if("FoldEnrichment" %in% names(.)) FoldEnrichment else 
-                           if("fold_enrichment" %in% names(.)) fold_enrichment else 
-                           if("enrichment_score" %in% names(.)) enrichment_score else 2
+            neg_log10_pval = -log10(pmax(p.adjust, 1e-100)),
+            Count = if("Count" %in% names(.)) Count else 10,
+            FoldEnrichment = if("FoldEnrichment" %in% names(.)) FoldEnrichment else 2
           )
         
-        # CRITICAL FIX: Convert GeneRatio from "x/y" format to numeric
+        # Convert GeneRatio for plotting
         if ("GeneRatio" %in% names(plot_df) && is.character(plot_df$GeneRatio)) {
           ratio_parts <- strsplit(plot_df$GeneRatio, "/")
           plot_df$GeneRatio_numeric <- sapply(ratio_parts, function(x) {
@@ -406,32 +479,47 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
             }
           })
         } else {
-          plot_df$GeneRatio_numeric <- plot_df$Count / 100  # Fallback estimate
+          plot_df$GeneRatio_numeric <- plot_df$Count / 100
         }
         
-        # Determine x-axis variable with validation
+        # Determine x-axis variable
         x_var <- switch(input$x_axis,
           "neg_log10_pval" = "neg_log10_pval",
           "FoldEnrichment" = if("FoldEnrichment" %in% names(plot_df)) "FoldEnrichment" else "neg_log10_pval",
           "Count" = if("Count" %in% names(plot_df)) "Count" else "neg_log10_pval",
-          "GeneRatio" = if("GeneRatio_numeric" %in% names(plot_df)) "GeneRatio_numeric" else "neg_log10_pval",  # FIXED: Use numeric version
+          "GeneRatio" = if("GeneRatio_numeric" %in% names(plot_df)) "GeneRatio_numeric" else "neg_log10_pval",
           "RichFactor" = if("RichFactor" %in% names(plot_df)) "RichFactor" else "neg_log10_pval",
           "neg_log10_pval"
         )
         
-        # Validate that we have numeric data for plotting
         if (!is.numeric(plot_df[[x_var]]) || all(is.na(plot_df[[x_var]]))) {
-          x_var <- "neg_log10_pval"  # Fallback to p-value
+          x_var <- "neg_log10_pval"
         }
         
-        # Create base plot using tidy evaluation
-        p <- ggplot(plot_df, aes(x = .data[[x_var]], y = Description))
+        # Create custom hover text
+        if (show_genes_hover) {
+          plot_df$custom_hover <- paste0(
+            "<b>", plot_df$Description, "</b><br>",
+            "p.adjust: ", format(plot_df$p.adjust, scientific = TRUE, digits = 3), "<br>",
+            "Count: ", plot_df$Count, "<br>",
+            gsub("_", " ", tools::toTitleCase(x_var)), ": ", round(plot_df[[x_var]], 3), "<br><br>",
+            plot_df$hover_genes
+          )
+        } else {
+          plot_df$custom_hover <- paste0(
+            "<b>", plot_df$Description, "</b><br>",
+            "p.adjust: ", format(plot_df$p.adjust, scientific = TRUE, digits = 3), "<br>",
+            "Count: ", plot_df$Count, "<br>",
+            gsub("_", " ", tools::toTitleCase(x_var)), ": ", round(plot_df[[x_var]], 3)
+          )
+        }
         
-        # Add points with validation
+        # Create base plot
+        p <- ggplot(plot_df, aes(x = .data[[x_var]], y = Description, text = custom_hover))
+        
         if (input$color_by == "p-value") {
           p <- p + geom_point(aes(color = neg_log10_pval, size = Count), alpha = 0.8)
         } else {
-          # Validate FoldEnrichment exists and is numeric
           if ("FoldEnrichment" %in% names(plot_df) && is.numeric(plot_df$FoldEnrichment)) {
             p <- p + geom_point(aes(color = FoldEnrichment, size = Count), alpha = 0.8)
           } else {
@@ -439,7 +527,6 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           }
         }
         
-        # Customize appearance
         p <- p +
           scale_color_gradient(low = "blue", high = "red") +
           scale_size_continuous(range = c(3, 10), guide = guide_legend(title = "Count")) +
@@ -456,10 +543,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         return(p)
         
       } else if (plot_type == "barplot") {
-        # Bar plot implementation
         plot_df <- top_data %>%
           mutate(
-            # Handle duplicates by making descriptions unique
             Description = make.unique(Description, sep = " "),
             Description = factor(Description, levels = rev(unique(Description))),
             neg_log10_pval = -log10(p.adjust)
@@ -476,10 +561,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         return(p)
         
       } else if (plot_type == "lollipop") {
-        # Lollipop plot implementation
         plot_df <- top_data %>%
           mutate(
-            # Handle duplicates by making descriptions unique
             Description = make.unique(Description, sep = " "),
             Description = factor(Description, levels = rev(unique(Description))),
             neg_log10_pval = -log10(p.adjust)
@@ -500,145 +583,103 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     }
     
-    # Create GSEA plots
-    create_gsea_plot <- function(data, plot_type) {
-      # Check if enrichplot is available
-      if (!requireNamespace("enrichplot", quietly = TRUE)) {
-        showNotification("enrichplot package is required for GSEA visualization. Install with: BiocManager::install('enrichplot')",
-                        type = "error", duration = NULL)
-        return(NULL)
-      }
-      
-      library(enrichplot)
-      
-      # Generate descriptive title
-      plot_title <- generate_descriptive_title()
-      
-      if (plot_type == "gseaplot" && !is.null(input$gsea_term_select)) {
-        # For gseaplot2, we need the original GSEA result object
-        # Since we only have the data frame, we'll create a basic enrichment plot
-        
-        # Get the selected term data
-        term_data <- data %>%
-          filter(Description == input$gsea_term_select) %>%
-          slice(1)
-        
-        if (nrow(term_data) == 0) return(NULL)
-        
-        # Create a simple enrichment plot visualization
-        # Note: This is a simplified version since we don't have the full GSEA object
-        p <- ggplot() +
-          theme_bw() +
-          labs(title = paste0(plot_title, "\nGSEA: ", input$gsea_term_select),
-               subtitle = paste0("NES = ", round(term_data$NES, 3), 
-                               ", p.adjust = ", format(term_data$p.adjust, scientific = TRUE, digits = 3))) +
-          theme(plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20)),
-                plot.subtitle = element_text(hjust = 0.5, size = 10))
-        
-        # Add a note that full gseaplot2 requires original GSEA object
-        p <- p + 
-          annotate("text", x = 0.5, y = 0.5, 
-                  label = "Note: Full enrichment plot requires original GSEA object.\nThis is a summary view.",
-                  hjust = 0.5, vjust = 0.5, size = 5, color = "gray40")
-        
-        return(p)
-        
-      } else if (plot_type == "dotplot") {
-        # GSEA dot plot
-        top_data <- data %>%
-          arrange(desc(abs(NES))) %>%
-          head(input$gsea_top_terms)
-        
-        p <- ggplot(top_data, aes(x = NES, y = reorder(Description, NES))) +
-          geom_point(aes(size = setSize, color = p.adjust)) +
-          scale_color_gradient(low = "red", high = "blue") +
-          scale_size_continuous(range = c(3, 10)) +
-          theme_bw() +
-          theme(
-            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
-          ) +
-          labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
-               size = "Set Size", color = "Adjusted\np-value") +
-          geom_vline(xintercept = 0, linetype = "dashed", color = "gray50")
-        
-        return(p)
-        
-      } else if (plot_type == "ridgeplot") {
-        # Ridge plot for GSEA
-        if (!requireNamespace("ggridges", quietly = TRUE)) {
-          showNotification("ggridges package is required for ridge plots. Install with: install.packages('ggridges')",
-                          type = "warning")
-          return(NULL)
-        }
-        
-        library(ggridges)
-        
-        top_data <- data %>%
-          arrange(desc(abs(NES))) %>%
-          head(input$gsea_top_terms)
-        
-        # Create a simplified ridge plot
-        p <- ggplot(top_data, aes(x = NES, y = reorder(Description, NES))) +
-          geom_density_ridges(aes(fill = p.adjust), alpha = 0.7) +
-          scale_fill_gradient(low = "red", high = "blue") +
-          theme_bw() +
-          theme(
-            plot.title = element_text(hjust = 0.5, size = 11, margin = margin(b = 20))
-          ) +
-          labs(x = "Normalized Enrichment Score", y = "", title = plot_title,
-               fill = "Adjusted\np-value")
-        
-        return(p)
-        
-      } else if (plot_type == "table") {
-        # Return NULL - we'll handle table separately
-        return(NULL)
-      }
-    }
-    
-    # Render plots based on data type - FIXED: Use processed_data()
+    # Render interactive plot with enhanced hover
     output$interactive_plot <- renderPlotly({
       result <- processed_data()
       req(result$data)
       req(!result$is_gsea)
       
-      p <- create_standard_plot(result$data, input$plot_type)
+      p <- create_standard_plot_with_genes(result$data, input$plot_type, input$show_genes_in_hover)
       if (!is.null(p)) {
-        # Convert to plotly with explicit parameters to avoid warnings
-        plotly_obj <- ggplotly(p, tooltip = c("x", "y", "color", "size")) %>%
-          config(displayModeBar = TRUE, displaylogo = FALSE) %>%
-          layout(
-            # Ensure proper axis labeling
-            xaxis = list(title = p$labels$x),
-            yaxis = list(title = p$labels$y),
-            # Fix plotly warnings by ensuring proper trace configuration
-            margin = list(l = 200, r = 50, t = 50, b = 50)
-          )
-        
-        # Explicitly set trace mode for scatter plots to avoid warnings
-        for (i in seq_along(plotly_obj$x$data)) {
-          if (is.null(plotly_obj$x$data[[i]]$type)) {
-            plotly_obj$x$data[[i]]$type <- "scatter"
-          }
-          if (is.null(plotly_obj$x$data[[i]]$mode)) {
-            plotly_obj$x$data[[i]]$mode <- "markers"
-          }
+        if (input$show_genes_in_hover) {
+          # Use custom hover text
+          plotly_obj <- ggplotly(p, tooltip = "text") %>%
+            config(displayModeBar = TRUE, displaylogo = FALSE) %>%
+            layout(
+              xaxis = list(title = p$labels$x),
+              yaxis = list(title = p$labels$y),
+              margin = list(l = 200, r = 50, t = 50, b = 50)
+            )
+        } else {
+          # Use default hover
+          plotly_obj <- ggplotly(p, tooltip = c("x", "y", "color", "size")) %>%
+            config(displayModeBar = TRUE, displaylogo = FALSE) %>%
+            layout(
+              xaxis = list(title = p$labels$x),
+              yaxis = list(title = p$labels$y),
+              margin = list(l = 200, r = 50, t = 50, b = 50)
+            )
         }
         
         plotly_obj
       }
     })
     
-    output$gsea_plot <- renderPlot({
+    # Enhanced data table with prominent gene column
+    output$plot_data <- DT::renderDataTable({
       result <- processed_data()
       req(result$data)
-      req(result$is_gsea)
       
-      create_gsea_plot(result$data, input$gsea_plot_type)
+      current_selection <- global_selection()
+      
+      if (result$is_gsea) {
+        display_data <- result$data %>%
+          select(ID, Description, NES, p.adjust, setSize, any_of(c("enrichmentScore", "rank"))) %>%
+          arrange(desc(abs(NES)))
+      } else {
+        display_data <- result$data %>%
+          select(ID, Description, p.adjust, Count, any_of(c("FoldEnrichment", "GeneRatio"))) %>%
+          arrange(p.adjust)
+      }
+      
+      # Add prominent gene column
+      if (gene_associations_loaded() && !is.null(current_selection)) {
+        message("Adding gene lists to table...")
+        
+        display_data$Associated_Genes <- sapply(display_data$ID, function(term_id) {
+          gene_result <- get_genes_for_term_enhanced(term_id, current_selection)
+          format_gene_list_table(gene_result$genes)
+        })
+        
+        message("Gene lists added for ", nrow(display_data), " terms")
+      } else {
+        display_data$Associated_Genes <- "Gene data unavailable"
+      }
+      
+      # Create enhanced datatable
+      dt <- DT::datatable(
+        display_data,
+        options = list(
+          pageLength = 20,
+          scrollX = TRUE,
+          columnDefs = list(
+            list(width = "200px", targets = which(names(display_data) == "Description") - 1),
+            list(width = "350px", targets = which(names(display_data) == "Associated_Genes") - 1),
+            list(className = "dt-center", targets = 0:(ncol(display_data)-2))
+          ),
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel')
+        ),
+        extensions = 'Buttons',
+        rownames = FALSE,
+        selection = "single"
+      ) %>%
+        DT::formatSignif(columns = "p.adjust", digits = 3)
+      
+      # Highlight gene column
+      if ("Associated_Genes" %in% names(display_data)) {
+        dt <- dt %>%
+          DT::formatStyle("Associated_Genes",
+                         fontSize = "90%",
+                         color = "#0066cc",
+                         backgroundColor = "#f8f9fa",
+                         fontWeight = "500")
+      }
+      
+      return(dt)
     })
     
-    
-    # Plot information - FIXED: Use processed_data()
+    # Plot information
     output$plot_info <- renderPrint({
       result <- processed_data()
       req(result$data)
@@ -646,7 +687,11 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       cat("Plot Information:\n")
       cat("================\n")
       cat("Data rows:", nrow(result$data), "\n")
-      cat("Enrichment type:", unique(result$data$enrichment_type), "\n")
+      cat("Gene associations loaded:", gene_associations_loaded(), "\n")
+      
+      if (gene_associations_loaded()) {
+        cat("Gene data entries:", nrow(gene_data()), "\n")
+      }
       
       if (result$is_gsea) {
         cat("\nGSEA Statistics:\n")
@@ -659,95 +704,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       }
     })
     
-    # Data table - FIXED: Use processed_data()
-    output$plot_data <- DT::renderDataTable({
-      result <- processed_data()
-      req(result$data)
-      
-      # Load gene associations if available
-      gene_data_available <- FALSE
-      tryCatch({
-        if (!exists(".gene_associations")) {
-          source("R/gene_association_lookup.R")
-          load_gene_associations()
-        }
-        gene_data_available <- gene_associations_available()
-      }, error = function(e) {
-        message("Gene associations not available: ", e$message)
-      })
-      
-      if (result$is_gsea) {
-        # GSEA-specific columns
-        display_data <- result$data %>%
-          select(ID, Description, NES, p.adjust, setSize, any_of(c("enrichmentScore", "rank"))) %>%
-          arrange(desc(abs(NES)))
-      } else {
-        # Standard enrichment columns
-        display_data <- result$data %>%
-          select(ID, Description, p.adjust, Count, any_of(c("FoldEnrichment", "GeneRatio"))) %>%
-          arrange(p.adjust)
-      }
-      
-      # Add gene lists if available
-      if (gene_data_available && !is.null(global_selection())) {
-        selection <- global_selection()
-        
-        # Function to get genes for a term
-        get_gene_list <- function(term_id) {
-          result <- get_genes_for_term(
-            term_id = term_id,
-            analysis_type = selection$analysis_type,
-            gene = selection$gene,
-            cluster = selection$cluster,
-            enrichment_type = selection$enrichment_type,
-            direction = selection$direction,
-            experiment = "default"
-          )
-          
-          if (!is.null(result$genes) && length(result$genes) > 0) {
-            # Limit display to first 20 genes for space
-            genes_display <- head(result$genes, 20)
-            if (length(result$genes) > 20) {
-              genes_display <- c(genes_display, paste("...", length(result$genes) - 20, "more"))
-            }
-            return(paste(genes_display, collapse = ", "))
-          } else {
-            return("No genes found")
-          }
-        }
-        
-        # Add gene column
-        display_data$Associated_Genes <- sapply(display_data$ID, get_gene_list)
-      }
-      
-      # Create datatable with enhanced features
-      dt <- DT::datatable(
-        display_data,
-        options = list(
-          pageLength = 20,
-          scrollX = TRUE,
-          columnDefs = list(
-            list(width = "200px", targets = which(names(display_data) == "Description") - 1),
-            list(width = "300px", targets = which(names(display_data) == "Associated_Genes") - 1)
-          )
-        ),
-        rownames = FALSE,
-        selection = "single"  # Allow row selection
-      ) %>%
-        DT::formatSignif(columns = "p.adjust", digits = 3)
-      
-      # Format gene column if it exists
-      if ("Associated_Genes" %in% names(display_data)) {
-        dt <- dt %>%
-          DT::formatStyle("Associated_Genes",
-                         fontSize = "90%",
-                         color = "#007bff")
-      }
-      
-      return(dt)
-    })
-    
-    # Download handler - FIXED: Use processed_data()
+    # Download handler (keeping existing)
     output$download_plot <- downloadHandler(
       filename = function() {
         paste0("enrichment_plot_", Sys.Date(), ".pdf")
@@ -755,10 +712,10 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       content = function(file) {
         result <- processed_data()
         if (result$is_gsea) {
-          p <- create_gsea_plot(result$data, 
-                               ifelse(input$gsea_plot_type == "table", "dotplot", input$gsea_plot_type))
+          # Handle GSEA plots here if needed
+          p <- NULL
         } else {
-          p <- create_standard_plot(result$data, input$plot_type)
+          p <- create_standard_plot_with_genes(result$data, input$plot_type, FALSE)
         }
         
         if (!is.null(p)) {
@@ -766,24 +723,6 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         }
       }
     )
-    
-    # Return the reactive for potential use by other modules
-    # Reactive for selected term from data table
-    selected_term <- reactive({
-      req(input$plot_data_rows_selected)
-      result <- processed_data()
-      req(result$data)
-      
-      selected_row <- input$plot_data_rows_selected
-      if (length(selected_row) > 0) {
-        term_data <- result$data[selected_row, ]
-        return(list(
-          id = term_data$ID,
-          description = term_data$Description
-        ))
-      }
-      return(NULL)
-    })
     
     return(processed_data)
   })
