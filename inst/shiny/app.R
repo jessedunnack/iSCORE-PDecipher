@@ -133,6 +133,7 @@ source("modules/mod_de_analysis.R")  # Cross-condition DE gene analysis
 source("modules/mod_de_heatmap.R")  # Interactive DE gene heatmaps
 source("modules/mod_signature_nomination.R")  # Signature nomination module
 source("modules/mod_signature_trends.R")  # Signature trends analysis module
+source("modules/mod_enrichment_gene_display_v2.R")
 
 # Ensure UI functions are available (fallback assignments)
 ui_functions <- list(

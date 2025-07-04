@@ -664,22 +664,87 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       result <- processed_data()
       req(result$data)
       
+      # Load gene associations if available
+      gene_data_available <- FALSE
+      tryCatch({
+        if (!exists(".gene_associations")) {
+          source("R/gene_association_lookup.R")
+          load_gene_associations()
+        }
+        gene_data_available <- gene_associations_available()
+      }, error = function(e) {
+        message("Gene associations not available: ", e$message)
+      })
+      
       if (result$is_gsea) {
         # GSEA-specific columns
         display_data <- result$data %>%
-          select(Description, NES, p.adjust, setSize, any_of(c("enrichmentScore", "rank"))) %>%
+          select(ID, Description, NES, p.adjust, setSize, any_of(c("enrichmentScore", "rank"))) %>%
           arrange(desc(abs(NES)))
       } else {
         # Standard enrichment columns
         display_data <- result$data %>%
-          select(Description, p.adjust, Count, any_of(c("FoldEnrichment", "GeneRatio"))) %>%
+          select(ID, Description, p.adjust, Count, any_of(c("FoldEnrichment", "GeneRatio"))) %>%
           arrange(p.adjust)
       }
       
-      DT::datatable(display_data,
-                    options = list(pageLength = 20),
-                    rownames = FALSE) %>%
+      # Add gene lists if available
+      if (gene_data_available && !is.null(global_selection())) {
+        selection <- global_selection()
+        
+        # Function to get genes for a term
+        get_gene_list <- function(term_id) {
+          result <- get_genes_for_term(
+            term_id = term_id,
+            analysis_type = selection$analysis_type,
+            gene = selection$gene,
+            cluster = selection$cluster,
+            enrichment_type = selection$enrichment_type,
+            direction = selection$direction,
+            experiment = "default"
+          )
+          
+          if (!is.null(result$genes) && length(result$genes) > 0) {
+            # Limit display to first 20 genes for space
+            genes_display <- head(result$genes, 20)
+            if (length(result$genes) > 20) {
+              genes_display <- c(genes_display, paste("...", length(result$genes) - 20, "more"))
+            }
+            return(paste(genes_display, collapse = ", "))
+          } else {
+            return("No genes found")
+          }
+        }
+        
+        # Add gene column
+        display_data$Associated_Genes <- sapply(display_data$ID, get_gene_list)
+      }
+      
+      # Create datatable with enhanced features
+      dt <- DT::datatable(
+        display_data,
+        options = list(
+          pageLength = 20,
+          scrollX = TRUE,
+          columnDefs = list(
+            list(width = "200px", targets = which(names(display_data) == "Description") - 1),
+            list(width = "300px", targets = which(names(display_data) == "Associated_Genes") - 1)
+          )
+        ),
+        rownames = FALSE,
+        selection = "single"  # Allow row selection
+      ) %>%
         DT::formatSignif(columns = "p.adjust", digits = 3)
+      
+      # Format gene column if it exists
+      if ("Associated_Genes" %in% names(display_data)) {
+        dt <- dt %>%
+          DT::formatStyle("Associated_Genes",
+                         fontSize = "90%",
+                         color = "#007bff")
+      }
+      
+      return(dt)
     })
     
     # Download handler - FIXED: Use processed_data()
@@ -703,6 +768,23 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     )
     
     # Return the reactive for potential use by other modules
+    # Reactive for selected term from data table
+    selected_term <- reactive({
+      req(input$plot_data_rows_selected)
+      result <- processed_data()
+      req(result$data)
+      
+      selected_row <- input$plot_data_rows_selected
+      if (length(selected_row) > 0) {
+        term_data <- result$data[selected_row, ]
+        return(list(
+          id = term_data$ID,
+          description = term_data$Description
+        ))
+      }
+      return(NULL)
+    })
+    
     return(processed_data)
   })
 }

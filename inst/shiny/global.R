@@ -233,6 +233,34 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
 }
 
 # =============================================================================
+
+# =============================================================================
+# GENE ASSOCIATION LOOKUP
+# =============================================================================
+
+# Load gene association functions if available in package
+tryCatch({
+  # Check if we're in package mode (installed) or development mode
+  if (requireNamespace('iSCORE.PDecipher', quietly = TRUE)) {
+    # Package mode - functions should be exported
+    message('Loading gene associations from package...')
+    iSCORE.PDecipher::load_gene_associations()
+  } else {
+    # Development mode - source the file
+    gene_lookup_file <- '../../R/gene_association_lookup.R'
+    if (file.exists(gene_lookup_file)) {
+      message('Loading gene associations from development file...')
+      source(gene_lookup_file)
+      load_gene_associations()
+    } else {
+      message('Gene association file not found - gene display will be unavailable')
+    }
+  }
+}, error = function(e) {
+  message('Could not load gene associations: ', e$message)
+  message('Gene display functionality will be limited')
+})
+
 # INITIALIZATION
 # =============================================================================
 
