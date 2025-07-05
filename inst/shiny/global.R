@@ -244,16 +244,39 @@ tryCatch({
   if (requireNamespace('iSCORE.PDecipher', quietly = TRUE)) {
     # Package mode - functions should be exported
     message('Loading gene associations from package...')
-    iSCORE.PDecipher::load_gene_associations()
+    success <- iSCORE.PDecipher::load_gene_associations()
+    if (success) {
+      message('Gene associations loaded successfully from package')
+    } else {
+      message('Failed to load gene associations from package')
+    }
   } else {
     # Development mode - source the file
     gene_lookup_file <- '../../R/gene_association_lookup.R'
     if (file.exists(gene_lookup_file)) {
       message('Loading gene associations from development file...')
       source(gene_lookup_file)
-      load_gene_associations()
+      success <- load_gene_associations()
+      if (success) {
+        message('Gene associations loaded successfully from development file')
+      } else {
+        message('Failed to load gene associations from development file')
+      }
     } else {
-      message('Gene association file not found - gene display will be unavailable')
+      # Try alternative path for when running from project root
+      alt_gene_lookup_file <- 'R/gene_association_lookup.R'
+      if (file.exists(alt_gene_lookup_file)) {
+        message('Loading gene associations from alternative development path...')
+        source(alt_gene_lookup_file)
+        success <- load_gene_associations()
+        if (success) {
+          message('Gene associations loaded successfully from alternative path')
+        } else {
+          message('Failed to load gene associations from alternative path')
+        }
+      } else {
+        message('Gene association file not found - gene display will be unavailable')
+      }
     }
   }
 }, error = function(e) {

@@ -43,15 +43,47 @@ tryCatch({
   create_source_label <<- function(gene, method, modality = NULL) return(as.character(gene))
 })
 
-# Fast cluster-specific DE data extraction 
-extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100) {
+# Fast cluster-specific DE data extraction with progress indicators
+extract_cluster_de_data_optimized <- function(de_results, target_cluster, 
+                                             p_cutoff = 0.05, 
+                                             max_genes_per_condition = 100,
+                                             show_progress = TRUE) {
+  
+  # Initialize progress
+  if (show_progress) {
+    progress <- shiny::Progress$new()
+    progress$set(message = "Processing DE data", value = 0)
+    on.exit(progress$close())
+  }
+  
+  # Pre-allocate results list for efficiency
+  all_results <- list()
+  result_counter <- 1
+  
+  # Count total operations for progress
+  total_operations <- 0
+  if ("iSCORE_PD_MAST" %in% names(de_results)) {
+    total_operations <- total_operations + length(names(de_results$iSCORE_PD_MAST))
+  }
+  if ("CRISPRi_Mixscale" %in% names(de_results)) {
+    total_operations <- total_operations + length(names(de_results$CRISPRi_Mixscale))
+  }
+  
+  current_operation <- 0
   processed_data <- data.frame()
   
   # Process MAST results - only for target cluster
   if ("iSCORE_PD_MAST" %in% names(de_results)) {
     mast_data <- de_results$iSCORE_PD_MAST
+    mast_genes <- names(mast_data)
     
-    for (gene in names(mast_data)) {
+    for (gene in mast_genes) {
+      current_operation <- current_operation + 1
+      
+      if (show_progress) {
+        progress$inc(1/total_operations, detail = paste("Processing MAST", gene))
+      }
+      
       # Skip if this cluster doesn't exist for this gene
       if (!target_cluster %in% names(mast_data[[gene]])) next
       
@@ -59,16 +91,18 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
       if (!is.null(cluster_results$results)) {
         results <- cluster_results$results
         
-        # Quick filter to significant genes only
-        sig_results <- results[!is.na(results$p_val_adj) & results$p_val_adj < 0.05, ]
+        # Vectorized filtering for efficiency
+        sig_mask <- !is.na(results$p_val_adj) & results$p_val_adj < p_cutoff
+        sig_results <- results[sig_mask, ]
         
         # Limit to top genes by significance
-        if (nrow(sig_results) > max_genes) {
-          sig_results <- sig_results[order(sig_results$p_val_adj), ][1:max_genes, ]
+        if (nrow(sig_results) > max_genes_per_condition) {
+          sig_results <- sig_results[order(sig_results$p_val_adj)[1:max_genes_per_condition], ]
         }
         
         if (nrow(sig_results) > 0) {
-          cluster_data <- data.frame(
+          # Store as list element for later rbind (more efficient)
+          all_results[[result_counter]] <- data.frame(
             gene = gene,
             cluster = target_cluster,
             gene_name = rownames(sig_results),
@@ -79,7 +113,7 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
             experiment = "default",
             stringsAsFactors = FALSE
           )
-          processed_data <- rbind(processed_data, cluster_data)
+          result_counter <- result_counter + 1
         }
       }
     }
@@ -88,8 +122,15 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
   # Process CRISPRi results - only for target cluster (if present)
   if ("CRISPRi_Mixscale" %in% names(de_results)) {
     crispi_data <- de_results$CRISPRi_Mixscale
+    crispi_genes <- names(crispi_data)
     
-    for (gene in names(crispi_data)) {
+    for (gene in crispi_genes) {
+      current_operation <- current_operation + 1
+      
+      if (show_progress) {
+        progress$inc(1/total_operations, detail = paste("Processing CRISPRi", gene))
+      }
+      
       # Skip if this cluster doesn't exist for this gene
       if (!target_cluster %in% names(crispi_data[[gene]])) next
       
@@ -105,17 +146,18 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
           pval_col <- paste0("p_cell_type", exp, ":weight")
           
           if (pval_col %in% names(results) && nrow(results) > 0) {
-            # Quick filter to significant genes
-            valid_rows <- !is.na(results[[pval_col]]) & results[[pval_col]] < 0.05
-            sig_results <- results[valid_rows, ]
+            # Vectorized filtering for efficiency
+            valid_mask <- !is.na(results[[pval_col]]) & results[[pval_col]] < p_cutoff
+            sig_results <- results[valid_mask, ]
             
             # Limit to top genes
-            if (nrow(sig_results) > max_genes) {
-              sig_results <- sig_results[order(sig_results[[pval_col]]), ][1:max_genes, ]
+            if (nrow(sig_results) > max_genes_per_condition) {
+              sig_results <- sig_results[order(sig_results[[pval_col]])[1:max_genes_per_condition], ]
             }
             
             if (nrow(sig_results) > 0) {
-              cluster_data <- data.frame(
+              # Store as list element for later rbind (more efficient)
+              all_results[[result_counter]] <- data.frame(
                 gene = gene,
                 cluster = target_cluster,
                 gene_name = rownames(sig_results),
@@ -126,7 +168,7 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
                 experiment = exp,
                 stringsAsFactors = FALSE
               )
-              processed_data <- rbind(processed_data, cluster_data)
+              result_counter <- result_counter + 1
             }
           }
         }
@@ -134,13 +176,24 @@ extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100)
     }
   }
   
-  # Clean up and add source labels
-  if (nrow(processed_data) > 0) {
-    processed_data <- processed_data[!is.na(processed_data$log2FC) & !is.na(processed_data$pvalue), ]
-    processed_data$source_label <- paste0(processed_data$gene, " (", processed_data$source, ")")
+  # Combine all results efficiently
+  if (length(all_results) > 0) {
+    final_results <- do.call(rbind, all_results)
+    # Clean up and add source labels
+    final_results <- final_results[!is.na(final_results$log2FC) & !is.na(final_results$pvalue), ]
+    final_results$source_label <- paste0(final_results$gene, " (", final_results$source, ")")
+    return(final_results)
+  } else {
+    return(data.frame())
   }
-  
-  return(processed_data)
+}
+
+# Keep original function for backwards compatibility
+extract_cluster_de_data <- function(de_results, target_cluster, max_genes = 100) {
+  # Use the optimized version but without progress indicators
+  return(extract_cluster_de_data_optimized(de_results, target_cluster, 
+                                          max_genes_per_condition = max_genes,
+                                          show_progress = FALSE))
 }
 
 mod_de_heatmap_ui <- function(id) {
@@ -466,8 +519,11 @@ mod_de_heatmap_server <- function(id, app_data, global_selection) {
         heatmap_data$processing_log <- c(heatmap_data$processing_log, 
                                         paste("Processing DE data for", selected_cluster, "only"))
         
-        # Use a much more targeted approach - extract only what we need
-        processed_de <- extract_cluster_de_data(de_results, selected_cluster, max_genes = 100)
+        # Use the optimized approach with progress indicators
+        processed_de <- extract_cluster_de_data_optimized(de_results, selected_cluster, 
+                                                         p_cutoff = 0.05,
+                                                         max_genes_per_condition = 100,
+                                                         show_progress = TRUE)
         
         if (nrow(processed_de) == 0) {
           heatmap_data$processing_log <- c(heatmap_data$processing_log,

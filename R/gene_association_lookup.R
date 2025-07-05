@@ -5,38 +5,65 @@
 #' @author Claude Code Assistant
 #' @date 2025-01-13
 
-#' Global variable to store loaded gene associations
-.gene_associations <- NULL
+#' Environment-based storage for gene associations (replaces global variable)
+.gene_association_env <- new.env(parent = emptyenv())
 
 #' Load gene associations data
 #'
 #' @param force_reload Logical, whether to force reload even if already loaded
-#' @return Data frame with gene associations or NULL if not available
+#' @return Logical indicating success/failure of loading
 #' @export
 load_gene_associations <- function(force_reload = FALSE) {
-  if (is.null(.gene_associations) || force_reload) {
-    # Try to load from package extdata
-    extdata_path <- system.file("extdata", "gene_term_associations.rds", package = "iSCORE.PDecipher")
-    
-    if (file.exists(extdata_path)) {
-      message("Loading gene associations from package data...")
-      .gene_associations <<- readRDS(extdata_path)
-      message("Loaded ", nrow(.gene_associations), " gene-term associations")
-    } else {
-      # Fallback: try local file for development
-      local_path <- "inst/extdata/gene_term_associations.rds"
-      if (file.exists(local_path)) {
-        message("Loading gene associations from local development file...")
-        .gene_associations <<- readRDS(local_path)
-        message("Loaded ", nrow(.gene_associations), " gene-term associations")
-      } else {
-        warning("Gene associations file not found. Gene display functionality will be limited.")
-        .gene_associations <<- NULL
-      }
-    }
+  # Check if already loaded
+  if (!force_reload && exists("data", envir = .gene_association_env)) {
+    return(invisible(TRUE))
   }
   
-  return(.gene_associations)
+  # Try to load from package extdata
+  extdata_path <- system.file("extdata", "gene_term_associations.rds", package = "iSCORE.PDecipher")
+  
+  if (file.exists(extdata_path)) {
+    tryCatch({
+      message("Loading gene associations from package data...")
+      data <- readRDS(extdata_path)
+      assign("data", data, envir = .gene_association_env)
+      message("Loaded ", nrow(data), " gene-term associations")
+      return(invisible(TRUE))
+    }, error = function(e) {
+      warning("Failed to load gene associations from package: ", e$message)
+      return(invisible(FALSE))
+    })
+  } else {
+    # Fallback: try local file for development
+    local_path <- "inst/extdata/gene_term_associations.rds"
+    if (file.exists(local_path)) {
+      tryCatch({
+        message("Loading gene associations from local development file...")
+        data <- readRDS(local_path)
+        assign("data", data, envir = .gene_association_env)
+        message("Loaded ", nrow(data), " gene-term associations")
+        return(invisible(TRUE))
+      }, error = function(e) {
+        warning("Failed to load gene associations from local file: ", e$message)
+        return(invisible(FALSE))
+      })
+    } else {
+      warning("Gene associations file not found. Gene display functionality will be limited.")
+      return(invisible(FALSE))
+    }
+  }
+}
+
+#' Get gene associations data
+#'
+#' @return Data frame with gene associations or NULL if not available
+#' @export
+get_gene_associations <- function() {
+  if (exists("data", envir = .gene_association_env)) {
+    return(get("data", envir = .gene_association_env))
+  } else {
+    return(NULL)
+  }
 }
 
 #' Check if gene associations are available
@@ -44,7 +71,8 @@ load_gene_associations <- function(force_reload = FALSE) {
 #' @return Logical indicating if gene associations are loaded
 #' @export
 gene_associations_available <- function() {
-  return(!is.null(.gene_associations) && nrow(.gene_associations) > 0)
+  data <- get_gene_associations()
+  return(!is.null(data) && nrow(data) > 0)
 }
 
 #' Get genes for a specific enrichment term
@@ -74,14 +102,17 @@ get_genes_for_term <- function(term_id, analysis_type, gene, cluster,
   composite_key <- paste(analysis_type, gene, cluster, enrichment_type, 
                         direction, experiment, term_id, sep = "|")
   
+  # Get the data
+  associations_data <- get_gene_associations()
+  
   # Find matching association
-  match_idx <- which(.gene_associations$composite_key == composite_key)
+  match_idx <- which(associations_data$composite_key == composite_key)
   
   if (length(match_idx) == 0) {
     # Try without experiment specification (fallback)
     composite_key_fallback <- paste(analysis_type, gene, cluster, enrichment_type, 
                                    direction, "default", term_id, sep = "|")
-    match_idx <- which(.gene_associations$composite_key == composite_key_fallback)
+    match_idx <- which(associations_data$composite_key == composite_key_fallback)
   }
   
   if (length(match_idx) == 0) {
@@ -89,7 +120,7 @@ get_genes_for_term <- function(term_id, analysis_type, gene, cluster,
   }
   
   # Get the association
-  association <- .gene_associations[match_idx[1], ]
+  association <- associations_data[match_idx[1], ]
   
   # Split gene string into vector
   genes <- unlist(strsplit(association$associated_genes, "/"))
@@ -150,7 +181,7 @@ search_gene_associations <- function(pattern, analysis_type = NULL, gene = NULL,
   }
   
   # Start with all associations
-  results <- .gene_associations
+  results <- get_gene_associations()
   
   # Apply filters
   if (!is.null(analysis_type)) {
@@ -187,14 +218,16 @@ get_association_stats <- function() {
     return(list(error = "Gene associations not available"))
   }
   
+  associations_data <- get_gene_associations()
+  
   stats <- list(
-    total_associations = nrow(.gene_associations),
-    unique_terms = length(unique(.gene_associations$term_id)),
-    unique_genes = length(unique(.gene_associations$gene)),
-    analysis_types = sort(unique(.gene_associations$analysis_type)),
-    enrichment_types = sort(unique(.gene_associations$enrichment_type)),
-    directions = sort(unique(.gene_associations$direction)),
-    clusters = sort(unique(.gene_associations$cluster))
+    total_associations = nrow(associations_data),
+    unique_terms = length(unique(associations_data$term_id)),
+    unique_genes = length(unique(associations_data$gene)),
+    analysis_types = sort(unique(associations_data$analysis_type)),
+    enrichment_types = sort(unique(associations_data$enrichment_type)),
+    directions = sort(unique(associations_data$direction)),
+    clusters = sort(unique(associations_data$cluster))
   )
   
   return(stats)

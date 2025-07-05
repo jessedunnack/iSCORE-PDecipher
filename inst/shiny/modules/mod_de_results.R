@@ -690,6 +690,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # Render cluster information with cell type breakdown and top markers
     output$cluster_info <- renderUI({
+      # Capture namespace function at the start
+      ns <- session$ns
+      
       req(input$cluster_selector)
       req(values$umap_data)
       
