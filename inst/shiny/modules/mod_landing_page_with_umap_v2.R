@@ -384,7 +384,7 @@ landingPageWithUmapUI <- function(id) {
 #' 
 #' @param id Module namespace
 #' @param data Reactive data object from app
-landingPageWithUmapServer <- function(id, data) {
+landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
   moduleServer(id, function(input, output, session) {
     
     # Reactive values for UMAP data and markers
@@ -410,31 +410,62 @@ landingPageWithUmapServer <- function(id, data) {
       session$userData$welcome_dismissed <- TRUE
     })
     
-    # Determine which UMAP dataset to load based on app data
+    # Determine which UMAP dataset to load based on user selection or app data
     observe({
       req(data$data_loaded)
       
-      # Determine dataset based on loaded data
-      # Check for specific markers in the data
-      has_crispri <- any(grepl("MixScale", data$consolidated_data$method))
-      has_mutations <- any(grepl("MAST", data$consolidated_data$method))
-      has_crispa <- any(grepl("CRISPRa", data$consolidated_data$method))
-      
-      cat("[DATASET DETECTION] MAST:", has_mutations, "CRISPRi:", has_crispri, "CRISPRa:", has_crispa, "\n")
-      
-      # Determine which dataset to load based on actual content
-      if (has_crispri && has_mutations && has_crispa) {
-        dataset_to_load <- "Full_Dataset"
-        cat("[DATASET DETECTION] Loading Full_Dataset (all 3 modalities)\n")
-      } else if (has_crispri && has_mutations) {
-        dataset_to_load <- "iSCORE_PD_CRISPRi"
-        cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (MAST + CRISPRi only)\n")
-      } else if (has_crispri) {
-        dataset_to_load <- "iSCORE_PD_CRISPRi"
-        cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (CRISPRi only)\n")
+      # Use provided dataset name if available, otherwise fallback to auto-detection
+      if (!is.null(selected_dataset)) {
+        # Map user-friendly names to UMAP file names
+        dataset_mapping <- list(
+          "iSCORE-PD only" = "iSCORE_PD",
+          "iSCORE-PD + CRISPRi" = "iSCORE_PD_CRISPRi", 
+          "iSCORE-PD + CRISPRi + CRISPRa" = "Full_Dataset"
+        )
+        
+        dataset_to_load <- dataset_mapping[[selected_dataset]]
+        if (is.null(dataset_to_load)) {
+          # If mapping fails, extract from directory name
+          if (grepl("iSCORE-PD_plus_CRISPRi_and_CRISPRa", selected_dataset)) {
+            dataset_to_load <- "Full_Dataset"
+          } else if (grepl("iSCORE-PD_plus_CRISPRi", selected_dataset)) {
+            dataset_to_load <- "iSCORE_PD_CRISPRi"
+          } else {
+            dataset_to_load <- "iSCORE_PD"
+          }
+        }
+        cat("[DATASET SELECTION] Using selected dataset:", selected_dataset, "-> UMAP:", dataset_to_load, "\n")
       } else {
-        dataset_to_load <- "iSCORE_PD"
-        cat("[DATASET DETECTION] Loading iSCORE_PD (MAST only)\n")
+        # Fallback to auto-detection for backwards compatibility
+        has_crispri <- any(grepl("MixScale", data$consolidated_data$method))
+        has_mutations <- any(grepl("MAST", data$consolidated_data$method))
+        has_crispa <- any(grepl("CRISPRa", data$consolidated_data$method))
+        
+        cat("[DATASET DETECTION] MAST:", has_mutations, "CRISPRi:", has_crispri, "CRISPRa:", has_crispa, "\n")
+        
+        # More conservative detection: prefer smaller datasets unless clearly all 3 modalities
+        # Check if data actually contains all 3 modalities (not just presence)
+        total_rows <- nrow(data$consolidated_data)
+        mast_count <- sum(grepl("MAST", data$consolidated_data$method))
+        mixscale_count <- sum(grepl("MixScale", data$consolidated_data$method))
+        crispa_count <- sum(grepl("CRISPRa", data$consolidated_data$method))
+        
+        cat("[DATASET DETECTION] Row counts - Total:", total_rows, "MAST:", mast_count, "MixScale:", mixscale_count, "CRISPRa:", crispa_count, "\n")
+        
+        # Only use Full_Dataset if CRISPRa is substantial (>5% of data)
+        if (has_crispa && crispa_count > (total_rows * 0.05)) {
+          dataset_to_load <- "Full_Dataset"
+          cat("[DATASET DETECTION] Loading Full_Dataset (substantial CRISPRa data found)\n")
+        } else if (has_crispri && has_mutations) {
+          dataset_to_load <- "iSCORE_PD_CRISPRi"
+          cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (MAST + CRISPRi)\n")
+        } else if (has_crispri) {
+          dataset_to_load <- "iSCORE_PD_CRISPRi"
+          cat("[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (CRISPRi only)\n")
+        } else {
+          dataset_to_load <- "iSCORE_PD"
+          cat("[DATASET DETECTION] Loading iSCORE_PD (MAST only)\n")
+        }
       }
       
       umap_data$dataset_name <- dataset_to_load
