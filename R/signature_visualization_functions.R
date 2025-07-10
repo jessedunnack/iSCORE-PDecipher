@@ -211,26 +211,36 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
   
   # Prepare data for heatmap with enhanced error handling
   tryCatch({
+    # Get available columns
+    available_cols <- colnames(signature_data)
+    
     plot_data <- signature_data %>%
       mutate(
-        cluster_info = case_when(
-          "cluster" %in% colnames(signature_data) ~ as.character(cluster),
-          "cluster_id" %in% colnames(signature_data) ~ as.character(cluster_id),
-          "cluster_name" %in% colnames(signature_data) ~ as.character(cluster_name),
-          TRUE ~ "Unknown"
-        ),
-        gene_pair_info = case_when(
-          "gene_pair" %in% colnames(signature_data) ~ as.character(gene_pair),
-          "mast_gene" %in% colnames(signature_data) & "crispri_gene" %in% colnames(signature_data) ~ 
-            paste0(mast_gene, " vs ", crispri_gene),
-          "gene_name" %in% colnames(signature_data) ~ as.character(gene_name),
-          TRUE ~ paste0("Row_", row_number())
-        ),
-        metric_value = case_when(
-          "signature_strength" %in% colnames(signature_data) ~ as.numeric(signature_strength),
-          "strength" %in% colnames(signature_data) ~ as.numeric(strength),
-          TRUE ~ as.numeric(NA)
-        )
+        cluster_info = if("cluster" %in% available_cols) {
+          as.character(cluster)
+        } else if("cluster_id" %in% available_cols) {
+          as.character(cluster_id)
+        } else if("cluster_name" %in% available_cols) {
+          as.character(cluster_name)
+        } else {
+          "Unknown"
+        },
+        gene_pair_info = if("gene_pair" %in% available_cols) {
+          as.character(gene_pair)
+        } else if(all(c("mast_gene", "crispri_gene") %in% available_cols)) {
+          paste0(mast_gene, " vs ", crispri_gene)
+        } else if("gene_name" %in% available_cols) {
+          as.character(gene_name)
+        } else {
+          paste0("Row_", row_number())
+        },
+        metric_value = if("signature_strength" %in% available_cols) {
+          as.numeric(signature_strength)
+        } else if("strength" %in% available_cols) {
+          as.numeric(strength)
+        } else {
+          as.numeric(NA)
+        }
       ) %>%
       filter(!is.na(metric_value))  # Remove rows with missing metric values
   }, error = function(e) {
