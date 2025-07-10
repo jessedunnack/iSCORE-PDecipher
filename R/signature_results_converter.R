@@ -82,23 +82,17 @@ convert_signature_results_for_trends <- function(signature_results) {
     }
   }
   
-  # If no files were loaded, try to extract from summary_stats
-  if (nrow(all_signatures) == 0 && !is.null(signature_results$summary_stats)) {
-    # Create minimal signatures from summary stats
-    if (!is.null(signature_results$summary_stats$total_signatures) && 
-        signature_results$summary_stats$total_signatures > 0) {
-      
-      # Create placeholder data
-      n_sigs <- min(signature_results$summary_stats$total_signatures, 10)
-      all_signatures <- data.frame(
-        gene_pair = paste0("Gene_", 1:n_sigs),
-        cluster = paste0("cluster_", 0:(n_sigs-1)),
-        signature_strength = runif(n_sigs, 0.5, 3.0),
-        gene_overlap_count = sample(5:50, n_sigs, replace = TRUE),
-        pathway_overlap_count = sample(10:100, n_sigs, replace = TRUE),
-        stringsAsFactors = FALSE
-      )
-    }
+  # If no files were loaded, return empty but valid structure
+  if (nrow(all_signatures) == 0) {
+    warning("No signature data could be loaded from files or summary stats")
+    all_signatures <- data.frame(
+      gene_pair = character(0),
+      cluster = character(0),
+      signature_strength = numeric(0),
+      gene_overlap_count = integer(0),
+      pathway_overlap_count = integer(0),
+      stringsAsFactors = FALSE
+    )
   }
   
   return(list(

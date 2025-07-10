@@ -209,14 +209,35 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
     signature_data <- signature_data[cluster_col %in% cluster_filter, ]
   }
   
-  # Prepare data for heatmap
-  plot_data <- signature_data %>%
-    mutate(
-      cluster_info = ifelse("cluster" %in% colnames(signature_data), cluster, 
-                           ifelse("cluster_id" %in% colnames(signature_data), cluster_id, "Unknown")),
-      metric_value = ifelse("signature_strength" %in% colnames(signature_data), signature_strength, 
-                           ifelse("strength" %in% colnames(signature_data), strength, 1))
-    )
+  # Prepare data for heatmap with enhanced error handling
+  tryCatch({
+    plot_data <- signature_data %>%
+      mutate(
+        cluster_info = case_when(
+          "cluster" %in% colnames(signature_data) ~ as.character(cluster),
+          "cluster_id" %in% colnames(signature_data) ~ as.character(cluster_id),
+          "cluster_name" %in% colnames(signature_data) ~ as.character(cluster_name),
+          TRUE ~ "Unknown"
+        ),
+        gene_pair_info = case_when(
+          "gene_pair" %in% colnames(signature_data) ~ as.character(gene_pair),
+          "mast_gene" %in% colnames(signature_data) & "crispri_gene" %in% colnames(signature_data) ~ 
+            paste0(mast_gene, " vs ", crispri_gene),
+          "gene_name" %in% colnames(signature_data) ~ as.character(gene_name),
+          TRUE ~ paste0("Row_", row_number())
+        ),
+        metric_value = case_when(
+          "signature_strength" %in% colnames(signature_data) ~ as.numeric(signature_strength),
+          "strength" %in% colnames(signature_data) ~ as.numeric(strength),
+          TRUE ~ as.numeric(NA)
+        )
+      ) %>%
+      filter(!is.na(metric_value))  # Remove rows with missing metric values
+  }, error = function(e) {
+    cat("[HEATMAP ERROR] Data preparation failed:", e$message, "\n")
+    cat("[HEATMAP DEBUG] Input columns:", paste(colnames(signature_data), collapse = ", "), "\n")
+    stop("Failed to prepare heatmap data: ", e$message)
+  })
   
   # Handle different metrics
   if (metric == "gene_fisher_p" && "gene_fisher_p" %in% colnames(signature_data)) {
@@ -243,12 +264,27 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
     metric_label <- "Signature Strength"
   }
   
-  # Create matrix
-  heatmap_matrix <- plot_data %>%
-    dplyr::select(gene_pair, cluster_info, metric_value) %>%
-    tidyr::pivot_wider(names_from = cluster_info, values_from = metric_value, values_fill = 0) %>%
-    tibble::column_to_rownames("gene_pair") %>%
-    as.matrix()
+  # Create matrix with better error handling
+  tryCatch({
+    # Ensure we have the required columns
+    if (!"gene_pair_info" %in% colnames(plot_data)) {
+      stop("gene_pair_info column missing from plot_data")
+    }
+    
+    heatmap_matrix <- plot_data %>%
+      dplyr::select(gene_pair_info, cluster_info, metric_value) %>%
+      # Ensure metric_value is numeric
+      mutate(metric_value = as.numeric(metric_value)) %>%
+      filter(!is.na(metric_value)) %>%
+      tidyr::pivot_wider(names_from = cluster_info, values_from = metric_value, values_fill = 0) %>%
+      tibble::column_to_rownames("gene_pair_info") %>%
+      as.matrix()
+  }, error = function(e) {
+    cat("[HEATMAP ERROR] Matrix creation failed:", e$message, "\n")
+    cat("[HEATMAP DEBUG] Available columns:", paste(colnames(plot_data), collapse = ", "), "\n")
+    cat("[HEATMAP DEBUG] Data dimensions:", nrow(plot_data), "x", ncol(plot_data), "\n")
+    stop("Failed to create heatmap matrix: ", e$message)
+  })
   
   if (nrow(heatmap_matrix) == 0) {
     return(plotly::plot_ly() %>% 
