@@ -309,6 +309,14 @@ mod_signature_nomination_ui <- function(id) {
             wellPanel(
               h4("Interactive Signature Strength Heatmap"),
               
+              # Explanatory note about pathway-focused analysis
+              div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
+                icon("info-circle"),
+                strong(" Analysis Focus: "), 
+                "This heatmap shows overlaps of pathway-associated genes only - genes that contribute to enriched biological processes. ",
+                "For ALL DE gene overlaps (larger numbers), see the Summary Statistics in DE Genes page."
+              ),
+              
               # Heatmap controls
               fluidRow(
                 column(3,

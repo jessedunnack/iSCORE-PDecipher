@@ -1688,10 +1688,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
              style = "color: #2c3e50; margin-bottom: 5px;")
         ),
         
+        # Explanatory note about analysis scope
+        div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
+          icon("info-circle"),
+          strong(" Analysis Scope: "), 
+          "This shows overlap of ALL tested genes meeting significance criteria. ",
+          "For pathway-focused overlaps (smaller, more functionally coherent), see the Signature Heatmap in Signature Nomination."
+        ),
+        
         fluidRow(
           column(4,
             div(class = "text-center",
               h5("MAST Significant"),
+              h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
               h3(mast_sig, style = "color: #3c8dbc;"),
               p("(p < 0.05, |log2FC| > 0.25)")
             )
@@ -1699,6 +1708,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           column(4,
             div(class = "text-center",
               h5("MixScale Significant"),
+              h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
               h3(mixscale_sig, style = "color: #5cb85c;"),
               p("(p < 0.05, |log2FC| > 0.25)")
             )
@@ -1706,6 +1716,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           column(4,
             div(class = "text-center",
               h5("Overlapping Genes"),
+              h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
               h3(overlap, style = "color: #f0ad4e;"),
               p("(significant in both)")
             )
