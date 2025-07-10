@@ -1524,10 +1524,24 @@ mod_de_results_server <- function(id, global_selection, app_data) {
     
     # Render summary statistics
     output$stats_content <- renderUI({
+      # Ensure proper reactivity by accessing all reactive dependencies
+      req(global_selection())
+      current_selection <- global_selection()
+      
+      # Also ensure reactivity to local cluster selection changes
+      # Note: values$selected_cluster can be NULL initially, so don't require it
+      
+      # Get display text for current settings
       cluster_text <- if (is.null(values$selected_cluster) || values$selected_cluster == "All") {
         "all clusters"
       } else {
         values$selected_cluster
+      }
+      
+      gene_text <- if (is.null(current_selection$gene) || current_selection$gene == "All" || current_selection$gene == "") {
+        "All genes"
+      } else {
+        current_selection$gene
       }
       
       # Calculate stats from actual data
@@ -1536,7 +1550,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       overlap <- 0
       
       # Get current global selection for filtering
-      current_gene <- global_selection()$gene
+      current_gene <- current_selection$gene
       
       # Calculate MAST significant genes
       if (!is.null(values$de_data_mast) && nrow(values$de_data_mast) > 0) {
@@ -1668,6 +1682,12 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
       
       tagList(
+        # Dynamic title showing current settings
+        div(class = "text-center", style = "margin-bottom: 20px;",
+          h4(paste("Summary Statistics:", gene_text, "-", cluster_text), 
+             style = "color: #2c3e50; margin-bottom: 5px;")
+        ),
+        
         fluidRow(
           column(4,
             div(class = "text-center",
