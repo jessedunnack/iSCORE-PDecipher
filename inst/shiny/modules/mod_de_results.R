@@ -940,7 +940,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
       
       # Determine significance
-      plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 1
+      plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 0.25
       
       # Color based on selection
       if (color_by == "significance") {
@@ -1159,7 +1159,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
         
         # Select top significant genes for labeling (up to 20)
-        plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 1
+        plot_data$significant <- plot_data$pvalue < 0.05 & abs(plot_data$log2FC) > 0.25
         significant_genes <- plot_data[plot_data$significant, ]
         
         # Sort by combined significance and fold change for best labels
@@ -1185,9 +1185,9 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           y = 'pvalue',
           title = plot_title,
           subtitle = paste("Total genes:", nrow(plot_data), "| Significant:", sum(plot_data$significant)),
-          caption = paste("Significance: p < 0.05 & |log2FC| > 1"),
+          caption = paste("Significance: p < 0.05 & |log2FC| > 0.25"),
           pCutoff = 0.05,
-          FCcutoff = 1,
+          FCcutoff = 0.25,
           selectLab = genes_to_label,
           xlab = bquote(~Log[2]~ 'fold change'),
           ylab = bquote(~-Log[10]~'P-value'),
@@ -1569,7 +1569,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Apply significance criteria
         if (nrow(mast_filtered) > 0) {
           mast_sig <- sum(!is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
-                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1)
+                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 0.25)
         }
       }
       
@@ -1590,7 +1590,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Apply significance criteria
         if (nrow(mixscale_filtered) > 0) {
           mixscale_sig <- sum(!is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
-                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1)
+                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 0.25)
         }
       }
       
@@ -1619,14 +1619,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Get significant gene data with direction info
         if (nrow(mast_filtered) > 0) {
           mast_sig_idx <- !is.na(mast_filtered$pvalue) & !is.na(mast_filtered$log2FC) &
-                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 1
+                         mast_filtered$pvalue < 0.05 & abs(mast_filtered$log2FC) > 0.25
           mast_sig_data <- mast_filtered[mast_sig_idx, c("gene_name", "log2FC", "pvalue")]
           mast_sig_genes <- mast_sig_data$gene_name
         }
         
         if (nrow(mixscale_filtered) > 0) {
           mixscale_sig_idx <- !is.na(mixscale_filtered$pvalue) & !is.na(mixscale_filtered$log2FC) &
-                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 1
+                             mixscale_filtered$pvalue < 0.05 & abs(mixscale_filtered$log2FC) > 0.25
           mixscale_sig_data <- mixscale_filtered[mixscale_sig_idx, c("gene_name", "log2FC", "pvalue")]
           mixscale_sig_genes <- mixscale_sig_data$gene_name
         }
@@ -1693,14 +1693,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             div(class = "text-center",
               h5("MAST Significant"),
               h3(mast_sig, style = "color: #3c8dbc;"),
-              p("(p < 0.05, |log2FC| > 1)")
+              p("(p < 0.05, |log2FC| > 0.25)")
             )
           ),
           column(4,
             div(class = "text-center",
               h5("MixScale Significant"),
               h3(mixscale_sig, style = "color: #5cb85c;"),
-              p("(p < 0.05, |log2FC| > 1)")
+              p("(p < 0.05, |log2FC| > 0.25)")
             )
           ),
           column(4,
