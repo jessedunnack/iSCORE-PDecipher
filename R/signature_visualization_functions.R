@@ -301,65 +301,99 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
            plotly::add_text(x = 0.5, y = 0.5, text = "No data available for heatmap"))
   }
   
-  # Handle clustering
-  row_order <- rownames(heatmap_matrix)
-  col_order <- colnames(heatmap_matrix)
-  
-  if (clustering %in% c("both", "row")) {
-    if (nrow(heatmap_matrix) > 1) {
-      tryCatch({
-        row_dist <- dist(heatmap_matrix)
-        row_hclust <- hclust(row_dist)
-        row_order <- rownames(heatmap_matrix)[row_hclust$order]
-      }, error = function(e) {
-        cat("[HEATMAP] Row clustering failed:", e$message, "\n")
-      })
+  # Create interactive clustered heatmap with dendrograms using heatmaply
+  tryCatch({
+    # Check if heatmaply is available
+    if (!requireNamespace("heatmaply", quietly = TRUE)) {
+      warning("heatmaply package not available, falling back to basic plotly heatmap")
+      
+      # Fallback to basic plotly heatmap (current implementation)
+      plotly_colorscale <- switch(color_scale,
+        "viridis" = "Viridis",
+        "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+        "Reds" = "Reds", 
+        "Blues" = "Blues",
+        "Viridis"  # fallback
+      )
+      
+      return(plotly::plot_ly(
+        z = heatmap_matrix,
+        x = colnames(heatmap_matrix),
+        y = rownames(heatmap_matrix),
+        type = "heatmap",
+        colorscale = plotly_colorscale,
+        hovertemplate = paste0(
+          "<b>Gene Pair:</b> %{y}<br>",
+          "<b>Cluster:</b> %{x}<br>",
+          "<b>", metric_label, ":</b> %{z:.2f}<br>",
+          "<extra></extra>"
+        )
+      ) %>%
+      plotly::layout(
+        title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
+        xaxis = list(title = "Cluster"),
+        yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
+      ))
     }
-  }
-  
-  if (clustering %in% c("both", "column")) {
-    if (ncol(heatmap_matrix) > 1) {
-      tryCatch({
-        col_dist <- dist(t(heatmap_matrix))
-        col_hclust <- hclust(col_dist)
-        col_order <- colnames(heatmap_matrix)[col_hclust$order]
-      }, error = function(e) {
-        cat("[HEATMAP] Column clustering failed:", e$message, "\n")
-      })
-    }
-  }
-  
-  # Reorder matrix
-  heatmap_matrix <- heatmap_matrix[row_order, col_order, drop = FALSE]
-  
-  # Set color scale
-  plotly_colorscale <- switch(color_scale,
-    "viridis" = "Viridis",
-    "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
-    "Reds" = "Reds", 
-    "Blues" = "Blues",
-    "Viridis"  # fallback
-  )
-  
-  # Create interactive heatmap
-  plotly::plot_ly(
-    z = heatmap_matrix,
-    x = colnames(heatmap_matrix),
-    y = rownames(heatmap_matrix),
-    type = "heatmap",
-    colorscale = plotly_colorscale,
-    hovertemplate = paste0(
-      "<b>Gene Pair:</b> %{y}<br>",
-      "<b>Cluster:</b> %{x}<br>",
-      "<b>", metric_label, ":</b> %{z:.2f}<br>",
-      "<extra></extra>"
+    
+    # Set up clustering options
+    cluster_rows <- clustering %in% c("both", "row")
+    cluster_cols <- clustering %in% c("both", "column")
+    
+    # Set up colors for heatmaply
+    heatmaply_colors <- switch(color_scale,
+      "viridis" = viridis::viridis(256),
+      "RdBu" = RColorBrewer::brewer.pal(11, "RdBu"),
+      "Reds" = RColorBrewer::brewer.pal(9, "Reds"),
+      "Blues" = RColorBrewer::brewer.pal(9, "Blues"),
+      viridis::viridis(256)  # fallback
     )
-  ) %>%
-  plotly::layout(
-    title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
-    xaxis = list(title = "Cluster"),
-    yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
-  )
+    
+    # Create clustered heatmap with dendrograms
+    heatmaply::heatmaply(
+      heatmap_matrix,
+      dendrogram = if(cluster_rows && cluster_cols) "both" else if(cluster_rows) "row" else if(cluster_cols) "column" else "none",
+      colors = heatmaply_colors,
+      main = paste("Interactive Signature", metric_label, "Heatmap"),
+      xlab = "Cluster",
+      ylab = "Gene Pair (MAST vs CRISPRi)",
+      margins = c(80, 150),  # Adjust margins for labels
+      key.title = metric_label,
+      plot_method = "plotly",
+      heatmap_layers = theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    )
+    
+  }, error = function(e) {
+    cat("[HEATMAP ERROR] Clustered heatmap creation failed:", e$message, "\n")
+    
+    # Fallback to basic plotly heatmap
+    plotly_colorscale <- switch(color_scale,
+      "viridis" = "Viridis",
+      "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+      "Reds" = "Reds", 
+      "Blues" = "Blues",
+      "Viridis"  # fallback
+    )
+    
+    plotly::plot_ly(
+      z = heatmap_matrix,
+      x = colnames(heatmap_matrix),
+      y = rownames(heatmap_matrix),
+      type = "heatmap",
+      colorscale = plotly_colorscale,
+      hovertemplate = paste0(
+        "<b>Gene Pair:</b> %{y}<br>",
+        "<b>Cluster:</b> %{x}<br>",
+        "<b>", metric_label, ":</b> %{z:.2f}<br>",
+        "<extra></extra>"
+      )
+    ) %>%
+    plotly::layout(
+      title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
+      xaxis = list(title = "Cluster"),
+      yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
+    )
+  })
 }
 
 #' Create Gene Pair Multi-Metric Dashboard
