@@ -294,8 +294,11 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
       
       # Run analysis with error handling
       tryCatch({
+        # Convert signature results to expected format
+        converted_results <- convert_signature_results_for_trends(analysis_results())
+        
         trends_result <- analyze_signature_trends(
-          signature_results = analysis_results(),
+          signature_results = converted_results,
           enrichment_data = enrichment_data(),
           min_frequency = input$min_frequency,
           top_n = input$top_n_results

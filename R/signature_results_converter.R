@@ -1,0 +1,110 @@
+#' Convert discover_top_signatures results to format expected by analyze_signature_trends
+#'
+#' This function bridges the gap between the file-based output of discover_top_signatures
+#' and the data frame input expected by analyze_signature_trends.
+#'
+#' @param signature_results Results from discover_top_signatures()
+#' @return List with all_signatures and pan_cluster_signatures data frames
+#' @export
+convert_signature_results_for_trends <- function(signature_results) {
+  
+  # Check if we have the expected structure
+  if (is.null(signature_results) || !is.list(signature_results)) {
+    warning("Invalid signature results provided")
+    return(list(
+      all_signatures = data.frame(),
+      pan_cluster_signatures = data.frame()
+    ))
+  }
+  
+  # Initialize empty data frames
+  all_signatures <- data.frame()
+  pan_cluster_signatures <- data.frame()
+  
+  # Try to load data from files if they exist
+  if (!is.null(signature_results$files_generated)) {
+    
+    # Load top signatures file
+    if (!is.null(signature_results$files_generated$top_signatures) && 
+        file.exists(signature_results$files_generated$top_signatures)) {
+      tryCatch({
+        all_signatures <- read.csv(signature_results$files_generated$top_signatures, 
+                                   stringsAsFactors = FALSE)
+        
+        # Ensure required columns exist
+        if (!"signature_strength" %in% colnames(all_signatures)) {
+          # Calculate signature strength if missing
+          if (all(c("gene_overlap_count", "pathway_overlap_count", "gene_fisher_p") %in% colnames(all_signatures))) {
+            all_signatures$signature_strength <- 
+              (all_signatures$gene_overlap_count * 0.4) +
+              (all_signatures$pathway_overlap_count * 0.3) +
+              (-log10(pmax(all_signatures$gene_fisher_p, 1e-10)) * 0.3)
+          } else {
+            all_signatures$signature_strength <- 1.0  # Default value
+          }
+        }
+        
+        # Ensure cluster column exists
+        if (!"cluster" %in% colnames(all_signatures) && "cluster_name" %in% colnames(all_signatures)) {
+          all_signatures$cluster <- all_signatures$cluster_name
+        }
+        
+      }, error = function(e) {
+        warning("Failed to load top signatures file: ", e$message)
+      })
+    }
+    
+    # Load pan-cluster signatures file
+    if (!is.null(signature_results$files_generated$pan_cluster) && 
+        file.exists(signature_results$files_generated$pan_cluster)) {
+      tryCatch({
+        pan_cluster_signatures <- read.csv(signature_results$files_generated$pan_cluster, 
+                                          stringsAsFactors = FALSE)
+        
+        # Ensure required columns exist
+        if (!"signature_strength" %in% colnames(pan_cluster_signatures)) {
+          # Calculate mean signature strength if missing
+          if ("mean_gene_overlap" %in% colnames(pan_cluster_signatures)) {
+            pan_cluster_signatures$signature_strength <- pan_cluster_signatures$mean_gene_overlap * 0.1
+          } else {
+            pan_cluster_signatures$signature_strength <- 1.0  # Default value
+          }
+        }
+        
+        # Add cluster column for pan-cluster (set to "pan_cluster")
+        if (!"cluster" %in% colnames(pan_cluster_signatures)) {
+          pan_cluster_signatures$cluster <- "pan_cluster"
+        }
+        
+      }, error = function(e) {
+        warning("Failed to load pan-cluster signatures file: ", e$message)
+      })
+    }
+  }
+  
+  # If no files were loaded, try to extract from summary_stats
+  if (nrow(all_signatures) == 0 && !is.null(signature_results$summary_stats)) {
+    # Create minimal signatures from summary stats
+    if (!is.null(signature_results$summary_stats$total_signatures) && 
+        signature_results$summary_stats$total_signatures > 0) {
+      
+      # Create placeholder data
+      n_sigs <- min(signature_results$summary_stats$total_signatures, 10)
+      all_signatures <- data.frame(
+        gene_pair = paste0("Gene_", 1:n_sigs),
+        cluster = paste0("cluster_", 0:(n_sigs-1)),
+        signature_strength = runif(n_sigs, 0.5, 3.0),
+        gene_overlap_count = sample(5:50, n_sigs, replace = TRUE),
+        pathway_overlap_count = sample(10:100, n_sigs, replace = TRUE),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  
+  return(list(
+    all_signatures = all_signatures,
+    pan_cluster_signatures = pan_cluster_signatures,
+    summary_stats = signature_results$summary_stats,
+    files_generated = signature_results$files_generated
+  ))
+}

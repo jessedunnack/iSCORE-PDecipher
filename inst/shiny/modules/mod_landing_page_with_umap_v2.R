@@ -550,6 +550,9 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     
     # Render UMAP plot
     output$umap_plot <- renderPlot({
+      # Add dependency on PC selection to trigger re-render
+      req(input$pc_selection)
+      
       if (!umap_data$loaded || is.null(umap_data$sce)) {
         # Placeholder when no data
         plot.new()
