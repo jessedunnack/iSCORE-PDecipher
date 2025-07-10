@@ -17,12 +17,17 @@ convert_signature_results_for_trends <- function(signature_results) {
     ))
   }
   
+  # Debug: Log the structure we received
+  cat("[CONVERTER] Signature results structure:", paste(names(signature_results), collapse = ", "), "\n")
+  
   # Initialize empty data frames
   all_signatures <- data.frame()
   pan_cluster_signatures <- data.frame()
   
   # Try to load data from files if they exist
   if (!is.null(signature_results$files_generated)) {
+    cat("[CONVERTER] Files generated structure:", paste(names(signature_results$files_generated), collapse = ", "), "\n")
+    cat("[CONVERTER] Top signatures file:", signature_results$files_generated$top_signatures %||% "NULL", "\n")
     
     # Load top signatures file
     if (!is.null(signature_results$files_generated$top_signatures) && 
@@ -82,17 +87,35 @@ convert_signature_results_for_trends <- function(signature_results) {
     }
   }
   
-  # If no files were loaded, return empty but valid structure
+  # If no files were loaded, check if data is directly in the results object
   if (nrow(all_signatures) == 0) {
-    warning("No signature data could be loaded from files or summary stats")
-    all_signatures <- data.frame(
-      gene_pair = character(0),
-      cluster = character(0),
-      signature_strength = numeric(0),
-      gene_overlap_count = integer(0),
-      pathway_overlap_count = integer(0),
-      stringsAsFactors = FALSE
-    )
+    cat("[CONVERTER] No files loaded, checking for direct data in results object\n")
+    
+    # Check if signature data is directly available (not in files)
+    if (!is.null(signature_results$all_signatures)) {
+      cat("[CONVERTER] Found all_signatures directly in results\n")
+      all_signatures <- signature_results$all_signatures
+    } else if (!is.null(signature_results$top_signatures)) {
+      cat("[CONVERTER] Found top_signatures directly in results\n")
+      all_signatures <- signature_results$top_signatures
+    } else {
+      cat("[CONVERTER] No signature data found in any format\n")
+      warning("No signature data could be loaded from files or summary stats")
+      all_signatures <- data.frame(
+        gene_pair = character(0),
+        cluster = character(0),
+        signature_strength = numeric(0),
+        gene_overlap_count = integer(0),
+        pathway_overlap_count = integer(0),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  
+  # Same check for pan-cluster signatures
+  if (nrow(pan_cluster_signatures) == 0 && !is.null(signature_results$pan_cluster_signatures)) {
+    cat("[CONVERTER] Found pan_cluster_signatures directly in results\n")
+    pan_cluster_signatures <- signature_results$pan_cluster_signatures
   }
   
   return(list(
