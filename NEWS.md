@@ -1,3 +1,37 @@
+# iSCORE.PDecipher 0.2.3
+
+## Critical Volcano Plot Fix (2025-01-13)
+
+This hotfix release resolves a critical discrepancy in volcano plot data display for gene variants.
+
+### 🔥 **CRITICAL BUG FIX: VPS13C and SNCA Volcano Plot Gene Harmonization**
+- **Issue**: VPS13C_W395C volcano plots showed "no results available" while summary statistics showed overlap data
+- **Root Cause**: Missing gene harmonization in volcano plot rendering vs summary statistics
+- **Fix Applied**: Added gene harmonization to both static and interactive MixScale volcano plots
+- **Impact**: All gene variants now show consistent data between volcano plots and statistics
+
+### 🧬 **Gene Variants Fixed**
+- **VPS13C_W395C** → Now correctly maps to VPS13C MixScale data
+- **VPS13C_A444P** → Now correctly maps to VPS13C MixScale data  
+- **SNCA_A30P** → Now correctly maps to SNCA MixScale data
+- **SNCA_A53T** → Now correctly maps to SNCA MixScale data
+- **PRKN** → Confirmed working mapping to PARK2 MixScale data
+
+### ✅ **Testing & Validation**
+- Added comprehensive test suite (`test_vps13c_volcano_fix.R`)
+- Verified all 11 clusters have data for each variant
+- Confirmed gene harmonization logic working correctly
+- All target genes available in MixScale dataset
+
+### 🔧 **Technical Implementation**
+- Modified `inst/shiny/modules/mod_de_results.R` volcano plot renderers
+- Applied same harmonization logic used in Fisher's exact test calculations
+- Ensures consistency across all DE Results page visualizations
+
+**Resolution**: Volcano plots now display correctly for all gene variants, matching the behavior of summary statistics.
+
+---
+
 # iSCORE.PDecipher 0.2.2
 
 ## Major Statistical Improvements (2025-01-13)
