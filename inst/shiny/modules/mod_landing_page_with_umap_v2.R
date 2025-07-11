@@ -627,7 +627,21 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     observe({
       if (umap_data$loaded && !is.null(umap_data$sce)) {
         clusters <- sort(unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters))
-        cluster_choices <- setNames(as.character(clusters), paste("Cluster", clusters))
+        
+        # Clean up cluster names: remove "cluster_" prefix and create clean display names
+        cluster_values <- as.character(clusters)
+        cluster_labels <- sapply(cluster_values, function(x) {
+          if (grepl("^cluster_", x)) {
+            # Extract number after "cluster_" and format as "Cluster X"
+            cluster_num <- gsub("^cluster_", "", x)
+            paste("Cluster", cluster_num)
+          } else {
+            # If not in "cluster_X" format, just add "Cluster" prefix
+            paste("Cluster", x)
+          }
+        })
+        
+        cluster_choices <- setNames(cluster_values, cluster_labels)
         
         updateSelectInput(session, "selected_cluster",
                          choices = cluster_choices,
