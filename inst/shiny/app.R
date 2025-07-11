@@ -794,6 +794,34 @@ server <- function(input, output, session) {
     gene %in% valid_genes
   }
   
+  # Helper function to create labeled gene choices for dropdown
+  create_labeled_gene_choices <- function(genes, method_key) {
+    if (length(genes) == 0) return(character(0))
+    
+    # Create display labels with source information
+    labeled_genes <- sapply(genes, function(gene) {
+      # Check if it's a MAST mutation variant
+      if (grepl("_[A-Z][0-9]+[A-Z]$", gene)) {
+        # It's a mutation variant (e.g., SNCA_A30P, VPS13C_W395C)
+        paste0(gene, " (MAST mutation)")
+      } else if (method_key == "MAST") {
+        # Non-variant MAST gene
+        paste0(gene, " (MAST)")
+      } else if (method_key == "MixScale_CRISPRi") {
+        # CRISPRi knockdown
+        paste0(gene, " (CRISPRi knockdown)")
+      } else if (method_key == "MixScale_CRISPRa") {
+        # CRISPRa activation
+        paste0(gene, " (CRISPRa activation)")
+      } else {
+        gene
+      }
+    })
+    
+    # Return named vector where names are display labels and values are actual gene names
+    setNames(genes, labeled_genes)
+  }
+  
   # Initialize app with data - run once on startup
   observe({
     # Check environment variables first
@@ -873,6 +901,9 @@ server <- function(input, output, session) {
       valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
       
       if (length(valid_genes) > 0) {
+        # Create labeled choices
+        labeled_choices <- create_labeled_gene_choices(valid_genes, input$global_analysis_type)
+        
         # Keep current selection if still valid, otherwise pick first
         current_gene <- input$global_gene
         selected <- if (!is.null(current_gene) && current_gene %in% valid_genes) {
@@ -884,7 +915,7 @@ server <- function(input, output, session) {
         }
         
         updateSelectInput(session, "global_gene", 
-                         choices = valid_genes, 
+                         choices = labeled_choices, 
                          selected = selected)
       }
     }

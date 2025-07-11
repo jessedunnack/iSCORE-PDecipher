@@ -49,7 +49,7 @@ mod_de_analysis_ui <- function(id) {
       checkboxGroupInput(ns("cluster_selection"),
                          "Clusters:",
                          choices = paste0("cluster_", 0:13),
-                         selected = paste0("cluster_", 0:2)),
+                         selected = paste0("cluster_", 0:13)),  # Select all clusters by default
       
       # Significance cutoffs
       wellPanel(
@@ -242,7 +242,7 @@ mod_de_analysis_server <- function(id, app_data) {
         available_genes <- unique(processed_de$gene)
         updateSelectizeInput(session, "gene_selection",
                             choices = available_genes,
-                            selected = head(available_genes, 3))
+                            selected = available_genes)  # Select all genes by default
         
         showNotification(
           paste("Loaded", nrow(processed_de), "significant DE genes from", length(available_genes), "genes/conditions"),
