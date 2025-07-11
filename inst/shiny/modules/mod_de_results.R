@@ -1534,18 +1534,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       })
     })
     
-    # Render summary statistics
-    output$stats_content <- renderUI({
-      # Ensure proper reactivity by accessing all reactive dependencies
-      req(global_selection())
-      current_selection <- global_selection()
-      
-      # CRITICAL FIX: Clear overlap data values at the beginning to prevent stale data
+    # REACTIVE LOOP FIX: Move side effects to separate observer
+    observeEvent(global_selection(), {
+      # Clear overlap data values when global selection changes to prevent stale data
       # This ensures when switching to genes with no MixScale data (like GBA), 
       # the overlap section properly shows "no data" instead of stale results
       values$mast_sig_data <- NULL
       values$mixscale_sig_data <- NULL
       values$overlap_data <- NULL
+    }, priority = 100)  # High priority to clear data before other reactions
+    
+    # REACTIVE LOOP FIX: Pure reactive for statistics computation (no side effects)
+    stats_data <- reactive({
+      # Ensure proper reactivity by accessing all reactive dependencies
+      req(global_selection())
+      current_selection <- global_selection()
       
       # Also ensure reactivity to local cluster selection changes
       # Note: values$selected_cluster can be NULL initially, so don't require it
@@ -1653,9 +1656,8 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Calculate overlap
         overlap <- length(intersect(mast_sig_genes, mixscale_sig_genes))
         
-        # Store the significant gene data for overlap analysis
-        values$mast_sig_data <- mast_sig_data
-        values$mixscale_sig_data <- mixscale_sig_data
+        # Return significant gene data (no side effects)
+        # Side effects will be handled by separate observer
       }
       
       # UPDATED: Statistical significance with proper background gene handling (intersection/union approaches)
@@ -1768,10 +1770,37 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       cat("  Union p-value:", fisher_results$union_approach$fisher_p, "\n")
       cat("  Will show dual Fisher's test?:", (!is.na(fisher_results$intersection_approach$fisher_p) || !is.na(fisher_results$union_approach$fisher_p)), "\n")
       
+      # Return computed data (no UI rendering in reactive)
+      return(list(
+        gene_text = gene_text,
+        cluster_text = cluster_text,
+        mast_sig = mast_sig,
+        mixscale_sig = mixscale_sig,
+        overlap = overlap,
+        fisher_results = fisher_results,
+        mast_sig_data = mast_sig_data,
+        mixscale_sig_data = mixscale_sig_data
+      ))
+    })
+    
+    # Observer to handle side effects (updating values$ based on computed stats)
+    observeEvent(stats_data(), {
+      stats <- stats_data()
+      if (!is.null(stats)) {
+        values$mast_sig_data <- stats$mast_sig_data
+        values$mixscale_sig_data <- stats$mixscale_sig_data
+      }
+    })
+    
+    # Pure UI renderer (no side effects)
+    output$stats_content <- renderUI({
+      stats <- stats_data()
+      req(stats)
+      
       tagList(
         # Dynamic title showing current settings
         div(class = "text-center", style = "margin-bottom: 20px;",
-          h4(paste("Summary Statistics:", gene_text, "-", cluster_text), 
+          h4(paste("Summary Statistics:", stats$gene_text, "-", stats$cluster_text), 
              style = "color: #2c3e50; margin-bottom: 5px;")
         ),
         
@@ -1788,7 +1817,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             div(class = "text-center",
               h5("MAST Significant"),
               h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
-              h3(mast_sig, style = "color: #3c8dbc;"),
+              h3(stats$mast_sig, style = "color: #3c8dbc;"),
               p("(p < 0.05, |log2FC| > 0.25)")
             )
           ),
@@ -1796,7 +1825,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             div(class = "text-center",
               h5("MixScale Significant"),
               h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
-              h3(mixscale_sig, style = "color: #5cb85c;"),
+              h3(stats$mixscale_sig, style = "color: #5cb85c;"),
               p("(p < 0.05, |log2FC| > 0.25)")
             )
           ),
@@ -1804,14 +1833,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             div(class = "text-center",
               h5("Overlapping Genes"),
               h6("(All DE Genes)", style = "color: #7f8c8d; margin-top: -5px;"),
-              h3(overlap, style = "color: #f0ad4e;"),
+              h3(stats$overlap, style = "color: #f0ad4e;"),
               p("(significant in both)")
             )
           )
         ),
         
         # UPDATED: Statistical significance test results with dual approach
-        if (!is.na(fisher_results$intersection_approach$fisher_p) || !is.na(fisher_results$union_approach$fisher_p)) {
+        if (!is.na(stats$fisher_results$intersection_approach$fisher_p) || !is.na(stats$fisher_results$union_approach$fisher_p)) {
           tagList(
             hr(),
             div(class = "text-center",
@@ -1825,20 +1854,20 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               ),
               fluidRow(
                 # Intersection approach column
-                if (!is.na(fisher_results$intersection_approach$fisher_p)) {
+                if (!is.na(stats$fisher_results$intersection_approach$fisher_p)) {
                   column(6,
                     div(
                       strong("Fisher's Test (Intersection)"),
                       br(),
                       span("p-value: ", style = "color: #666;"),
-                      span(format_pvalue(fisher_results$intersection_approach$fisher_p), 
-                           style = paste0("color: ", if (fisher_results$intersection_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
+                      span(format_pvalue(stats$fisher_results$intersection_approach$fisher_p), 
+                           style = paste0("color: ", if (stats$fisher_results$intersection_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
                       br(),
                       span("Background: ", style = "color: #666;"),
-                      span(format(fisher_results$intersection_approach$background_size, big.mark = ",")),
+                      span(format(stats$fisher_results$intersection_approach$background_size, big.mark = ",")),
                       br(),
                       span("Odds Ratio: ", style = "color: #666;"),
-                      span(format(fisher_results$intersection_approach$fisher_or, digits = 2)),
+                      span(format(stats$fisher_results$intersection_approach$fisher_or, digits = 2)),
                       br(),
                       span("(Conservative)", style = "color: #5cb85c; font-size: 0.9em;")
                     )
@@ -1856,20 +1885,20 @@ mod_de_results_server <- function(id, global_selection, app_data) {
                 },
                 
                 # Union approach column
-                if (!is.na(fisher_results$union_approach$fisher_p)) {
+                if (!is.na(stats$fisher_results$union_approach$fisher_p)) {
                   column(6,
                     div(
                       strong("Fisher's Test (Union)"),
                       br(),
                       span("p-value: ", style = "color: #666;"),
-                      span(format_pvalue(fisher_results$union_approach$fisher_p), 
-                           style = paste0("color: ", if (fisher_results$union_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
+                      span(format_pvalue(stats$fisher_results$union_approach$fisher_p), 
+                           style = paste0("color: ", if (stats$fisher_results$union_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
                       br(),
                       span("Background: ", style = "color: #666;"),
-                      span(format(fisher_results$union_approach$background_size, big.mark = ",")),
+                      span(format(stats$fisher_results$union_approach$background_size, big.mark = ",")),
                       br(),
                       span("Odds Ratio: ", style = "color: #666;"),
-                      span(format(fisher_results$union_approach$fisher_or, digits = 2)),
+                      span(format(stats$fisher_results$union_approach$fisher_or, digits = 2)),
                       br(),
                       span("(Liberal)", style = "color: #f0ad4e; font-size: 0.9em;")
                     )
@@ -1898,7 +1927,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         },
         
         hr(),
-        p(paste("Statistics for", cluster_text), class = "text-muted text-center")
+        p(paste("Statistics for", stats$cluster_text), class = "text-muted text-center")
       )
     })
     
