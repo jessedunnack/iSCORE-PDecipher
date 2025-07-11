@@ -1528,6 +1528,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       req(global_selection())
       current_selection <- global_selection()
       
+      # CRITICAL FIX: Clear overlap data values at the beginning to prevent stale data
+      # This ensures when switching to genes with no MixScale data (like GBA), 
+      # the overlap section properly shows "no data" instead of stale results
+      values$mast_sig_data <- NULL
+      values$mixscale_sig_data <- NULL
+      values$overlap_data <- NULL
+      
       # Also ensure reactivity to local cluster selection changes
       # Note: values$selected_cluster can be NULL initially, so don't require it
       
