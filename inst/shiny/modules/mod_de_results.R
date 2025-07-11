@@ -1667,9 +1667,28 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       if (mast_sig > 0 && mixscale_sig > 0 && overlap >= 0) {
         # Get proper background genes from all tested genes (not just significant ones)
         if (!is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
-          # Extract all genes tested in DE analysis for the current selection
-          mast_all_genes <- unique(values$de_data_mast$gene_name)
-          mixscale_all_genes <- unique(values$de_data_mixscale$gene_name)
+          # CRITICAL FIX: Apply same filtering logic as significance calculation 
+          # to get genes tested in CURRENT selection only (not all comparisons)
+          mast_background_data <- values$de_data_mast
+          mixscale_background_data <- values$de_data_mixscale
+          
+          # Filter by selected cluster (same logic as significance calculation)
+          if (!is.null(values$selected_cluster) && values$selected_cluster != "All" && values$selected_cluster != "") {
+            mast_background_data <- mast_background_data[mast_background_data$cluster == values$selected_cluster, ]
+            mixscale_background_data <- mixscale_background_data[mixscale_background_data$cluster == values$selected_cluster, ]
+          }
+          
+          # Filter by global gene selection (same logic as significance calculation)
+          if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
+            mast_background_data <- mast_background_data[mast_background_data$gene == current_gene, ]
+            mixscale_background_data <- mixscale_background_data[mixscale_background_data$gene == current_gene, ]
+          }
+          
+          # NOW extract genes tested in the current specific comparison
+          mast_all_genes <- unique(mast_background_data$gene_name)
+          mixscale_all_genes <- unique(mixscale_background_data$gene_name)
+          
+          cat("[DE Results] Filtered background data - MAST rows:", nrow(mast_background_data), ", MixScale rows:", nrow(mixscale_background_data), "\n")
           
           # INTERSECTION APPROACH (Conservative): Genes tested in BOTH methods
           intersection_background <- intersect(mast_all_genes, mixscale_all_genes)
