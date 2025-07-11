@@ -214,28 +214,18 @@ mod_de_results_ui <- function(id) {
       column(12,
         wellPanel(
           fluidRow(
-            # Left section: Compact summary statistics (5 columns)
-            column(5,
-              h4("Analysis Summary"),
+            # Left half: Compact summary statistics
+            column(6,
+              h4("Summary Statistics"),
               div(id = ns("summary_stats"),
                 uiOutput(ns("stats_content"))
               )
             ),
-            # Right section: Paginated gene table (7 columns)
-            column(7,
-              h4("Overlapping DE Genes - Detailed View"),
+            # Right half: Overlapping genes list
+            column(6,
+              h4("Overlapping DE Genes"),
               div(id = ns("overlap_genes"),
-                # Paginated table output
-                DT::dataTableOutput(ns("overlap_genes_table"))
-              ),
-              # Download button below table
-              div(style = "margin-top: 15px; text-align: center;",
-                downloadButton(
-                  ns("download_overlap"),
-                  "Download All Overlapping Genes",
-                  class = "btn-sm btn-primary",
-                  icon = icon("download")
-                )
+                uiOutput(ns("overlap_content"))
               )
             )
           )
@@ -2002,15 +1992,15 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       )
     })
     
-    # Render overlapping genes table
-    output$overlap_genes_table <- DT::renderDataTable({
+    # Render overlapping genes content
+    output$overlap_content <- renderUI({
       if (is.null(values$mast_sig_data) || is.null(values$mixscale_sig_data)) {
-        # Return empty data table
-        return(DT::datatable(
-          data.frame(Message = "No overlapping genes found - requires significant genes in both MAST and MixScale results"),
-          options = list(dom = 't', paging = FALSE),
-          rownames = FALSE
-        ))
+        return(
+          div(class = "text-center text-muted",
+            p("No overlapping genes found"),
+            tags$small("Requires significant genes in both MAST and MixScale results")
+          )
+        )
       }
       
       # Get overlapping genes with direction information
@@ -2021,118 +2011,128 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       overlap_genes <- intersect(mast_genes$gene_name, mixscale_genes$gene_name)
       
       if (length(overlap_genes) == 0) {
-        # Return empty data table
-        return(DT::datatable(
-          data.frame(Message = "No overlapping genes found - different significant genes between MAST and MixScale"),
-          options = list(dom = 't', paging = FALSE),
-          rownames = FALSE
-        ))
+        return(
+          div(class = "text-center text-muted",
+            p("No overlapping genes found"),
+            tags$small("Different significant genes between MAST and MixScale")
+          )
+        )
       }
       
-      # Create comprehensive overlap data with direction
-      all_overlap_data <- data.frame(
-        Gene = overlap_genes,
-        MAST_log2FC = numeric(length(overlap_genes)),
-        MAST_pvalue = numeric(length(overlap_genes)),
-        MixScale_log2FC = numeric(length(overlap_genes)),
-        MixScale_pvalue = numeric(length(overlap_genes)),
-        Direction = character(length(overlap_genes)),
-        stringsAsFactors = FALSE
-      )
+      # Categorize overlapping genes by direction
+      same_direction_up <- character(0)
+      same_direction_down <- character(0)
+      opposite_direction <- character(0)
       
-      # Fill in the data
-      for (i in seq_along(overlap_genes)) {
-        gene <- overlap_genes[i]
-        
-        # Get MAST data
-        mast_idx <- which(mast_genes$gene_name == gene)[1]
-        if (length(mast_idx) > 0 && !is.na(mast_idx)) {
-          all_overlap_data$MAST_log2FC[i] <- mast_genes$log2FC[mast_idx]
-          all_overlap_data$MAST_pvalue[i] <- mast_genes$pvalue[mast_idx]
-        }
-        
-        # Get MixScale data
-        mixscale_idx <- which(mixscale_genes$gene_name == gene)[1]
-        if (length(mixscale_idx) > 0 && !is.na(mixscale_idx)) {
-          all_overlap_data$MixScale_log2FC[i] <- mixscale_genes$log2FC[mixscale_idx]
-          all_overlap_data$MixScale_pvalue[i] <- mixscale_genes$pvalue[mixscale_idx]
-        }
-        
-        # Determine direction
-        mast_fc <- all_overlap_data$MAST_log2FC[i]
-        mixscale_fc <- all_overlap_data$MixScale_log2FC[i]
+      for (gene in overlap_genes) {
+        mast_fc <- mast_genes$log2FC[mast_genes$gene_name == gene][1]
+        mixscale_fc <- mixscale_genes$log2FC[mixscale_genes$gene_name == gene][1]
         
         if (!is.na(mast_fc) && !is.na(mixscale_fc)) {
           if (mast_fc > 0 && mixscale_fc > 0) {
-            all_overlap_data$Direction[i] <- "Both ↑"
+            same_direction_up <- c(same_direction_up, gene)
           } else if (mast_fc < 0 && mixscale_fc < 0) {
-            all_overlap_data$Direction[i] <- "Both ↓"
+            same_direction_down <- c(same_direction_down, gene)
           } else {
-            all_overlap_data$Direction[i] <- "Opposite"
+            opposite_direction <- c(opposite_direction, gene)
           }
-        } else {
-          all_overlap_data$Direction[i] <- "Unknown"
         }
       }
+      
+      # Create downloadable gene lists
+      all_overlap_data <- data.frame(
+        Gene = overlap_genes,
+        MAST_log2FC = sapply(overlap_genes, function(g) {
+          idx <- which(mast_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mast_genes$log2FC[idx] else NA
+        }),
+        MAST_pvalue = sapply(overlap_genes, function(g) {
+          idx <- which(mast_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mast_genes$pvalue[idx] else NA
+        }),
+        MixScale_log2FC = sapply(overlap_genes, function(g) {
+          idx <- which(mixscale_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mixscale_genes$log2FC[idx] else NA
+        }),
+        MixScale_pvalue = sapply(overlap_genes, function(g) {
+          idx <- which(mixscale_genes$gene_name == g)[1]
+          if (length(idx) > 0 && !is.na(idx)) mixscale_genes$pvalue[idx] else NA
+        }),
+        stringsAsFactors = FALSE
+      )
       
       # Store for download
       values$overlap_data <- all_overlap_data
       
-      # Sort by absolute fold change for better visualization
-      all_overlap_data <- all_overlap_data[order(abs(all_overlap_data$MAST_log2FC), decreasing = TRUE), ]
-      
-      # Round numeric values for display
-      display_data <- all_overlap_data
-      display_data$MAST_log2FC <- round(display_data$MAST_log2FC, 3)
-      display_data$MixScale_log2FC <- round(display_data$MixScale_log2FC, 3)
-      display_data$MAST_pvalue <- format(display_data$MAST_pvalue, scientific = TRUE, digits = 3)
-      display_data$MixScale_pvalue <- format(display_data$MixScale_pvalue, scientific = TRUE, digits = 3)
-      
-      # Create datatable with pagination
-      DT::datatable(
-        display_data,
-        options = list(
-          pageLength = 15,  # Show 15 genes per page
-          dom = 'ftp',      # f=filter, t=table, p=pagination
-          columnDefs = list(
-            list(className = 'dt-center', targets = '_all'),
-            list(width = '20%', targets = 0),  # Gene column
-            list(width = '15%', targets = c(1, 3)),  # log2FC columns
-            list(width = '15%', targets = c(2, 4)),  # p-value columns
-            list(width = '20%', targets = 5)   # Direction column
-          ),
-          order = list(list(1, 'desc')),  # Sort by MAST_log2FC
-          searching = TRUE,
-          language = list(
-            search = "Search genes:",
-            paginate = list(
-              previous = "Previous",
-              `next` = "Next"
+      # Create UI
+      tagList(
+        # Summary counts
+        div(style = "margin-bottom: 15px;",
+          fluidRow(
+            column(4,
+              div(class = "text-center",
+                h6("Same ↑", style = "color: #d9534f; margin-bottom: 5px;"),
+                h4(length(same_direction_up), style = "color: #d9534f; margin: 0;"),
+                tags$small("Both up-regulated")
+              )
             ),
-            info = "Showing _START_ to _END_ of _TOTAL_ overlapping genes"
+            column(4,
+              div(class = "text-center",
+                h6("Same ↓", style = "color: #5bc0de; margin-bottom: 5px;"),
+                h4(length(same_direction_down), style = "color: #5bc0de; margin: 0;"),
+                tags$small("Both down-regulated")
+              )
+            ),
+            column(4,
+              div(class = "text-center",
+                h6("Opposite", style = "color: #f0ad4e; margin-bottom: 5px;"),
+                h4(length(opposite_direction), style = "color: #f0ad4e; margin: 0;"),
+                tags$small("Different directions")
+              )
+            )
           )
         ),
-        rownames = FALSE,
-        caption = htmltools::tags$caption(
-          style = 'caption-side: top; text-align: left; color: #666; font-size: 0.9em;',
-          'Click column headers to sort. Use search box to find specific genes.'
-        )
-      ) %>%
-        DT::formatStyle(
-          'Direction',
-          color = DT::styleEqual(
-            c('Both ↑', 'Both ↓', 'Opposite'),
-            c('#d9534f', '#5bc0de', '#f0ad4e')
-          ),
-          fontWeight = 'bold'
-        ) %>%
-        DT::formatStyle(
-          c('MAST_log2FC', 'MixScale_log2FC'),
-          color = DT::styleInterval(
-            c(-0.5, 0.5),
-            c('#5bc0de', 'black', '#d9534f')
+        
+        hr(style = "margin: 10px 0;"),
+        
+        # Gene lists with expand/collapse
+        if (length(same_direction_up) > 0) {
+          tagList(
+            h6("Same Direction Up-regulated:", style = "color: #d9534f;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(same_direction_up, collapse = ", ")
+            )
+          )
+        },
+        
+        if (length(same_direction_down) > 0) {
+          tagList(
+            h6("Same Direction Down-regulated:", style = "color: #5bc0de;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(same_direction_down, collapse = ", ")
+            )
+          )
+        },
+        
+        if (length(opposite_direction) > 0) {
+          tagList(
+            h6("Opposite Directions:", style = "color: #f0ad4e;"),
+            div(style = "max-height: 80px; overflow-y: auto; background-color: #f9f9f9; padding: 8px; margin-bottom: 10px; border-radius: 3px;",
+              paste(opposite_direction, collapse = ", ")
+            )
+          )
+        },
+        
+        # Download button
+        div(class = "text-center", style = "margin-top: 15px;",
+          downloadButton(
+            session$ns("download_overlap"),
+            "Download Gene List",
+            class = "btn-sm btn-primary",
+            icon = icon("download")
           )
         )
+      )
     })
     
     # Download handler for overlapping genes

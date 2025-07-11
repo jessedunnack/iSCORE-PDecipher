@@ -94,13 +94,37 @@ mod_de_analysis_ui <- function(id) {
     mainPanel(
       width = 9,
       
-      # Status and summary
+      # Status and summary - Split layout
       fluidRow(
         column(12,
           wellPanel(
             style = "background-color: #f8f9fa; margin-bottom: 20px;",
-            h4("Analysis Summary", style = "margin-top: 0;"),
-            verbatimTextOutput(ns("analysis_summary"))
+            fluidRow(
+              # Left section: Compact analysis summary (5 columns)
+              column(5,
+                h4("Analysis Summary", style = "margin-top: 0;"),
+                div(id = ns("summary_stats"),
+                  verbatimTextOutput(ns("analysis_summary"))
+                )
+              ),
+              # Right section: Detailed gene table (7 columns)
+              column(7,
+                h4("Top DE Genes - Detailed View", style = "margin-top: 0;"),
+                div(id = ns("detailed_genes"),
+                  # Paginated table output
+                  DT::dataTableOutput(ns("detailed_genes_table"))
+                ),
+                # Download button below table
+                div(style = "margin-top: 15px; text-align: center;",
+                  downloadButton(
+                    ns("download_detailed_genes"),
+                    "Download All Significant Genes",
+                    class = "btn-sm btn-primary",
+                    icon = icon("download")
+                  )
+                )
+              )
+            )
           )
         )
       ),
@@ -455,6 +479,98 @@ mod_de_analysis_server <- function(id, app_data) {
         DT::formatStyle("type",
                        backgroundColor = DT::styleEqual("Intersection", "#e8f4fd"))
     })
+    
+    # Detailed genes table for paginated view
+    output$detailed_genes_table <- DT::renderDataTable({
+      data <- processed_data()
+      if (is.null(data) || nrow(data) == 0) {
+        # Return empty data table with message
+        return(DT::datatable(
+          data.frame(Message = "No significant genes found with current filters"),
+          options = list(dom = 't', paging = FALSE),
+          rownames = FALSE
+        ))
+      }
+      
+      # Prepare display data with comprehensive gene information
+      display_data <- data %>%
+        dplyr::arrange(pvalue) %>%  # Sort by p-value (most significant first)
+        dplyr::select(
+          Gene = gene_name,
+          Target = gene,
+          Source = source,
+          Cluster = cluster,
+          `log2FC` = log2FC,
+          `P-value` = pvalue
+        ) %>%
+        dplyr::mutate(
+          # Round numeric values for display
+          `log2FC` = round(`log2FC`, 3),
+          `P-value` = format(`P-value`, scientific = TRUE, digits = 3),
+          # Add direction indicators
+          Direction = ifelse(`log2FC` > 0, "↑ UP", "↓ DOWN")
+        )
+      
+      # Create datatable with pagination and search
+      DT::datatable(
+        display_data,
+        options = list(
+          pageLength = 15,  # Show 15 genes per page
+          dom = 'ftp',      # f=filter, t=table, p=pagination
+          columnDefs = list(
+            list(className = 'dt-center', targets = '_all'),
+            list(width = '15%', targets = 0),  # Gene column
+            list(width = '15%', targets = 1),  # Target column
+            list(width = '12%', targets = 2),  # Source column
+            list(width = '12%', targets = 3),  # Cluster column
+            list(width = '12%', targets = 4),  # log2FC column
+            list(width = '15%', targets = 5),  # P-value column
+            list(width = '12%', targets = 6)   # Direction column
+          ),
+          order = list(list(5, 'asc')),  # Sort by P-value (ascending = most significant first)
+          searching = TRUE,
+          language = list(
+            search = "Search genes:",
+            paginate = list(
+              previous = "Previous",
+              `next` = "Next"
+            ),
+            info = "Showing _START_ to _END_ of _TOTAL_ significant genes"
+          )
+        ),
+        rownames = FALSE
+      ) %>%
+        # Color-code the Direction column
+        DT::formatStyle(
+          "Direction",
+          backgroundColor = DT::styleEqual(c("↑ UP", "↓ DOWN"), c("#d4edda", "#f8d7da")),
+          fontWeight = "bold"
+        )
+    })
+    
+    # Download handler for detailed genes
+    output$download_detailed_genes <- downloadHandler(
+      filename = function() {
+        paste0("detailed_de_genes_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        data <- processed_data()
+        if (!is.null(data) && nrow(data) > 0) {
+          # Prepare full dataset for download
+          download_data <- data %>%
+            dplyr::arrange(pvalue) %>%
+            dplyr::select(
+              Gene = gene_name,
+              Target = gene,
+              Source = source,
+              Cluster = cluster,
+              log2FC = log2FC,
+              P_value = pvalue
+            )
+          write.csv(download_data, file, row.names = FALSE)
+        }
+      }
+    )
     
     # Return reactive data for potential use by other modules
     return(reactive({ processed_data() }))
