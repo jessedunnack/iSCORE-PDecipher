@@ -661,14 +661,23 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           scrollY = "360px",  # Increased to match new table height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
-          autoWidth = FALSE,  # Control column widths
+          autoWidth = TRUE,  # Enable automatic width calculation
           columnDefs = list(
-            list(width = '60px', targets = 0),  # Gene column
-            list(width = '50px', targets = 1),  # Log2FC
-            list(width = '60px', targets = 2),  # P-val
-            list(width = '40px', targets = 3),  # % in cluster
-            list(width = '40px', targets = 4),  # % in other
+            list(width = '25%', targets = 0),  # Gene column (use percentage)
+            list(width = '20%', targets = 1),  # Log2FC
+            list(width = '20%', targets = 2),  # P-val
+            list(width = '17.5%', targets = 3),  # % in cluster
+            list(width = '17.5%', targets = 4),  # % in other
             list(className = 'dt-center', targets = 1:4)  # Center align numeric columns
+          ),
+          # Add initialization callback to fix column widths after render
+          initComplete = DT::JS(
+            "function(settings, json) {",
+            "  setTimeout(function() {",
+            "    $(this.api().table().container()).find('.dataTables_scrollBody table').css('width', '100%');",
+            "    this.api().columns.adjust();",
+            "  }, 100);",
+            "}"
           )
         ),
         rownames = FALSE,
