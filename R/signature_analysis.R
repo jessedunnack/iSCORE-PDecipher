@@ -3,7 +3,207 @@
 #' This module implements statistical methods for identifying shared signatures
 #' between MAST (mutations) and CRISPRi (knockdowns) experiments.
 
-#' Calculate gene overlap significance between two methods
+#' Calculate gene overlap significance with proper background gene handling
+#'
+#' @param mast_genes Character vector of significant genes from MAST
+#' @param crispri_genes Character vector of significant genes from CRISPRi  
+#' @param mast_background_genes Character vector of all genes tested in MAST
+#' @param crispri_background_genes Character vector of all genes tested in CRISPRi
+#' @param alternative Character, test direction ("greater", "two.sided", "less")
+#' @return List with overlap statistics for both intersection and union approaches
+#' @export
+calculate_gene_overlap_significance_proper <- function(mast_genes, crispri_genes, 
+                                                      mast_background_genes = NULL,
+                                                      crispri_background_genes = NULL,
+                                                      alternative = "greater") {
+  
+  # Input validation
+  if (length(mast_genes) == 0 || length(crispri_genes) == 0) {
+    return(list(
+      intersection_approach = list(
+        overlap_count = 0,
+        mast_count = length(mast_genes),
+        crispri_count = length(crispri_genes),
+        fisher_p = NA,
+        fisher_or = NA,
+        jaccard_index = 0,
+        background_size = 0,
+        background_type = "intersection",
+        error = "Empty gene lists"
+      ),
+      union_approach = list(
+        overlap_count = 0,
+        mast_count = length(mast_genes),
+        crispri_count = length(crispri_genes),
+        fisher_p = NA,
+        fisher_or = NA,
+        jaccard_index = 0,
+        background_size = 0,
+        background_type = "union",
+        error = "Empty gene lists"
+      )
+    ))
+  }
+  
+  # Calculate basic overlap statistics (same for both approaches)
+  overlap_genes <- intersect(mast_genes, crispri_genes)
+  overlap_count <- length(overlap_genes)
+  union_count <- length(union(mast_genes, crispri_genes))
+  jaccard_index <- ifelse(union_count > 0, overlap_count / union_count, 0)
+  
+  # Initialize results for both approaches
+  results <- list(
+    intersection_approach = NULL,
+    union_approach = NULL
+  )
+  
+  # Approach 1: Intersection background (genes tested in BOTH methods)
+  if (!is.null(mast_background_genes) && !is.null(crispri_background_genes)) {
+    intersection_background <- intersect(mast_background_genes, crispri_background_genes)
+    
+    if (length(intersection_background) > 0) {
+      # Filter gene lists to intersection background
+      mast_genes_filtered <- intersect(mast_genes, intersection_background)
+      crispri_genes_filtered <- intersect(crispri_genes, intersection_background)
+      overlap_genes_filtered <- intersect(mast_genes_filtered, crispri_genes_filtered)
+      overlap_count_filtered <- length(overlap_genes_filtered)
+      
+      # Calculate Fisher's exact test for intersection approach
+      fisher_stats_int <- calculate_fisher_test(
+        mast_genes_filtered, crispri_genes_filtered, intersection_background, alternative
+      )
+      
+      results$intersection_approach <- list(
+        overlap_count = overlap_count_filtered,
+        overlap_genes = overlap_genes_filtered,
+        mast_count = length(mast_genes_filtered),
+        crispri_count = length(crispri_genes_filtered),
+        fisher_p = fisher_stats_int$fisher_p,
+        fisher_or = fisher_stats_int$fisher_or,
+        jaccard_index = ifelse(length(union(mast_genes_filtered, crispri_genes_filtered)) > 0,
+                              overlap_count_filtered / length(union(mast_genes_filtered, crispri_genes_filtered)), 0),
+        background_size = length(intersection_background),
+        background_type = "intersection",
+        contingency_table = fisher_stats_int$contingency_table
+      )
+    } else {
+      results$intersection_approach <- list(
+        overlap_count = 0,
+        mast_count = 0,
+        crispri_count = 0,
+        fisher_p = NA,
+        fisher_or = NA,
+        jaccard_index = 0,
+        background_size = 0,
+        background_type = "intersection",
+        error = "No genes in intersection background"
+      )
+    }
+    
+    # Approach 2: Union background (genes tested in EITHER method)
+    union_background <- unique(c(mast_background_genes, crispri_background_genes))
+    
+    # Filter gene lists to union background
+    mast_genes_union <- intersect(mast_genes, union_background)
+    crispri_genes_union <- intersect(crispri_genes, union_background)
+    overlap_genes_union <- intersect(mast_genes_union, crispri_genes_union)
+    overlap_count_union <- length(overlap_genes_union)
+    
+    # Calculate Fisher's exact test for union approach
+    fisher_stats_union <- calculate_fisher_test(
+      mast_genes_union, crispri_genes_union, union_background, alternative
+    )
+    
+    results$union_approach <- list(
+      overlap_count = overlap_count_union,
+      overlap_genes = overlap_genes_union,
+      mast_count = length(mast_genes_union),
+      crispri_count = length(crispri_genes_union),
+      fisher_p = fisher_stats_union$fisher_p,
+      fisher_or = fisher_stats_union$fisher_or,
+      jaccard_index = ifelse(length(union(mast_genes_union, crispri_genes_union)) > 0,
+                            overlap_count_union / length(union(mast_genes_union, crispri_genes_union)), 0),
+      background_size = length(union_background),
+      background_type = "union",
+      contingency_table = fisher_stats_union$contingency_table
+    )
+  } else {
+    # Fallback if no proper background provided
+    results$intersection_approach <- list(
+      overlap_count = overlap_count,
+      overlap_genes = overlap_genes,
+      mast_count = length(mast_genes),
+      crispri_count = length(crispri_genes),
+      fisher_p = NA,
+      fisher_or = NA,
+      jaccard_index = jaccard_index,
+      background_size = 0,
+      background_type = "intersection",
+      error = "No background gene information provided"
+    )
+    
+    results$union_approach <- list(
+      overlap_count = overlap_count,
+      overlap_genes = overlap_genes,
+      mast_count = length(mast_genes),
+      crispri_count = length(crispri_genes),
+      fisher_p = NA,
+      fisher_or = NA,
+      jaccard_index = jaccard_index,
+      background_size = 0,
+      background_type = "union",
+      error = "No background gene information provided"
+    )
+  }
+  
+  return(results)
+}
+
+#' Helper function to calculate Fisher's exact test
+#'
+#' @param genes1 First gene set
+#' @param genes2 Second gene set
+#' @param background_genes Background gene universe
+#' @param alternative Test alternative
+#' @return List with Fisher's test results
+calculate_fisher_test <- function(genes1, genes2, background_genes, alternative = "greater") {
+  
+  # Calculate overlap
+  overlap_genes <- intersect(genes1, genes2)
+  overlap_count <- length(overlap_genes)
+  
+  # Contingency table for Fisher's test
+  genes1_only <- length(genes1) - overlap_count
+  genes2_only <- length(genes2) - overlap_count  
+  neither <- length(background_genes) - length(genes1) - length(genes2) + overlap_count
+  
+  fisher_p <- NA
+  fisher_or <- NA
+  contingency_matrix <- NULL
+  
+  if (genes1_only >= 0 && genes2_only >= 0 && neither >= 0) {
+    contingency_matrix <- matrix(
+      c(overlap_count, genes1_only, genes2_only, neither),
+      nrow = 2, byrow = TRUE
+    )
+    
+    tryCatch({
+      fisher_result <- fisher.test(contingency_matrix, alternative = alternative)
+      fisher_p <- fisher_result$p.value
+      fisher_or <- fisher_result$estimate
+    }, error = function(e) {
+      warning(paste("Fisher's exact test failed:", e$message))
+    })
+  }
+  
+  return(list(
+    fisher_p = fisher_p,
+    fisher_or = fisher_or,
+    contingency_table = contingency_matrix
+  ))
+}
+
+#' Calculate gene overlap significance between two methods (LEGACY - keep for compatibility)
 #'
 #' @param mast_genes Character vector of significant genes from MAST
 #' @param crispri_genes Character vector of significant genes from CRISPRi  
@@ -342,12 +542,13 @@ identify_pd_relevant_enrichments <- function(enrichment_data, pd_pathway_terms =
 #'
 #' @param gene_pair List with mast_gene and crispri_gene names
 #' @param enrichment_data Consolidated enrichment data
+#' @param de_data Original differential expression data structure (optional, for proper background genes)
 #' @param clusters Character vector of clusters to analyze (NULL for all)
 #' @param include_pathways Logical, whether to include pathway analysis
 #' @param progress_callback Function to call for progress updates (optional)
 #' @return List with comprehensive signature analysis results
 #' @export
-analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = NULL,
+analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = NULL, clusters = NULL,
                                         include_pathways = TRUE, progress_callback = NULL) {
   
   if (!is.null(progress_callback)) {
@@ -436,13 +637,81 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, clusters = 
     }
     
     if (length(mast_genes) > 0 && length(crispri_genes) > 0) {
-      background_genes <- unique(c(mast_genes, crispri_genes))
-      overlap_stats <- calculate_gene_overlap_significance(mast_genes, crispri_genes, background_genes)
       
-      cat("[OVERLAP DEBUG]", cluster, "- Overlap count:", overlap_stats$overlap_count, "\n")
-      cat("[OVERLAP DEBUG]", cluster, "- Jaccard index:", round(overlap_stats$jaccard_index, 3), "\n")
-      if (overlap_stats$overlap_count > 0) {
-        cat("[OVERLAP DEBUG]", cluster, "- Overlapping genes:", paste(head(overlap_stats$overlap_genes, 5), collapse = ", "), "\n")
+      # Extract proper background genes if DE data is available
+      mast_background_genes <- NULL
+      crispri_background_genes <- NULL
+      
+      if (!is.null(de_data)) {
+        # For MAST data - handle variant combining
+        if (gene_pair$mast_gene == "SNCA_combined") {
+          # Try both SNCA variants and take the largest background
+          snca_backgrounds <- list()
+          for (variant in c("SNCA_A30P", "SNCA_A53T")) {
+            if (!is.null(de_data$iSCORE_PD_MAST[[variant]][[cluster]])) {
+              snca_backgrounds[[variant]] <- de_data$iSCORE_PD_MAST[[variant]][[cluster]]$background_genes
+            }
+          }
+          if (length(snca_backgrounds) > 0) {
+            mast_background_genes <- unique(unlist(snca_backgrounds))
+          }
+        } else if (gene_pair$mast_gene == "VPS13C_combined") {
+          # Try both VPS13C variants and take the largest background
+          vps13c_backgrounds <- list()
+          for (variant in c("VPS13C_A444P", "VPS13C_W395C")) {
+            if (!is.null(de_data$iSCORE_PD_MAST[[variant]][[cluster]])) {
+              vps13c_backgrounds[[variant]] <- de_data$iSCORE_PD_MAST[[variant]][[cluster]]$background_genes
+            }
+          }
+          if (length(vps13c_backgrounds) > 0) {
+            mast_background_genes <- unique(unlist(vps13c_backgrounds))
+          }
+        } else {
+          # Regular single gene lookup
+          if (!is.null(de_data$iSCORE_PD_MAST[[gene_pair$mast_gene]][[cluster]])) {
+            mast_background_genes <- de_data$iSCORE_PD_MAST[[gene_pair$mast_gene]][[cluster]]$background_genes
+          }
+        }
+        
+        # For CRISPRi data 
+        if (!is.null(de_data$CRISPRi_Mixscale[[gene_pair$crispri_gene]][[cluster]])) {
+          crispri_background_genes <- de_data$CRISPRi_Mixscale[[gene_pair$crispri_gene]][[cluster]]$background_genes
+        }
+        
+        cat("[BACKGROUND DEBUG]", cluster, "- MAST background genes:", length(mast_background_genes %||% character(0)), "\n")
+        cat("[BACKGROUND DEBUG]", cluster, "- CRISPRi background genes:", length(crispri_background_genes %||% character(0)), "\n")
+      }
+      
+      # Use proper background calculation if available, otherwise fall back to old method
+      if (!is.null(mast_background_genes) && !is.null(crispri_background_genes)) {
+        overlap_stats <- calculate_gene_overlap_significance_proper(
+          mast_genes, crispri_genes, 
+          mast_background_genes, crispri_background_genes
+        )
+        
+        cat("[OVERLAP DEBUG]", cluster, "- INTERSECTION approach:\n")
+        cat("  Background size:", overlap_stats$intersection_approach$background_size, "\n")
+        cat("  Overlap count:", overlap_stats$intersection_approach$overlap_count, "\n")
+        cat("  Fisher p-value:", overlap_stats$intersection_approach$fisher_p, "\n")
+        cat("  Jaccard index:", round(overlap_stats$intersection_approach$jaccard_index, 3), "\n")
+        
+        cat("[OVERLAP DEBUG]", cluster, "- UNION approach:\n")
+        cat("  Background size:", overlap_stats$union_approach$background_size, "\n")
+        cat("  Overlap count:", overlap_stats$union_approach$overlap_count, "\n")
+        cat("  Fisher p-value:", overlap_stats$union_approach$fisher_p, "\n")
+        cat("  Jaccard index:", round(overlap_stats$union_approach$jaccard_index, 3), "\n")
+        
+      } else {
+        # Fallback to old method with warning
+        cat("[OVERLAP DEBUG]", cluster, "- WARNING: Using legacy background calculation (union of significant genes)\n")
+        background_genes <- unique(c(mast_genes, crispri_genes))
+        overlap_stats <- calculate_gene_overlap_significance(mast_genes, crispri_genes, background_genes)
+        
+        cat("[OVERLAP DEBUG]", cluster, "- Overlap count:", overlap_stats$overlap_count, "\n")
+        cat("[OVERLAP DEBUG]", cluster, "- Jaccard index:", round(overlap_stats$jaccard_index, 3), "\n")
+        if (overlap_stats$overlap_count > 0) {
+          cat("[OVERLAP DEBUG]", cluster, "- Overlapping genes:", paste(head(overlap_stats$overlap_genes, 5), collapse = ", "), "\n")
+        }
       }
     } else {
       overlap_stats <- list(error = "No valid gene lists extracted")
