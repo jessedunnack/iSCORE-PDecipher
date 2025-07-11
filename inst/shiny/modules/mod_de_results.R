@@ -829,6 +829,18 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         )
     })
     
+    # Helper function for user-friendly p-value formatting
+    format_pvalue <- function(p_val) {
+      if (is.na(p_val)) return("NA")
+      if (p_val >= 0.001) {
+        # Use decimal format for values >= 0.001
+        return(sprintf("%.3f", p_val))
+      } else {
+        # Use scientific notation for very small values < 0.001
+        return(format(p_val, digits = 2, scientific = TRUE))
+      }
+    }
+    
     # Generate volcano plot function - BULLETPROOF: Always returns valid plotly object
     generate_volcano_plot <- function(de_data, analysis_type, selected_cluster, color_by, current_gene = NULL, experiment_info = NULL) {
       # Wrap entire function in tryCatch to ensure we always return a plotly object
@@ -1819,7 +1831,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
                       strong("Fisher's Test (Intersection)"),
                       br(),
                       span("p-value: ", style = "color: #666;"),
-                      span(format(fisher_results$intersection_approach$fisher_p, digits = 3, scientific = TRUE), 
+                      span(format_pvalue(fisher_results$intersection_approach$fisher_p), 
                            style = paste0("color: ", if (fisher_results$intersection_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
                       br(),
                       span("Background: ", style = "color: #666;"),
@@ -1850,7 +1862,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
                       strong("Fisher's Test (Union)"),
                       br(),
                       span("p-value: ", style = "color: #666;"),
-                      span(format(fisher_results$union_approach$fisher_p, digits = 3, scientific = TRUE), 
+                      span(format_pvalue(fisher_results$union_approach$fisher_p), 
                            style = paste0("color: ", if (fisher_results$union_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
                       br(),
                       span("Background: ", style = "color: #666;"),
