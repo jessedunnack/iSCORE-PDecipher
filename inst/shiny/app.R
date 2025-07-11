@@ -451,35 +451,40 @@ ui <- fluidPage(
                   choices = character(0),
                   width = "100%"),
       
-      selectInput("global_enrichment_type",
-                  "Enrichment Database",
-                  choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA"),
-                  selected = "GO_BP",
-                  width = "100%"),
-      
-      # GSEA-specific options
+      # Enrichment Database selector - only show on relevant pages
       conditionalPanel(
-        condition = "input.global_enrichment_type == 'GSEA'",
-        wellPanel(
-          style = "background-color: #fff; border: 1px solid #ddd; margin-top: 10px;",
-          h5("GSEA Options", style = "margin-top: 0;"),
-          checkboxGroupInput(
-            "global_gsea_databases",
-            "Gene Set Collections:",
-            choices = c("C1: Positional" = "c1.all",
-                       "C2: Curated (CP)" = "c2.cp",
-                       "C5: GO" = "c5.all",
-                       "H: Hallmark" = "h.all"),
-            selected = c("c2.cp", "h.all")
-          ),
-          numericInput(
-            "global_min_nes",
-            "Min |NES|:",
-            value = 1.0,
-            min = 0,
-            max = 3,
-            step = 0.1,
-            width = "100%"
+        condition = "input.main_sections == 'Functional Enrichment' || input.main_sections == 'Signature Nomination'",
+        
+        selectInput("global_enrichment_type",
+                    "Enrichment Database",
+                    choices = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA"),
+                    selected = "GO_BP",
+                    width = "100%"),
+        
+        # GSEA-specific options
+        conditionalPanel(
+          condition = "input.global_enrichment_type == 'GSEA'",
+          wellPanel(
+            style = "background-color: #fff; border: 1px solid #ddd; margin-top: 10px;",
+            h5("GSEA Options", style = "margin-top: 0;"),
+            checkboxGroupInput(
+              "global_gsea_databases",
+              "Gene Set Collections:",
+              choices = c("C1: Positional" = "c1.all",
+                         "C2: Curated (CP)" = "c2.cp",
+                         "C5: GO" = "c5.all",
+                         "H: Hallmark" = "h.all"),
+              selected = c("c2.cp", "h.all")
+            ),
+            numericInput(
+              "global_min_nes",
+              "Min |NES|:",
+              value = 1.0,
+              min = 0,
+              max = 3,
+              step = 0.1,
+              width = "100%"
+            )
           )
         )
       ),
