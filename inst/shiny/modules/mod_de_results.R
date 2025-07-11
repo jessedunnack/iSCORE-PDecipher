@@ -1361,7 +1361,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           current_experiment <- global_selection()$experiment
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-            filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == current_gene, ]
+            # CRITICAL FIX: Apply gene harmonization for MixScale volcano plot
+            # Map MAST gene names to corresponding MixScale names
+            mixscale_gene <- current_gene
+            if (current_gene == "PRKN") {
+              mixscale_gene <- "PARK2"
+            } else if (current_gene %in% c("SNCA_A30P", "SNCA_A53T")) {
+              mixscale_gene <- "SNCA" 
+            } else if (current_gene %in% c("VPS13C_A444P", "VPS13C_W395C")) {
+              mixscale_gene <- "VPS13C"
+            }
+            
+            filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == mixscale_gene, ]
+            cat("[MixScale Volcano] Gene harmonization applied - MAST:", current_gene, "→ MixScale:", mixscale_gene, "\n")
           } else {
             filtered_data <- values$de_data_mixscale
           }
@@ -1499,7 +1511,18 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           current_experiment <- global_selection()$experiment
           
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-            filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == current_gene, ]
+            # CRITICAL FIX: Apply gene harmonization for MixScale interactive volcano plot
+            # Map MAST gene names to corresponding MixScale names
+            mixscale_gene <- current_gene
+            if (current_gene == "PRKN") {
+              mixscale_gene <- "PARK2"
+            } else if (current_gene %in% c("SNCA_A30P", "SNCA_A53T")) {
+              mixscale_gene <- "SNCA" 
+            } else if (current_gene %in% c("VPS13C_A444P", "VPS13C_W395C")) {
+              mixscale_gene <- "VPS13C"
+            }
+            
+            filtered_data <- values$de_data_mixscale[values$de_data_mixscale$gene == mixscale_gene, ]
           } else {
             filtered_data <- values$de_data_mixscale
           }
