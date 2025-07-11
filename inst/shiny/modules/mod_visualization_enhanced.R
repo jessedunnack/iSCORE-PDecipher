@@ -166,16 +166,26 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     
     observe({
       tryCatch({
-        # Load gene association data
-        gene_file <- "../../inst/extdata/gene_term_associations.rds"
-        if (file.exists(gene_file)) {
+        # Load gene association data using proper package path
+        gene_file <- system.file("extdata", "gene_term_associations.rds", package = "iSCORE.PDecipher")
+        if (file.exists(gene_file) && nchar(gene_file) > 0) {
           data <- readRDS(gene_file)
           gene_data(data)
           gene_associations_loaded(TRUE)
           message("Gene associations loaded: ", nrow(data), " associations")
         } else {
-          message("Gene association file not found at: ", gene_file)
-          gene_associations_loaded(FALSE)
+          message("Gene association file not found. Checking alternative location...")
+          # Fallback to relative path for development
+          fallback_file <- "../../inst/extdata/gene_term_associations.rds"
+          if (file.exists(fallback_file)) {
+            data <- readRDS(fallback_file)
+            gene_data(data)
+            gene_associations_loaded(TRUE)
+            message("Gene associations loaded from fallback: ", nrow(data), " associations")
+          } else {
+            message("Gene association file not found at either location")
+            gene_associations_loaded(FALSE)
+          }
         }
       }, error = function(e) {
         message("Failed to load gene associations: ", e$message)
