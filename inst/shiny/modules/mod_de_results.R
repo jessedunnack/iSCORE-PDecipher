@@ -1583,7 +1583,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           mast_filtered <- mast_filtered[mast_filtered$cluster == values$selected_cluster, ]
         }
         
-        # Filter by global gene selection
+        # Filter by global gene selection (MAST uses original gene names)
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
           mast_filtered <- mast_filtered[mast_filtered$gene == current_gene, ]
         }
@@ -1604,9 +1604,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           mixscale_filtered <- mixscale_filtered[mixscale_filtered$cluster == values$selected_cluster, ]
         }
         
-        # Filter by global gene selection
+        # Filter by global gene selection with gene harmonization
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == current_gene, ]
+          # Apply gene harmonization for MixScale data
+          mixscale_gene <- current_gene
+          if (current_gene == "PRKN") {
+            mixscale_gene <- "PARK2"
+          } else if (current_gene %in% c("SNCA_A30P", "SNCA_A53T")) {
+            mixscale_gene <- "SNCA" 
+          } else if (current_gene %in% c("VPS13C_A444P", "VPS13C_W395C")) {
+            mixscale_gene <- "VPS13C"
+          }
+          
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == mixscale_gene, ]
         }
         
         # Apply significance criteria
@@ -1634,8 +1644,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
         
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-          mast_filtered <- mast_filtered[mast_filtered$gene == current_gene, ]
-          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == current_gene, ]
+          # Apply gene harmonization for cross-method compatibility
+          mast_gene <- current_gene
+          mixscale_gene <- current_gene
+          
+          # Map MAST gene names to corresponding MixScale names  
+          if (current_gene == "PRKN") {
+            mixscale_gene <- "PARK2"
+          } else if (current_gene %in% c("SNCA_A30P", "SNCA_A53T")) {
+            mixscale_gene <- "SNCA" 
+          } else if (current_gene %in% c("VPS13C_A444P", "VPS13C_W395C")) {
+            mixscale_gene <- "VPS13C"
+          }
+          
+          mast_filtered <- mast_filtered[mast_filtered$gene == mast_gene, ]
+          mixscale_filtered <- mixscale_filtered[mixscale_filtered$gene == mixscale_gene, ]
         }
         
         # Get significant gene data with direction info
@@ -1692,10 +1715,25 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             mixscale_background_data <- mixscale_background_data[mixscale_background_data$cluster == values$selected_cluster, ]
           }
           
-          # Filter by global gene selection (same logic as significance calculation)
+          # Filter by global gene selection with gene harmonization
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-            mast_background_data <- mast_background_data[mast_background_data$gene == current_gene, ]
-            mixscale_background_data <- mixscale_background_data[mixscale_background_data$gene == current_gene, ]
+            # Apply gene harmonization for cross-method compatibility
+            mast_gene <- current_gene
+            mixscale_gene <- current_gene
+            
+            # Map MAST gene names to corresponding MixScale names  
+            if (current_gene == "PRKN") {
+              mixscale_gene <- "PARK2"
+            } else if (current_gene %in% c("SNCA_A30P", "SNCA_A53T")) {
+              mixscale_gene <- "SNCA" 
+            } else if (current_gene %in% c("VPS13C_A444P", "VPS13C_W395C")) {
+              mixscale_gene <- "VPS13C"
+            }
+            
+            mast_background_data <- mast_background_data[mast_background_data$gene == mast_gene, ]
+            mixscale_background_data <- mixscale_background_data[mixscale_background_data$gene == mixscale_gene, ]
+            
+            cat("[DE Results] Gene harmonization applied - MAST:", mast_gene, ", MixScale:", mixscale_gene, "\n")
           }
           
           # NOW extract genes tested in the current specific comparison
