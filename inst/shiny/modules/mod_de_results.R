@@ -1646,45 +1646,75 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         values$mixscale_sig_data <- mixscale_sig_data
       }
       
-      # Statistical significance of overlap (Fisher's exact test)
-      fisher_p <- NA
-      fisher_or <- NA
-      background_total <- 0
+      # UPDATED: Statistical significance with proper background gene handling (intersection/union approaches)
+      fisher_results <- list(
+        intersection_approach = list(fisher_p = NA, fisher_or = NA, background_size = 0),
+        union_approach = list(fisher_p = NA, fisher_or = NA, background_size = 0)
+      )
       
       if (mast_sig > 0 && mixscale_sig > 0 && overlap >= 0) {
-        # Estimate background set size (genes tested in both methods)
-        # For now, use a conservative estimate based on typical gene expression datasets
-        # In production, this should be calculated from the actual background sets
-        background_total <- if (!is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
-          # Estimate from unique gene names in both datasets
-          mast_genes <- unique(values$de_data_mast$gene_name)
-          mixscale_genes <- unique(values$de_data_mixscale$gene_name)
-          length(intersect(mast_genes, mixscale_genes))
-        } else {
-          15000  # Conservative estimate for typical expression datasets
-        }
-        
-        # Only perform test if we have sufficient data
-        if (background_total > max(mast_sig, mixscale_sig) && background_total > 0) {
-          # Create 2x2 contingency table for Fisher's exact test
-          # Table: overlap, mast_only, mixscale_only, neither
-          mast_only <- mast_sig - overlap
-          mixscale_only <- mixscale_sig - overlap
-          neither <- background_total - mast_sig - mixscale_only
+        # Get proper background genes from all tested genes (not just significant ones)
+        if (!is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
+          # Extract all genes tested in DE analysis for the current selection
+          mast_all_genes <- unique(values$de_data_mast$gene_name)
+          mixscale_all_genes <- unique(values$de_data_mixscale$gene_name)
           
-          # Ensure all values are non-negative
-          if (mast_only >= 0 && mixscale_only >= 0 && neither >= 0) {
-            contingency_matrix <- matrix(c(overlap, mast_only, mixscale_only, neither), 
-                                       nrow = 2, byrow = TRUE)
+          # INTERSECTION APPROACH (Conservative): Genes tested in BOTH methods
+          intersection_background <- intersect(mast_all_genes, mixscale_all_genes)
+          intersection_size <- length(intersection_background)
+          
+          # UNION APPROACH (Liberal): Genes tested in EITHER method  
+          union_background <- unique(c(mast_all_genes, mixscale_all_genes))
+          union_size <- length(union_background)
+          
+          cat("[DE Results] Background genes - Intersection:", intersection_size, ", Union:", union_size, "\n")
+          
+          # Calculate Fisher's exact test for both approaches
+          if (intersection_size > max(mast_sig, mixscale_sig) && intersection_size > 0) {
+            # Filter significant genes to intersection background
+            mast_sig_filtered <- intersect(mast_sig_genes, intersection_background)
+            mixscale_sig_filtered <- intersect(mixscale_sig_genes, intersection_background)
+            overlap_filtered <- length(intersect(mast_sig_filtered, mixscale_sig_filtered))
             
-            tryCatch({
-              fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
-              fisher_p <- fisher_result$p.value
-              fisher_or <- fisher_result$estimate
-            }, error = function(e) {
-              cat("[DE Results] Fisher's exact test failed:", e$message, "\n")
-            })
+            # Contingency table for intersection approach
+            mast_only <- length(mast_sig_filtered) - overlap_filtered
+            mixscale_only <- length(mixscale_sig_filtered) - overlap_filtered  
+            neither <- intersection_size - length(mast_sig_filtered) - mixscale_only
+            
+            if (mast_only >= 0 && mixscale_only >= 0 && neither >= 0) {
+              contingency_matrix <- matrix(c(overlap_filtered, mast_only, mixscale_only, neither), nrow = 2, byrow = TRUE)
+              tryCatch({
+                fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
+                fisher_results$intersection_approach$fisher_p <- fisher_result$p.value
+                fisher_results$intersection_approach$fisher_or <- fisher_result$estimate
+                fisher_results$intersection_approach$background_size <- intersection_size
+              }, error = function(e) {
+                cat("[DE Results] Intersection Fisher's test failed:", e$message, "\n")
+              })
+            }
           }
+          
+          # Calculate Fisher's exact test for union approach
+          if (union_size > max(mast_sig, mixscale_sig) && union_size > 0) {
+            # Use original overlap (genes can be in either background)
+            mast_only <- mast_sig - overlap
+            mixscale_only <- mixscale_sig - overlap
+            neither <- union_size - mast_sig - mixscale_only
+            
+            if (mast_only >= 0 && mixscale_only >= 0 && neither >= 0) {
+              contingency_matrix <- matrix(c(overlap, mast_only, mixscale_only, neither), nrow = 2, byrow = TRUE)
+              tryCatch({
+                fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
+                fisher_results$union_approach$fisher_p <- fisher_result$p.value
+                fisher_results$union_approach$fisher_or <- fisher_result$estimate  
+                fisher_results$union_approach$background_size <- union_size
+              }, error = function(e) {
+                cat("[DE Results] Union Fisher's test failed:", e$message, "\n")
+              })
+            }
+          }
+        } else {
+          cat("[DE Results] No DE data available for proper background calculation\n")
         }
       }
       
@@ -1730,37 +1760,81 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           )
         ),
         
-        # Statistical significance test results
-        if (!is.na(fisher_p)) {
+        # UPDATED: Statistical significance test results with dual approach
+        if (!is.na(fisher_results$intersection_approach$fisher_p) || !is.na(fisher_results$union_approach$fisher_p)) {
           tagList(
             hr(),
             div(class = "text-center",
               h5("Overlap Significance Test", style = "margin-bottom: 15px;"),
+              div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
+                icon("info-circle"),
+                strong(" Statistical Approaches: "), 
+                "Intersection (conservative) uses genes tested in BOTH methods. ",
+                "Union (liberal) uses genes tested in EITHER method. ",
+                "Both approaches use proper background genes from DE analysis."
+              ),
               fluidRow(
-                column(6,
-                  div(
-                    strong("Fisher's Exact Test"),
-                    br(),
-                    span("p-value: ", style = "color: #666;"),
-                    span(format(fisher_p, digits = 3, scientific = TRUE), 
-                         style = paste0("color: ", if (fisher_p < 0.05) "#d9534f" else "#333", ";")),
-                    br(),
-                    span("Background genes: ", style = "color: #666;"),
-                    span(format(background_total, big.mark = ","))
+                # Intersection approach column
+                if (!is.na(fisher_results$intersection_approach$fisher_p)) {
+                  column(6,
+                    div(
+                      strong("Fisher's Test (Intersection)"),
+                      br(),
+                      span("p-value: ", style = "color: #666;"),
+                      span(format(fisher_results$intersection_approach$fisher_p, digits = 3, scientific = TRUE), 
+                           style = paste0("color: ", if (fisher_results$intersection_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
+                      br(),
+                      span("Background: ", style = "color: #666;"),
+                      span(format(fisher_results$intersection_approach$background_size, big.mark = ",")),
+                      br(),
+                      span("Odds Ratio: ", style = "color: #666;"),
+                      span(format(fisher_results$intersection_approach$fisher_or, digits = 2)),
+                      br(),
+                      span("(Conservative)", style = "color: #5cb85c; font-size: 0.9em;")
+                    )
                   )
-                ),
-                column(6,
-                  div(
-                    strong("Effect Size"),
-                    br(),
-                    span("Odds Ratio: ", style = "color: #666;"),
-                    span(format(fisher_or, digits = 2)),
-                    br(),
-                    span("Interpretation: ", style = "color: #666;"),
-                    span(if (fisher_p < 0.05) "Significant overlap" else "Random overlap",
-                         style = paste0("color: ", if (fisher_p < 0.05) "#5cb85c" else "#f0ad4e", ";"))
+                } else {
+                  column(6,
+                    div(
+                      strong("Fisher's Test (Intersection)"),
+                      br(),
+                      span("Not available", style = "color: #999;"),
+                      br(),
+                      span("(Insufficient data)", style = "color: #666; font-size: 0.9em;")
+                    )
                   )
-                )
+                },
+                
+                # Union approach column
+                if (!is.na(fisher_results$union_approach$fisher_p)) {
+                  column(6,
+                    div(
+                      strong("Fisher's Test (Union)"),
+                      br(),
+                      span("p-value: ", style = "color: #666;"),
+                      span(format(fisher_results$union_approach$fisher_p, digits = 3, scientific = TRUE), 
+                           style = paste0("color: ", if (fisher_results$union_approach$fisher_p < 0.05) "#d9534f" else "#333", ";")),
+                      br(),
+                      span("Background: ", style = "color: #666;"),
+                      span(format(fisher_results$union_approach$background_size, big.mark = ",")),
+                      br(),
+                      span("Odds Ratio: ", style = "color: #666;"),
+                      span(format(fisher_results$union_approach$fisher_or, digits = 2)),
+                      br(),
+                      span("(Liberal)", style = "color: #f0ad4e; font-size: 0.9em;")
+                    )
+                  )
+                } else {
+                  column(6,
+                    div(
+                      strong("Fisher's Test (Union)"),
+                      br(),
+                      span("Not available", style = "color: #999;"),
+                      br(),
+                      span("(Insufficient data)", style = "color: #666; font-size: 0.9em;")
+                    )
+                  )
+                }
               )
             )
           )
