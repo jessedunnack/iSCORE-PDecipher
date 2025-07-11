@@ -190,7 +190,7 @@ compute_signature_rankings <- function(all_signatures) {
             pathway_overlap_stats = pathway_stats
           )
           
-          # Create signature entry with additional intersection/union info if available
+          # Create signature entry with BOTH intersection and union info if available
           signature_entry <- data.frame(
             gene_pair = gene_pair_name,
             mast_gene = analysis$gene_pair$mast_gene,
@@ -200,9 +200,17 @@ compute_signature_rankings <- function(all_signatures) {
             gene_overlap_count = overlap_stats_display$overlap_count %||% 0,
             gene_fisher_p = overlap_stats_display$fisher_p %||% NA,
             gene_jaccard = overlap_stats_display$jaccard_index %||% 0,
-            # Add background size information
+            # Add background size information (current: intersection approach for main display)
             background_size = overlap_stats_display$background_size %||% NA,
             background_type = overlap_stats_display$background_type %||% "legacy",
+            # Add INTERSECTION approach details
+            intersection_overlap_count = if("intersection_approach" %in% names(overlap_stats)) overlap_stats$intersection_approach$overlap_count %||% 0 else overlap_stats_display$overlap_count %||% 0,
+            intersection_fisher_p = if("intersection_approach" %in% names(overlap_stats)) overlap_stats$intersection_approach$fisher_p %||% NA else overlap_stats_display$fisher_p %||% NA,
+            intersection_background_size = if("intersection_approach" %in% names(overlap_stats)) overlap_stats$intersection_approach$background_size %||% NA else overlap_stats_display$background_size %||% NA,
+            # Add UNION approach details
+            union_overlap_count = if("union_approach" %in% names(overlap_stats)) overlap_stats$union_approach$overlap_count %||% 0 else 0,
+            union_fisher_p = if("union_approach" %in% names(overlap_stats)) overlap_stats$union_approach$fisher_p %||% NA else NA,
+            union_background_size = if("union_approach" %in% names(overlap_stats)) overlap_stats$union_approach$background_size %||% NA else NA,
             pathway_overlap_count = if(!is.null(pathway_stats)) pathway_stats$overlap_count %||% 0 else 0,
             pathway_fisher_p = if(!is.null(pathway_stats)) pathway_stats$fisher_p %||% NA else NA,
             mast_term_count = cluster_result$mast_term_count %||% 0,

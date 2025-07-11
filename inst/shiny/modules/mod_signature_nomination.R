@@ -1265,24 +1265,66 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           col_names <- c(col_names, "Signature Score")
         }
         
-        display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")
-        col_names <- c(col_names, "Shared DE Genes", "Shared Pathways", "DE Overlap p-value", "Jaccard Index")
+        # Check if we have new intersection/union Fisher's test results
+        has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p", 
+                                       "intersection_background_size", "union_background_size") %in% colnames(pair_data))
         
-        # Add background information if available (new proper Fisher's test)
-        if ("background_size" %in% colnames(pair_data) && "background_type" %in% colnames(pair_data)) {
-          display_cols <- c(display_cols, "background_size", "background_type")
-          col_names <- c(col_names, "Background Genes", "Test Type")
+        if (has_intersection_union) {
+          # NEW: Display both intersection and union approaches
+          display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count")
+          col_names <- c(col_names, "Shared DE Genes", "Shared Pathways")
+          
+          # Add intersection approach columns
+          display_cols <- c(display_cols, "intersection_fisher_p", "intersection_background_size")
+          col_names <- c(col_names, "Fisher p (Intersection)", "Background (Intersection)")
+          
+          # Add union approach columns
+          display_cols <- c(display_cols, "union_fisher_p", "union_background_size")  
+          col_names <- c(col_names, "Fisher p (Union)", "Background (Union)")
+          
+          # Add Jaccard index
+          display_cols <- c(display_cols, "gene_jaccard")
+          col_names <- c(col_names, "Jaccard Index")
+        } else {
+          # LEGACY: Display old single approach for backwards compatibility
+          display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")
+          col_names <- c(col_names, "Shared DE Genes", "Shared Pathways", "DE Overlap p-value", "Jaccard Index")
+          
+          # Add background information if available (legacy)
+          if ("background_size" %in% colnames(pair_data) && "background_type" %in% colnames(pair_data)) {
+            display_cols <- c(display_cols, "background_size", "background_type")
+            col_names <- c(col_names, "Background Genes", "Test Type")
+          }
         }
         
         display_data <- pair_data[, display_cols, drop = FALSE]
         colnames(display_data) <- col_names
         
-        # Add significance interpretation
-        display_data$Significance <- ifelse(
-          display_data$`DE Overlap p-value` < 0.001, "***",
-          ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
-                 ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns"))
-        )
+        # Add significance interpretation based on which columns are available
+        if (has_intersection_union) {
+          # Add significance for both approaches
+          display_data$`Intersection Sig` <- ifelse(
+            is.na(display_data$`Fisher p (Intersection)`), "n/a",
+            ifelse(display_data$`Fisher p (Intersection)` < 0.001, "***",
+                   ifelse(display_data$`Fisher p (Intersection)` < 0.01, "**",
+                          ifelse(display_data$`Fisher p (Intersection)` < 0.05, "*", "ns")))
+          )
+          
+          display_data$`Union Sig` <- ifelse(
+            is.na(display_data$`Fisher p (Union)`), "n/a",
+            ifelse(display_data$`Fisher p (Union)` < 0.001, "***",
+                   ifelse(display_data$`Fisher p (Union)` < 0.01, "**",
+                          ifelse(display_data$`Fisher p (Union)` < 0.05, "*", "ns")))
+          )
+        } else {
+          # Legacy significance interpretation
+          display_data$Significance <- ifelse(
+            is.na(display_data$`DE Overlap p-value`), "n/a",
+            ifelse(display_data$`DE Overlap p-value` < 0.001, "***",
+                   ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
+                          ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns")))
+          )
+        }
         
         DT::datatable(display_data,
                      options = list(
@@ -1294,7 +1336,32 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                      caption = paste("Gene pair analysis for", selected_pair, 
                                    "- showing cross-method signatures across clusters")) %>%
           DT::formatRound(c("Signature Score", "Jaccard Index"), digits = 2) %>%
-          DT::formatSignif(c("DE Overlap p-value"), digits = 3)
+          {
+            if (has_intersection_union) {
+              # Format both intersection and union p-values and add color coding
+              . %>%
+                DT::formatSignif(c("Fisher p (Intersection)", "Fisher p (Union)"), digits = 3) %>%
+                DT::formatStyle("Intersection Sig", 
+                               backgroundColor = DT::styleEqual(
+                                 c("***", "**", "*", "ns", "n/a"),
+                                 c("#d4edda", "#d1ecf1", "#fff3cd", "#f8d7da", "#e2e3e5")
+                               )) %>%
+                DT::formatStyle("Union Sig",
+                               backgroundColor = DT::styleEqual(
+                                 c("***", "**", "*", "ns", "n/a"),
+                                 c("#e8f5e8", "#e6f3ff", "#fffacd", "#ffe6e6", "#f5f5f5")
+                               ))
+            } else {
+              # Legacy formatting
+              . %>%
+                DT::formatSignif(c("DE Overlap p-value"), digits = 3) %>%
+                DT::formatStyle("Significance",
+                               backgroundColor = DT::styleEqual(
+                                 c("***", "**", "*", "ns", "n/a"),
+                                 c("#d4edda", "#d1ecf1", "#fff3cd", "#f8d7da", "#e2e3e5")
+                               ))
+            }
+          }
       } else {
         DT::datatable(data.frame(Message = "No data found for this gene pair"),
                      options = list(dom = 't'), rownames = FALSE)
