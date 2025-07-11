@@ -493,10 +493,29 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       
       progress$set(message = paste("Analyzing", total_gene_pairs, "gene pairs across", total_clusters, "clusters..."), value = 0.2)
       
+      # Load DE data for proper Fisher's exact test background genes
+      de_data <- NULL
+      data_dir <- Sys.getenv("ISCORE_DATA_DIR", "")
+      de_file_path <- file.path(data_dir, "full_DE_results.rds")
+      
+      if (file.exists(de_file_path)) {
+        tryCatch({
+          cat("[SIGNATURE ANALYSIS] Loading DE data for proper background genes...\n")
+          de_data <- readRDS(de_file_path)
+          cat("[SIGNATURE ANALYSIS] ✓ Loaded DE data - proper Fisher's exact tests enabled\n")
+        }, error = function(e) {
+          cat("[SIGNATURE ANALYSIS] ⚠ Warning: Could not load DE data:", e$message, "\n")
+          de_data <- NULL
+        })
+      } else {
+        cat("[SIGNATURE ANALYSIS] ⚠ Warning: DE data file not found, using legacy background calculation\n")
+      }
+      
       # Run signature discovery
       tryCatch({
         signature_results <- discover_top_signatures(
           enrichment_data = filtered_data,
+          de_data = de_data,
           top_n = input$top_signatures %||% 20,
           min_cluster_breadth = input$min_cluster_breadth %||% 8,
           combine_variants = input$combine_snca && input$combine_vps13c,
@@ -1248,6 +1267,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")
         col_names <- c(col_names, "Shared DE Genes", "Shared Pathways", "DE Overlap p-value", "Jaccard Index")
+        
+        # Add background information if available (new proper Fisher's test)
+        if ("background_size" %in% colnames(pair_data) && "background_type" %in% colnames(pair_data)) {
+          display_cols <- c(display_cols, "background_size", "background_type")
+          col_names <- c(col_names, "Background Genes", "Test Type")
+        }
         
         display_data <- pair_data[, display_cols, drop = FALSE]
         colnames(display_data) <- col_names

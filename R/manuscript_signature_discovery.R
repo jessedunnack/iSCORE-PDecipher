@@ -9,13 +9,14 @@
 #' Discover top signatures for manuscript prioritization
 #'
 #' @param enrichment_data Consolidated enrichment data
+#' @param de_data Original differential expression data (optional, for proper background genes)
 #' @param top_n Integer, number of top signatures to return
 #' @param min_cluster_breadth Integer, minimum clusters showing signature (for pan-cluster analysis)
 #' @param combine_variants Logical, whether to combine gene variants
 #' @param progress_callback Function for progress updates
 #' @return List with ranked signature discoveries
 #' @export
-discover_top_signatures <- function(enrichment_data, top_n = 10, min_cluster_breadth = 8,
+discover_top_signatures <- function(enrichment_data, de_data = NULL, top_n = 10, min_cluster_breadth = 8,
                                    combine_variants = TRUE, progress_callback = NULL) {
   
   if (!is.null(progress_callback)) {
@@ -56,6 +57,7 @@ discover_top_signatures <- function(enrichment_data, top_n = 10, min_cluster_bre
     pair_analysis <- analyze_gene_pair_signatures(
       list(mast_gene = gene_pair$mast_gene, crispri_gene = gene_pair$crispri_gene),
       enrichment_data,
+      de_data = de_data,
       include_pathways = TRUE,
       progress_callback = function(msg) {
         if (!is.null(progress_callback)) {
@@ -149,36 +151,58 @@ compute_signature_rankings <- function(all_signatures) {
           overlap_stats <- cluster_result$overlap_stats
           pathway_stats <- cluster_result$pathway_overlap_stats
           
-          # Debug: Check what we have in overlap_stats
-          cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- overlap_stats:",
-              "count=", overlap_stats$overlap_count %||% "NULL",
-              ", jaccard=", overlap_stats$jaccard_index %||% "NULL",
-              ", fisher_p=", overlap_stats$fisher_p %||% "NULL", "\n")
+          # Handle both new (intersection/union) and legacy overlap stats
+          if ("intersection_approach" %in% names(overlap_stats) && "union_approach" %in% names(overlap_stats)) {
+            # New proper Fisher's exact test results
+            intersection_stats <- overlap_stats$intersection_approach
+            union_stats <- overlap_stats$union_approach
+            
+            cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- NEW PROPER FISHER'S TEST:\n")
+            cat("  INTERSECTION: count=", intersection_stats$overlap_count %||% "NULL",
+                ", fisher_p=", intersection_stats$fisher_p %||% "NULL",
+                ", background=", intersection_stats$background_size %||% "NULL", "\n")
+            cat("  UNION: count=", union_stats$overlap_count %||% "NULL",
+                ", fisher_p=", union_stats$fisher_p %||% "NULL", 
+                ", background=", union_stats$background_size %||% "NULL", "\n")
+            
+            # Use intersection approach for conservative results (prioritize for UI)
+            overlap_stats_display <- intersection_stats
+          } else {
+            # Legacy overlap stats
+            cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- LEGACY overlap_stats:",
+                "count=", overlap_stats$overlap_count %||% "NULL",
+                ", jaccard=", overlap_stats$jaccard_index %||% "NULL",
+                ", fisher_p=", overlap_stats$fisher_p %||% "NULL", "\n")
+            overlap_stats_display <- overlap_stats
+          }
           
           # Skip if overlap_stats contains error
-          if ("error" %in% names(overlap_stats)) {
-            cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- SKIPPED: overlap_stats has error\n")
+          if ("error" %in% names(overlap_stats_display)) {
+            cat("[RANKING DEBUG]", gene_pair_name, "-", cluster, "- SKIPPED: Error in overlap stats\n")
             next
           }
           
-          # Calculate composite score
+          # Calculate composite score using display stats
           composite_score <- calculate_composite_signature_score(
-            overlap_stats = overlap_stats,
+            overlap_stats = overlap_stats_display,
             correlation_stats = NULL,  # Not available from enrichment data directly
             direction_stats = NULL,    # Would need DE data
             pathway_overlap_stats = pathway_stats
           )
           
-          # Create signature entry
+          # Create signature entry with additional intersection/union info if available
           signature_entry <- data.frame(
             gene_pair = gene_pair_name,
             mast_gene = analysis$gene_pair$mast_gene,
             crispri_gene = analysis$gene_pair$crispri_gene,
             cluster = cluster,
             signature_strength = composite_score$composite_score,
-            gene_overlap_count = overlap_stats$overlap_count %||% 0,
-            gene_fisher_p = overlap_stats$fisher_p %||% NA,
-            gene_jaccard = overlap_stats$jaccard_index %||% 0,
+            gene_overlap_count = overlap_stats_display$overlap_count %||% 0,
+            gene_fisher_p = overlap_stats_display$fisher_p %||% NA,
+            gene_jaccard = overlap_stats_display$jaccard_index %||% 0,
+            # Add background size information
+            background_size = overlap_stats_display$background_size %||% NA,
+            background_type = overlap_stats_display$background_type %||% "legacy",
             pathway_overlap_count = if(!is.null(pathway_stats)) pathway_stats$overlap_count %||% 0 else 0,
             pathway_fisher_p = if(!is.null(pathway_stats)) pathway_stats$fisher_p %||% NA else NA,
             mast_term_count = cluster_result$mast_term_count %||% 0,
