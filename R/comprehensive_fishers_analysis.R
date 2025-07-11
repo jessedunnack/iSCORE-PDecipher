@@ -294,6 +294,78 @@ format_pvalue <- function(p_val) {
   }
 }
 
+#' Process MAST data for volcano plots and Fisher's analysis
+#' @noRd
+process_mast_for_volcano <- function(mast_data) {
+  # Convert MAST data structure to volcano plot format
+  volcano_data <- data.frame()
+  
+  for (gene in names(mast_data)) {
+    for (cluster in names(mast_data[[gene]])) {
+      if (!is.null(mast_data[[gene]][[cluster]]$results)) {
+        de_results <- mast_data[[gene]][[cluster]]$results
+        
+        # Extract log2FC and p-values from MAST results
+        if ("avg_log2FC" %in% colnames(de_results) && "p_val_adj" %in% colnames(de_results)) {
+          cluster_data <- data.frame(
+            gene = gene,
+            cluster = cluster,
+            gene_name = rownames(de_results),
+            log2FC = de_results$avg_log2FC,
+            pvalue = de_results$p_val_adj,
+            experiment = "default",
+            stringsAsFactors = FALSE
+          )
+          volcano_data <- rbind(volcano_data, cluster_data)
+        }
+      }
+    }
+  }
+  
+  return(volcano_data)
+}
+
+#' Process MixScale data for volcano plots and Fisher's analysis
+#' @noRd
+process_mixscale_for_volcano <- function(mixscale_data) {
+  # Convert MixScale data structure to volcano plot format
+  volcano_data <- data.frame()
+  
+  for (gene in names(mixscale_data)) {
+    for (cluster in names(mixscale_data[[gene]])) {
+      if (!is.null(mixscale_data[[gene]][[cluster]]$results)) {
+        de_results <- mixscale_data[[gene]][[cluster]]$results
+        
+        # Find log2FC and p-value columns
+        log2fc_cols <- grep("^log2FC_", names(de_results), value = TRUE)
+        
+        if (length(log2fc_cols) > 0) {
+          # Use the first log2FC column and corresponding p-value
+          log2fc_col <- log2fc_cols[1]
+          # Extract experiment name from column
+          exp <- gsub("^log2FC_", "", log2fc_col)
+          pval_col <- paste0("p_cell_type", exp, ":weight")
+          
+          if (pval_col %in% colnames(de_results)) {
+            cluster_data <- data.frame(
+              gene = gene,
+              cluster = cluster,
+              gene_name = rownames(de_results),
+              log2FC = de_results[[log2fc_col]],
+              pvalue = de_results[[pval_col]],
+              experiment = exp,
+              stringsAsFactors = FALSE
+            )
+            volcano_data <- rbind(volcano_data, cluster_data)
+          }
+        }
+      }
+    }
+  }
+  
+  return(volcano_data)
+}
+
 #' Apply gene harmonization for MAST to CRISPRi mapping
 #' @noRd
 apply_gene_harmonization <- function(mast_gene) {
