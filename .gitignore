@@ -1,0 +1,50 @@
+# R and RStudio files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Output and temporary files
+*.csv
+*.pdf
+*.html
+*.log
+*.out
+
+# Large data files
+*.rds
+!inst/extdata/gene_associations_iscore.rds
+!inst/extdata/gene_associations_iscore_crispi.rds
+!inst/extdata/gene_term_associations.rds
+!inst/extdata/umap_data/*.rds
+
+# Temporary files
+*_temp_*
+*.tmp
+*.bak
+
+# Mac files
+.DS_Store
+
+# Windows files
+Thumbs.db
+
+# Development and debug files
+dev/debug/pd_analysis_debug_output.txt
+comprehensive_fishers_results.csv
+gene_level_fishers_summary.csv
+
+# Shiny app cache
+inst/shiny/cache/
+inst/shiny/rsconnect/
+
+# R package build files
+*.tar.gz
+*.tgz
+
+# Documentation build files
+docs/_site/
+docs/.jekyll-cache/
+vignettes/*.html
+vignettes/*.R
