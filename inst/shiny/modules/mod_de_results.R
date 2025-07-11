@@ -1652,6 +1652,18 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         union_approach = list(fisher_p = NA, fisher_or = NA, background_size = 0)
       )
       
+      # DEBUG: Log DE data availability for user troubleshooting
+      cat("[DE Results] DEBUG - DE data status:\n")
+      cat("  MAST DE data loaded:", !is.null(values$de_data_mast), "\n")
+      if (!is.null(values$de_data_mast)) {
+        cat("  MAST DE data rows:", nrow(values$de_data_mast), "\n")
+      }
+      cat("  MixScale DE data loaded:", !is.null(values$de_data_mixscale), "\n") 
+      if (!is.null(values$de_data_mixscale)) {
+        cat("  MixScale DE data rows:", nrow(values$de_data_mixscale), "\n")
+      }
+      cat("  Current overlap conditions: MAST sig >0:", mast_sig > 0, ", MixScale sig >0:", mixscale_sig > 0, ", overlap >=0:", overlap >= 0, "\n")
+      
       if (mast_sig > 0 && mixscale_sig > 0 && overlap >= 0) {
         # Get proper background genes from all tested genes (not just significant ones)
         if (!is.null(values$de_data_mast) && !is.null(values$de_data_mixscale)) {
@@ -1668,6 +1680,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           union_size <- length(union_background)
           
           cat("[DE Results] Background genes - Intersection:", intersection_size, ", Union:", union_size, "\n")
+          cat("[DE Results] Attempting Fisher's exact test calculations...\n")
           
           # Calculate Fisher's exact test for both approaches
           if (intersection_size > max(mast_sig, mixscale_sig) && intersection_size > 0) {
@@ -1717,6 +1730,12 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           cat("[DE Results] No DE data available for proper background calculation\n")
         }
       }
+      
+      # DEBUG: Log final Fisher's test results
+      cat("[DE Results] Final Fisher's test results:\n")
+      cat("  Intersection p-value:", fisher_results$intersection_approach$fisher_p, "\n")
+      cat("  Union p-value:", fisher_results$union_approach$fisher_p, "\n")
+      cat("  Will show dual Fisher's test?:", (!is.na(fisher_results$intersection_approach$fisher_p) || !is.na(fisher_results$union_approach$fisher_p)), "\n")
       
       tagList(
         # Dynamic title showing current settings
