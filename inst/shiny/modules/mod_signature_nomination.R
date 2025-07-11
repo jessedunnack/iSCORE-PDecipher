@@ -313,8 +313,9 @@ mod_signature_nomination_ui <- function(id) {
               div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
                 icon("info-circle"),
                 strong(" Analysis Focus: "), 
-                "This heatmap shows overlaps of pathway-associated genes only - genes that contribute to enriched biological processes. ",
-                "For ALL DE gene overlaps (larger numbers), see the Summary Statistics in DE Genes page."
+                "This shows genes that appear in ANY enriched pathway for MAST ", tags$em("AND"), " any enriched pathway for CRISPRi (same cluster). ",
+                "Includes all enrichment databases (GO, KEGG, Reactome, etc.). ",
+                "For ALL DE gene overlaps (larger numbers), see Summary Statistics in DE Genes page."
               ),
               
               # Heatmap controls
