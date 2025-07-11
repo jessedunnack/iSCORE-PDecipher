@@ -2107,7 +2107,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             search = "Search genes:",
             paginate = list(
               previous = "Previous",
-              next = "Next"
+              `next` = "Next"
             ),
             info = "Showing _START_ to _END_ of _TOTAL_ overlapping genes"
           )
