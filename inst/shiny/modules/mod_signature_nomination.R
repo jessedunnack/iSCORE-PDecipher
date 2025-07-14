@@ -118,6 +118,18 @@ mod_signature_nomination_ui <- function(id) {
                           "Quick Test (2 clusters)", 
                           class = "btn-warning btn-sm",
                           icon = icon("zap"))
+            ),
+            
+            # NEW: Precomputed results status indicator
+            conditionalPanel(
+              condition = "output.show_precomputed_status",
+              ns = ns,
+              div(class = "alert alert-info", style = "margin: 15px 0; font-size: 12px;",
+                icon("info-circle"),
+                span(style = "margin-left: 5px;",
+                  textOutput(ns("precomputed_status_text"), inline = TRUE)
+                )
+              )
             )
           ),
           
@@ -372,7 +384,10 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       analysis_results = NULL,
       gene_pairs = NULL,
       available_clusters = NULL,
-      analysis_running = FALSE
+      analysis_running = FALSE,
+      precomputed_results = NULL,          # NEW: Store precomputed results
+      precomputation_status = "pending",   # NEW: pending, loading, loaded, error
+      is_showing_precomputed = FALSE       # NEW: Flag for UI display
     )
     
     # Initialize available options when data is loaded
@@ -412,6 +427,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         updateSelectInput(session, "gene_selection",
                          choices = gene_choices,
                          selected = "all")
+        
+        # NEW: Try to load precomputed results for instant display
+        load_precomputed_results()
       }
     })
     
@@ -437,6 +455,117 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       updateSelectInput(session, "gene_selection",
                        choices = gene_choices,
                        selected = "all")
+    })
+    
+    # NEW: Function to load precomputed results for instant display
+    load_precomputed_results <- function() {
+      if (values$precomputation_status != "pending") return()
+      
+      values$precomputation_status <- "loading"
+      cat("[PRECOMPUTED] Attempting to load precomputed signature results...\n")
+      
+      tryCatch({
+        # Try to find the precomputed results file
+        pkg_root <- system.file(package = "iSCORE.PDecipher")
+        
+        # Check multiple possible locations
+        possible_paths <- c(
+          file.path(pkg_root, "extdata", "precomputed_signatures.json.gz"),
+          file.path(pkg_root, "extdata", "precomputed_signatures.json"),
+          "inst/extdata/precomputed_signatures.json.gz",
+          "inst/extdata/precomputed_signatures.json"
+        )
+        
+        precomputed_file <- NULL
+        for (path in possible_paths) {
+          if (file.exists(path)) {
+            precomputed_file <- path
+            break
+          }
+        }
+        
+        if (is.null(precomputed_file)) {
+          cat("[PRECOMPUTED] No precomputed results file found - will compute live\n")
+          values$precomputation_status <- "error"
+          return()
+        }
+        
+        cat("[PRECOMPUTED] Loading precomputed results from:", precomputed_file, "\n")
+        
+        # Load the precomputed results
+        if (grepl("\.gz$", precomputed_file)) {
+          # Gzipped JSON
+          con <- gzfile(precomputed_file, "r")
+          json_text <- readLines(con, warn = FALSE)
+          close(con)
+          precomputed_data <- jsonlite::fromJSON(paste(json_text, collapse = ""))
+        } else {
+          # Regular JSON
+          precomputed_data <- jsonlite::fromJSON(precomputed_file)
+        }
+        
+        # Validate the precomputed data structure
+        required_fields <- c("all_signatures", "top_signatures", "pan_cluster_signatures", 
+                           "analysis_summary", "precomputation_metadata")
+        missing_fields <- required_fields[!required_fields %in% names(precomputed_data)]
+        
+        if (length(missing_fields) > 0) {
+          stop("Missing required fields in precomputed data: ", paste(missing_fields, collapse = ", "))
+        }
+        
+        # Store the precomputed results
+        values$precomputed_results <- precomputed_data
+        values$precomputation_status <- "loaded"
+        
+        # Log successful loading
+        metadata <- precomputed_data$precomputation_metadata
+        cat("[PRECOMPUTED] ✓ Successfully loaded precomputed results\n")
+        cat("[PRECOMPUTED]   Generated:", metadata$generation_date %||% "unknown", "\n")
+        cat("[PRECOMPUTED]   Signatures:", nrow(precomputed_data$all_signatures), "\n")
+        cat("[PRECOMPUTED]   Pan-cluster:", nrow(precomputed_data$pan_cluster_signatures), "\n")
+        cat("[PRECOMPUTED]   Analysis time:", metadata$analysis_duration_minutes %||% "unknown", "minutes\n")
+        
+        # Show results immediately if user is viewing the overview tab
+        if (!is.null(input$results_tabs) && input$results_tabs == "overview") {
+          display_precomputed_results()
+        }
+        
+      }, error = function(e) {
+        cat("[PRECOMPUTED] Error loading precomputed results:", e$message, "\n")
+        values$precomputation_status <- "error"
+      })
+    }
+    
+    # NEW: Function to display precomputed results
+    display_precomputed_results <- function() {
+      req(values$precomputed_results)
+      req(values$precomputation_status == "loaded")
+      
+      cat("[PRECOMPUTED] Displaying precomputed results in UI\n")
+      
+      # Set the analysis results to the precomputed data
+      values$analysis_results <- values$precomputed_results
+      values$is_showing_precomputed <- TRUE
+      
+      # Update the gene pair selector if available
+      if (!is.null(values$analysis_results$all_signatures) && 
+          nrow(values$analysis_results$all_signatures) > 0) {
+        gene_pair_choices <- unique(values$analysis_results$all_signatures$gene_pair)
+        updateSelectInput(session, "selected_gene_pair",
+                         choices = gene_pair_choices,
+                         selected = gene_pair_choices[1])
+      }
+    }
+    
+    # NEW: Observer to display precomputed results when user switches to overview tab
+    observeEvent(input$results_tabs, {
+      if (input$results_tabs == "overview" && 
+          is.null(values$analysis_results) && 
+          !is.null(values$precomputed_results) &&
+          values$precomputation_status == "loaded") {
+        
+        display_precomputed_results()
+      }
     })
     
     # Toggle advanced settings
@@ -604,9 +733,13 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     observeEvent(input$run_analysis, {
       values$analysis_running <- TRUE
       
+      # NEW: Clear precomputed flag when running custom analysis
+      values$is_showing_precomputed <- FALSE
+      cat("[SIGNATURE] Running custom analysis - clearing precomputed flag\n")
+      
       # Show progress
       output$analysis_progress <- renderText({
-        "Analysis in progress..."
+        "Running custom analysis..."
       })
       
       # Perform analysis
@@ -1567,6 +1700,26 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     str_to_title <- function(x) {
       gsub("(^|[[:space:]])([[:alpha:]])", "\\1\\U\\2", x, perl = TRUE)
     }
+    
+    # NEW: Output for precomputed status text
+    output$precomputed_status_text <- renderText({
+      if (values$is_showing_precomputed && !is.null(values$precomputed_results)) {
+        metadata <- values$precomputed_results$precomputation_metadata
+        generation_date <- metadata$generation_date %||% "unknown"
+        paste0("Showing precomputed results (generated ", generation_date, "). ",
+               "Click 'Discover Signatures' to run with custom settings.")
+      } else if (values$precomputation_status == "loading") {
+        "Loading precomputed results..."
+      } else {
+        NULL
+      }
+    })
+    
+    # NEW: Control visibility of precomputed status panel
+    output$show_precomputed_status <- reactive({
+      values$is_showing_precomputed || values$precomputation_status == "loading"
+    })
+    outputOptions(output, "show_precomputed_status", suspendWhenHidden = FALSE)
     
     # Return reactive values for potential use by other modules
     return(list(
