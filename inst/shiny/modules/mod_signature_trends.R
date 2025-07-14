@@ -538,16 +538,34 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
             return(plotly_empty("No overlapping signatures between frequency and impact analysis"))
           }
           
-          # Create scatter plot
-          p <- ggplot2::ggplot(merged_data, ggplot2::aes(x = frequency_score, y = impact_score)) +
-            ggplot2::geom_point(ggplot2::aes(size = signature_strength.x), alpha = 0.7, color = "#2166ac") +
-            ggplot2::labs(title = "Signature Frequency vs Impact",
-                         x = "Frequency Score", 
-                         y = "Impact Score",
-                         size = "Signature Strength") +
-            ggplot2::theme_minimal()
+          # Debug merged data structure
+          cat("[TRENDS DEBUG] Merged data columns:", paste(names(merged_data), collapse = ", "), "\n")
+          cat("[TRENDS DEBUG] Merged data rows:", nrow(merged_data), "\n")
           
-          plotly::ggplotly(p, tooltip = c("x", "y", "size"))
+          # Find appropriate columns for plotting
+          freq_col <- if ("frequency_score" %in% names(merged_data)) "frequency_score" else if ("frequency_count" %in% names(merged_data)) "frequency_count" else names(merged_data)[2]
+          impact_col <- if ("impact_score" %in% names(merged_data)) "impact_score" else if ("signature_strength" %in% names(merged_data)) "signature_strength" else names(merged_data)[3]
+          size_col <- if ("mean_strength" %in% names(merged_data)) "mean_strength" else if ("signature_strength" %in% names(merged_data)) "signature_strength" else NULL
+          
+          # Create scatter plot with safe column references
+          if (!is.null(size_col)) {
+            p <- ggplot2::ggplot(merged_data, ggplot2::aes_string(x = freq_col, y = impact_col)) +
+              ggplot2::geom_point(ggplot2::aes_string(size = size_col), alpha = 0.7, color = "#2166ac") +
+              ggplot2::labs(title = "Signature Frequency vs Impact",
+                           x = "Frequency Score", 
+                           y = "Impact Score",
+                           size = "Signature Strength") +
+              ggplot2::theme_minimal()
+          } else {
+            p <- ggplot2::ggplot(merged_data, ggplot2::aes_string(x = freq_col, y = impact_col)) +
+              ggplot2::geom_point(alpha = 0.7, color = "#2166ac") +
+              ggplot2::labs(title = "Signature Frequency vs Impact",
+                           x = "Frequency Score", 
+                           y = "Impact Score") +
+              ggplot2::theme_minimal()
+          }
+          
+          plotly::ggplotly(p)
         } else {
           return(plotly_empty("Cannot merge frequency and impact data - missing gene_pair column"))
         }
@@ -567,18 +585,31 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
       }
       
       tryCatch({
-        # Create a simple heatmap of signature metrics
-        # Assume freq_data has columns like frequency_score, mean_strength, max_strength
-        if (all(c("gene_pair", "frequency_score", "mean_strength") %in% colnames(freq_data))) {
+        # Debug available columns
+        cat("[TRENDS DEBUG] freq_data columns for heatmap:", paste(names(freq_data), collapse = ", "), "\n")
+        cat("[TRENDS DEBUG] freq_data rows:", nrow(freq_data), "\n")
+        
+        # Find available numeric columns for heatmap
+        numeric_cols <- sapply(freq_data, is.numeric)
+        available_metrics <- names(freq_data)[numeric_cols]
+        available_metrics <- available_metrics[available_metrics != "gene_pair"]  # Exclude gene_pair
+        
+        cat("[TRENDS DEBUG] Available numeric columns:", paste(available_metrics, collapse = ", "), "\n")
+        
+        if (length(available_metrics) >= 2 && "gene_pair" %in% names(freq_data)) {
           
           # Take top 20 signatures for readability
           plot_data <- head(freq_data, 20)
           
+          # Use first two available numeric columns
+          metric_cols <- head(available_metrics, 2)
+          cat("[TRENDS DEBUG] Using metrics for heatmap:", paste(metric_cols, collapse = ", "), "\n")
+          
           # Reshape data for heatmap
           library(tidyr)
           heatmap_data <- plot_data %>%
-            dplyr::select(gene_pair, frequency_score, mean_strength) %>%
-            tidyr::pivot_longer(cols = c(frequency_score, mean_strength), 
+            dplyr::select(gene_pair, all_of(metric_cols)) %>%
+            tidyr::pivot_longer(cols = all_of(metric_cols), 
                                names_to = "metric", values_to = "value")
           
           # Create heatmap
@@ -594,7 +625,7 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
           
           plotly::ggplotly(p, tooltip = c("x", "y", "fill"))
         } else {
-          return(plotly_empty("Insufficient columns for heatmap - need gene_pair, frequency_score, mean_strength"))
+          return(plotly_empty(paste("Insufficient data for heatmap. Available columns:", paste(names(freq_data), collapse = ", "), ". Need gene_pair + 2 numeric columns")))
         }
       }, error = function(e) {
         return(plotly_empty(paste("Error creating signature heatmap:", e$message)))

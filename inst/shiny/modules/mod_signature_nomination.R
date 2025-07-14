@@ -1318,7 +1318,30 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           }
         }
         
+        # Debug before subsetting
+        cat("[GENE PAIR DEBUG] About to subset pair_data with display_cols:", paste(display_cols, collapse = ", "), "\n")
+        cat("[GENE PAIR DEBUG] pair_data class before subsetting:", class(pair_data), "\n")
+        cat("[GENE PAIR DEBUG] pair_data columns:", paste(names(pair_data), collapse = ", "), "\n")
+        
+        # Ensure we have a proper data frame before subsetting
+        if (!is.data.frame(pair_data)) {
+          cat("[GENE PAIR DEBUG] pair_data is not a data frame, converting from:", class(pair_data), "\n")
+          pair_data <- as.data.frame(pair_data)
+        }
+        
+        # Check if display_cols exist in pair_data
+        missing_cols <- setdiff(display_cols, names(pair_data))
+        if (length(missing_cols) > 0) {
+          cat("[GENE PAIR DEBUG] Missing columns:", paste(missing_cols, collapse = ", "), "\n")
+          return(DT::datatable(
+            data.frame(Message = paste("Missing required columns:", paste(missing_cols, collapse = ", "))),
+            options = list(dom = 't'), rownames = FALSE
+          ))
+        }
+        
         display_data <- pair_data[, display_cols, drop = FALSE]
+        cat("[GENE PAIR DEBUG] display_data created successfully, class:", class(display_data), "\n")
+        
         colnames(display_data) <- col_names
         
         # Add significance interpretation based on which columns are available
