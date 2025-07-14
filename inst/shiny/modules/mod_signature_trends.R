@@ -295,7 +295,16 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
       # Run analysis with error handling
       tryCatch({
         # Convert signature results to expected format
-        converted_results <- convert_signature_results_for_trends(analysis_results())
+        # analysis_results() returns the actual signature analysis results
+        signature_data <- analysis_results()
+        
+        # Debug: Check what we're actually getting
+        cat("[TRENDS DEBUG] Signature data structure:", class(signature_data), "\n")
+        if (is.list(signature_data)) {
+          cat("[TRENDS DEBUG] List elements:", names(signature_data), "\n")
+        }
+        
+        converted_results <- convert_signature_results_for_trends(signature_data)
         
         trends_result <- analyze_signature_trends(
           signature_results = converted_results,

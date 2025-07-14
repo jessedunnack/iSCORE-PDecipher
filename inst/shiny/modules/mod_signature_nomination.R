@@ -1235,7 +1235,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       all_sigs <- values$analysis_results$all_signatures
       selected_pair <- input$selected_gene_pair
       
-      if (nrow(all_sigs) == 0) {
+      # Better error handling for data structure
+      if (is.null(all_sigs) || !is.data.frame(all_sigs) || nrow(all_sigs) == 0) {
         return(DT::datatable(
           data.frame(Message = "No signature data available"),
           options = list(dom = 't'), rownames = FALSE
