@@ -826,3 +826,287 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = N
     total_clusters_analyzed = length(cluster_results)
   ))
 }
+
+#' Enhanced gene overlap significance with direction-aware analysis and experiment weighting (v0.2.6)
+#'
+#' This function implements the enhanced statistical framework combining:
+#' - Direction-aware Fisher's exact tests (same vs opposite direction)
+#' - Experiment weighting based on cell counts
+#' - Biological expectation weighting (LRRK2 vs SNCA)
+#'
+#' @param mast_data Data frame with MAST DE results (must have avg_log2FC, p_val_adj columns)
+#' @param crispri_experiments_data List of CRISPRi DE results by experiment
+#' @param gene_name Gene name for biological context
+#' @param cluster_id Cluster identifier
+#' @param experiment_weights Experiment weights from calculate_experiment_weights()
+#' @param background_genes Character vector of background genes (optional)
+#' @param lfc_threshold Log2 fold change threshold (default 0.25)
+#' @param p_threshold P-value threshold (default 0.05)
+#' @param use_enhanced_analysis Logical, whether to use enhanced method (default TRUE)
+#' @return List with enhanced overlap significance results
+#' @export
+calculate_enhanced_overlap_significance <- function(mast_data, crispri_experiments_data, 
+                                                   gene_name, cluster_id, experiment_weights,
+                                                   background_genes = NULL,
+                                                   lfc_threshold = 0.25, p_threshold = 0.05,
+                                                   use_enhanced_analysis = TRUE) {
+  
+  if (!use_enhanced_analysis) {
+    # Fallback to legacy method for backward compatibility
+    if (is.list(crispri_experiments_data) && length(crispri_experiments_data) > 0) {
+      # Use first experiment for legacy compatibility
+      first_exp_data <- crispri_experiments_data[[1]]
+      mast_genes <- rownames(mast_data)[mast_data$p_val_adj < p_threshold & 
+                                        abs(mast_data$avg_log2FC) > lfc_threshold & 
+                                        !is.na(mast_data$p_val_adj)]
+      
+      # Handle CRISPRi gene extraction (experiment-specific columns)
+      crispri_lfc_col <- names(first_exp_data)[grepl("^log2FC", names(first_exp_data))][1]
+      if (is.na(crispri_lfc_col)) crispri_lfc_col <- "log2FC"
+      
+      crispri_genes <- rownames(first_exp_data)[first_exp_data$p_val_adj < p_threshold & 
+                                               abs(first_exp_data[[crispri_lfc_col]]) > lfc_threshold & 
+                                               !is.na(first_exp_data$p_val_adj)]
+      
+      return(calculate_gene_overlap_significance_proper(
+        mast_genes, crispri_genes, 
+        rownames(mast_data), rownames(first_exp_data)
+      ))
+    }
+  }
+  
+  cat("[ENHANCED OVERLAP] Analyzing", gene_name, "in", cluster_id, "with direction-aware and weighted approach\n")
+  
+  # Determine biological direction expectation
+  if (!exists("get_biological_direction_expectation")) {
+    source("R/enhanced_direction_analysis.R")
+  }
+  direction_expectation <- get_biological_direction_expectation(gene_name)
+  cat("[ENHANCED OVERLAP] Biological expectation for", gene_name, ":", direction_expectation, "\n")
+  
+  # Initialize results structure
+  enhanced_results <- list(
+    gene_name = gene_name,
+    cluster_id = cluster_id,
+    biological_expectation = direction_expectation,
+    experiment_results = list(),
+    weighted_meta_analysis = NULL,
+    enhanced_statistics = NULL
+  )
+  
+  # Analyze each experiment separately with direction awareness
+  experiments <- names(crispri_experiments_data)
+  experiment_direction_results <- list()
+  
+  for (exp in experiments) {
+    exp_data <- crispri_experiments_data[[exp]]
+    if (is.null(exp_data) || nrow(exp_data) == 0) {
+      cat("[ENHANCED OVERLAP] Skipping", exp, "- no data available\n")
+      next
+    }
+    
+    cat("[ENHANCED OVERLAP] Analyzing experiment:", exp, "\n")
+    
+    # Perform direction-aware analysis for this experiment
+    if (!exists("enhanced_direction_analysis")) {
+      source("R/enhanced_direction_analysis.R")
+    }
+    exp_direction_result <- enhanced_direction_analysis(
+      mast_data, exp_data, gene_name, background_genes, lfc_threshold, p_threshold
+    )
+    
+    experiment_direction_results[[exp]] <- exp_direction_result
+    enhanced_results$experiment_results[[exp]] <- exp_direction_result
+  }
+  
+  # Weighted meta-analysis across experiments
+  if (length(experiment_direction_results) > 0) {
+    cat("[ENHANCED OVERLAP] Performing weighted meta-analysis across", length(experiment_direction_results), "experiments\n")
+    
+    # Extract weights for this cluster
+    meta_analysis_results <- list()
+    
+    # Combine same-direction results across experiments
+    same_direction_effects <- list()
+    same_direction_pvalues <- list()
+    same_direction_weights <- list()
+    
+    # Combine opposite-direction results across experiments  
+    opposite_direction_effects <- list()
+    opposite_direction_pvalues <- list()
+    opposite_direction_weights <- list()
+    
+    for (exp in names(experiment_direction_results)) {
+      weight_key <- paste0(exp, "_", cluster_id)
+      if (weight_key %in% names(experiment_weights$weights)) {
+        exp_weight <- experiment_weights$weights[[weight_key]]
+        
+        if (exp_weight > 0) {
+          exp_result <- experiment_direction_results[[exp]]
+          
+          # Same direction
+          if (!is.null(exp_result$same_direction) && !is.na(exp_result$same_direction$fisher_p)) {
+            same_direction_effects[[exp]] <- exp_result$same_direction$overlap_count
+            same_direction_pvalues[[exp]] <- exp_result$same_direction$fisher_p
+            same_direction_weights[[exp]] <- exp_weight
+          }
+          
+          # Opposite direction
+          if (!is.null(exp_result$opposite_direction) && !is.na(exp_result$opposite_direction$fisher_p)) {
+            opposite_direction_effects[[exp]] <- exp_result$opposite_direction$overlap_count
+            opposite_direction_pvalues[[exp]] <- exp_result$opposite_direction$fisher_p
+            opposite_direction_weights[[exp]] <- exp_weight
+          }
+        }
+      }
+    }
+    
+    # Weighted combination of same-direction results
+    same_direction_meta <- combine_weighted_results(
+      same_direction_effects, same_direction_pvalues, same_direction_weights, "same_direction"
+    )
+    
+    # Weighted combination of opposite-direction results
+    opposite_direction_meta <- combine_weighted_results(
+      opposite_direction_effects, opposite_direction_pvalues, opposite_direction_weights, "opposite_direction"
+    )
+    
+    # Apply biological weighting to combine same vs opposite direction results
+    if (direction_expectation == "opposing") {
+      primary_meta <- opposite_direction_meta
+      secondary_meta <- same_direction_meta
+      primary_weight <- 0.8
+      secondary_weight <- 0.2
+    } else if (direction_expectation == "same") {
+      primary_meta <- same_direction_meta
+      secondary_meta <- opposite_direction_meta
+      primary_weight <- 0.8
+      secondary_weight <- 0.2
+    } else {
+      # Mixed/unknown: equal weighting
+      primary_meta <- same_direction_meta
+      secondary_meta <- opposite_direction_meta
+      primary_weight <- 0.5
+      secondary_weight <- 0.5
+    }
+    
+    # Final combined p-value using weighted Fisher's method
+    final_combined_p <- combine_meta_pvalues(
+      primary_meta$combined_p, secondary_meta$combined_p,
+      primary_weight, secondary_weight
+    )
+    
+    enhanced_results$weighted_meta_analysis <- list(
+      same_direction_meta = same_direction_meta,
+      opposite_direction_meta = opposite_direction_meta,
+      primary_direction = ifelse(direction_expectation == "opposing", "opposite", "same"),
+      primary_meta = primary_meta,
+      secondary_meta = secondary_meta,
+      final_combined_p = final_combined_p,
+      biological_weighting = c(primary_weight, secondary_weight),
+      experiments_included = length(experiment_direction_results)
+    )
+  }
+  
+  # Enhanced statistics summary
+  enhanced_results$enhanced_statistics <- list(
+    direction_expectation = direction_expectation,
+    experiments_analyzed = length(experiment_direction_results),
+    primary_experiment = experiment_weights$primary_experiment,
+    weighting_method = experiment_weights$weighting_method,
+    analysis_timestamp = Sys.time(),
+    enhanced_method_version = "v0.2.6"
+  )
+  
+  cat("[ENHANCED OVERLAP] Enhanced analysis completed for", gene_name, "\n")
+  cat("[ENHANCED OVERLAP] Final combined p-value:", enhanced_results$weighted_meta_analysis$final_combined_p %||% "NA", "\n")
+  
+  return(enhanced_results)
+}
+
+#' Helper function to combine weighted results across experiments
+#'
+#' @param effects List of effect sizes by experiment
+#' @param pvalues List of p-values by experiment  
+#' @param weights List of weights by experiment
+#' @param direction_type Character, "same_direction" or "opposite_direction"
+#' @return List with combined weighted results
+combine_weighted_results <- function(effects, pvalues, weights, direction_type) {
+  
+  if (length(pvalues) == 0) {
+    return(list(
+      combined_p = NA,
+      weighted_effect = NA,
+      experiments_included = 0,
+      direction_type = direction_type,
+      error = "No valid experiments"
+    ))
+  }
+  
+  # Convert to vectors
+  effect_vec <- unlist(effects)
+  pvalue_vec <- unlist(pvalues)
+  weight_vec <- unlist(weights)
+  
+  # Weighted average effect size
+  weighted_effect <- sum(effect_vec * weight_vec) / sum(weight_vec)
+  
+  # Weighted combination of p-values using Fisher's method
+  chi_square_stats <- -2 * log(pvalue_vec)
+  weighted_chi_square <- sum(chi_square_stats * weight_vec) / sum(weight_vec)
+  
+  # Convert back to p-value
+  effective_df <- 2 * length(pvalue_vec)
+  combined_p <- pchisq(weighted_chi_square * 2 * length(pvalue_vec), 
+                      df = effective_df, lower.tail = FALSE)
+  
+  return(list(
+    combined_p = combined_p,
+    weighted_effect = weighted_effect,
+    experiments_included = length(pvalue_vec),
+    direction_type = direction_type,
+    experiment_pvalues = pvalue_vec,
+    experiment_weights = weight_vec,
+    weighted_chi_square = weighted_chi_square
+  ))
+}
+
+#' Helper function to combine meta-analysis p-values with biological weighting
+#'
+#' @param primary_p P-value from primary (expected) direction
+#' @param secondary_p P-value from secondary (alternative) direction
+#' @param primary_weight Weight for primary direction
+#' @param secondary_weight Weight for secondary direction
+#' @return Combined p-value
+combine_meta_pvalues <- function(primary_p, secondary_p, primary_weight, secondary_weight) {
+  
+  if (is.na(primary_p) && is.na(secondary_p)) {
+    return(NA)
+  }
+  
+  if (is.na(primary_p)) {
+    return(secondary_p)
+  }
+  
+  if (is.na(secondary_p)) {
+    return(primary_p)
+  }
+  
+  # Weighted Fisher's method
+  chi_square_primary <- -2 * log(primary_p)
+  chi_square_secondary <- -2 * log(secondary_p)
+  
+  weighted_chi_square <- (chi_square_primary * primary_weight + 
+                         chi_square_secondary * secondary_weight)
+  
+  # Convert back to p-value
+  effective_df <- 2 * (primary_weight + secondary_weight)
+  combined_p <- pchisq(weighted_chi_square, df = effective_df, lower.tail = FALSE)
+  
+  return(combined_p)
+}
+
+# Helper function for null coalescing
+if (!exists("%||%")) {
+  `%||%` <- function(a, b) if (is.null(a)) b else a
+}

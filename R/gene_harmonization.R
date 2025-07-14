@@ -185,6 +185,50 @@ get_mutation_categories <- function() {
       # Loss-of-function mutations - both target and downstream
       rep("Target_And_Downstream", 7)
     ),
+    # NEW v0.2.6: Direction expectations for cross-method comparison
+    direction_expectation_vs_crispri = c(
+      # SNCA variants: Aggregation-prone (Lewy bodies) vs CRISPRi (less aggregation)
+      # Both may reduce aggregation pathways → SAME direction expected
+      "same", "same", 
+      
+      # LRRK2: Hyperactive kinase (gain-of-function) vs CRISPRi (loss-of-function)  
+      # → OPPOSING effects expected
+      "opposing",
+      
+      # VPS13C variants: Point mutations, effects may be complex → mixed
+      "mixed", "mixed",
+      
+      # SYNJ1: Point mutation, may have mixed effects → mixed
+      "mixed",
+      
+      # Loss-of-function mutations: Should show similar effects to CRISPRi
+      # → SAME direction expected
+      rep("same", 7)
+    ),
+    biological_rationale = c(
+      # SNCA variants
+      "Aggregation-prone variant leads to Lewy body formation; CRISPRi reduces aggregation",
+      "Aggregation-prone variant leads to Lewy body formation; CRISPRi reduces aggregation",
+      
+      # LRRK2
+      "G2019S creates hyperactive kinase (gain-of-function); CRISPRi causes knockdown (loss-of-function)",
+      
+      # VPS13C variants  
+      "Point mutation effects on VPS13C function may be complex",
+      "Point mutation effects on VPS13C function may be complex",
+      
+      # SYNJ1
+      "Point mutation effects on SYNJ1 function may be complex",
+      
+      # Loss-of-function mutations
+      "Nonsense mutation reduces protein function similar to CRISPRi",
+      "Nonsense mutation reduces protein function similar to CRISPRi", 
+      "Large deletion reduces protein function similar to CRISPRi",
+      "Large deletion reduces protein function similar to CRISPRi",
+      "Frameshift mutation reduces protein function similar to CRISPRi",
+      "Frameshift mutation reduces protein function similar to CRISPRi",
+      "Splice site mutation reduces protein function similar to CRISPRi"
+    ),
     stringsAsFactors = FALSE
   )
   
