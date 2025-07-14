@@ -1456,19 +1456,22 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             )
           } else {
             cat("[FDR DEBUG] FDR-corrected p-values not available, using raw p-values\n")
-            # Fallback to raw p-values if FDR not available
+            # Fallback to raw p-values if FDR not available - use original data columns
+            raw_intersection_p <- pair_data$intersection_fisher_p[match(display_data$Cluster, pair_data$cluster)]
+            raw_union_p <- pair_data$union_fisher_p[match(display_data$Cluster, pair_data$cluster)]
+            
             display_data$`Intersection Sig` <- ifelse(
-              is.na(display_data$`Fisher p (Intersection)`), "n/a",
-              ifelse(display_data$`Fisher p (Intersection)` < 0.001, "***",
-                     ifelse(display_data$`Fisher p (Intersection)` < 0.01, "**",
-                            ifelse(display_data$`Fisher p (Intersection)` < 0.05, "*", "ns")))
+              is.na(raw_intersection_p), "n/a",
+              ifelse(raw_intersection_p < 0.001, "***",
+                     ifelse(raw_intersection_p < 0.01, "**",
+                            ifelse(raw_intersection_p < 0.05, "*", "ns")))
             )
             
             display_data$`Union Sig` <- ifelse(
-              is.na(display_data$`Fisher p (Union)`), "n/a",
-              ifelse(display_data$`Fisher p (Union)` < 0.001, "***",
-                     ifelse(display_data$`Fisher p (Union)` < 0.01, "**",
-                            ifelse(display_data$`Fisher p (Union)` < 0.05, "*", "ns")))
+              is.na(raw_union_p), "n/a",
+              ifelse(raw_union_p < 0.001, "***",
+                     ifelse(raw_union_p < 0.01, "**",
+                            ifelse(raw_union_p < 0.05, "*", "ns")))
             )
           }
         } else {
@@ -1483,11 +1486,13 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                             ifelse(fdr_gene_p < 0.05, "*", "ns")))
             )
           } else {
+            # Use original data column for raw p-values
+            raw_gene_p <- pair_data$gene_fisher_p[match(display_data$Cluster, pair_data$cluster)]
             display_data$Significance <- ifelse(
-              is.na(display_data$`DE Overlap p-value`), "n/a",
-              ifelse(display_data$`DE Overlap p-value` < 0.001, "***",
-                     ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
-                            ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns")))
+              is.na(raw_gene_p), "n/a",
+              ifelse(raw_gene_p < 0.001, "***",
+                     ifelse(raw_gene_p < 0.01, "**",
+                            ifelse(raw_gene_p < 0.05, "*", "ns")))
             )
           }
         }
