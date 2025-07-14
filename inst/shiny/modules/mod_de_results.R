@@ -1869,7 +1869,8 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
           icon("info-circle"),
           strong(" Analysis Scope: "), 
-          "This shows overlap of ALL genes tested in differential expression analysis that meet significance criteria (p < 0.05, |log2FC| > 0.25). ",
+          "This shows ", tags$strong("direct overlap of differentially expressed genes"), " meeting significance criteria (p < 0.05, |log2FC| > 0.25). ",
+          "This differs from the pathway-based gene overlaps shown on the Signature Nomination page, which analyze genes contributing to enriched pathways. ",
           "For genes appearing in enriched pathways only (smaller subset), see Signature Heatmap in Signature Nomination."
         ),
         

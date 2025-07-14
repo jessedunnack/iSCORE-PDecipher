@@ -293,9 +293,10 @@ mod_signature_nomination_ui <- function(id) {
                   tags$li(tags$strong("Union Approach (Liberal):"), " Tests overlap among all genes either method could detect (more inclusive)")
                 ),
                 p(
-                  strong("FDR Correction (NEW):"), " P-values are corrected for multiple testing using hierarchical FDR correction: ",
+                  strong("FDR Correction (NEW):"), " P-values are corrected for multiple testing using ", 
+                  tags$strong("hierarchical Benjamini-Hochberg FDR correction"), ": ",
                   "first within each gene pair (across clusters and test types), then across all gene pairs. ",
-                  "FDR-corrected values are shown as 'Sig (FDR)' columns when available."
+                  "When available, FDR-corrected p-values are displayed by default with clear '(FDR)' labeling."
                 ),
                 p(
                   strong("Significance Levels:"), " ",
@@ -307,6 +308,23 @@ mod_signature_nomination_ui <- function(id) {
                 p(
                   tags$em("Note: Gene overlap may be non-significant even when pathway overlap is significant, ",
                   "as different genes can converge on the same biological functions.")
+                ),
+                div(class = "alert alert-warning", style = "margin-top: 15px; font-size: 0.85em;",
+                  icon("exclamation-triangle"),
+                  h6("Gene Overlap Definition", style = "margin-top: 0; color: #856404;"),
+                  p(
+                    tags$strong("Important distinction:"), " The gene overlaps shown here are ", 
+                    tags$strong("genes contributing to significantly enriched pathways"), 
+                    ", not direct differential expression overlaps. This differs from the 'Shared DE Genes' ",
+                    "count on the DE Genes page, which shows direct overlap of genes meeting ",
+                    "DE criteria (p < 0.05, |log2FC| > 0.25).", style = "margin-bottom: 8px;"
+                  ),
+                  p(
+                    tags$strong("Why they differ:"), " A gene can be differentially expressed but not contribute ",
+                    "to enriched pathways, or contribute to pathways without being the most significantly DE. ",
+                    "This pathway-based overlap analysis reveals functional convergence between methods.",
+                    style = "margin-bottom: 0;"
+                  )
                 )
               ),
               
@@ -1330,26 +1348,51 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p", 
                                        "intersection_background_size", "union_background_size") %in% colnames(pair_data))
         
+        # Determine whether to show FDR-corrected or raw p-values
+        has_fdr_correction <- "intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)
+        
         if (has_intersection_union) {
           # NEW: Display both intersection and union approaches
           display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count")
-          col_names <- c(col_names, "Shared DE Genes", "Shared Pathways")
+          col_names <- c(col_names, "Pathway Genes", "Shared Pathways")
           
-          # Add intersection approach columns
-          display_cols <- c(display_cols, "intersection_fisher_p", "intersection_background_size")
-          col_names <- c(col_names, "Fisher p (Intersection)", "Background (Intersection)")
+          # Add intersection approach columns with FDR preference
+          if (has_fdr_correction) {
+            display_cols <- c(display_cols, "intersection_fisher_p_fdr_hierarchical", "intersection_background_size")
+            col_names <- c(col_names, "Fisher p-value (FDR-corrected)", "Background (Intersection)")
+          } else {
+            display_cols <- c(display_cols, "intersection_fisher_p", "intersection_background_size")
+            col_names <- c(col_names, "Fisher p-value (raw)", "Background (Intersection)")
+          }
           
-          # Add union approach columns
-          display_cols <- c(display_cols, "union_fisher_p", "union_background_size")  
-          col_names <- c(col_names, "Fisher p (Union)", "Background (Union)")
+          # Add union approach columns with FDR preference
+          if (has_fdr_correction && "union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            display_cols <- c(display_cols, "union_fisher_p_fdr_hierarchical", "union_background_size")  
+            col_names <- c(col_names, "Fisher p-value (FDR-corrected, Union)", "Background (Union)")
+          } else {
+            display_cols <- c(display_cols, "union_fisher_p", "union_background_size")  
+            col_names <- c(col_names, "Fisher p-value (raw, Union)", "Background (Union)")
+          }
           
           # Add Jaccard index
           display_cols <- c(display_cols, "gene_jaccard")
           col_names <- c(col_names, "Jaccard Index")
         } else {
           # LEGACY: Display old single approach for backwards compatibility
-          display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_fisher_p", "gene_jaccard")
-          col_names <- c(col_names, "Shared DE Genes", "Shared Pathways", "DE Overlap p-value", "Jaccard Index")
+          display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count")
+          col_names <- c(col_names, "Pathway Genes", "Shared Pathways")
+          
+          # Show FDR-corrected or raw p-values with clear labeling
+          if (has_fdr_correction && "gene_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            display_cols <- c(display_cols, "gene_fisher_p_fdr_hierarchical")
+            col_names <- c(col_names, "Fisher p-value (FDR-corrected)")
+          } else {
+            display_cols <- c(display_cols, "gene_fisher_p")
+            col_names <- c(col_names, "Fisher p-value (raw)")
+          }
+          
+          display_cols <- c(display_cols, "gene_jaccard")
+          col_names <- c(col_names, "Jaccard Index")
           
           # Add background information if available (legacy)
           if ("background_size" %in% colnames(pair_data) && "background_type" %in% colnames(pair_data)) {
