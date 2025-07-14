@@ -181,26 +181,10 @@ mod_signature_nomination_ui <- function(id) {
       
       # Right panel: Results and visualizations
       column(8,
-        # Results tabs
-        tabsetPanel(id = ns("results_tabs"),
+        # Results tabs - PD Biology Focus set as default tab
+        tabsetPanel(id = ns("results_tabs"), selected = "pd_biology",
           
-          # Overview tab
-          tabPanel("Signature Overview", value = "overview",
-            wellPanel(
-              h4("Signature Discovery Results"),
-              uiOutput(ns("analysis_summary")),
-              
-              # Quick action buttons
-              div(class = "text-center", style = "margin: 15px 0;",
-                downloadButton(ns("download_summary"), "Download Summary (CSV)", 
-                              class = "btn-success btn-sm"),
-                downloadButton(ns("download_full"), "Download Full Results (Excel)", 
-                              class = "btn-info btn-sm", style = "margin-left: 10px;")
-              )
-            )
-          ),
-          
-          # PD Biological Interpretation tab (NEW)
+          # PD Biological Interpretation tab (NOW DEFAULT)
           tabPanel("PD Biology Focus", value = "pd_biology",
             wellPanel(
               h4("Parkinson's Disease Biological Interpretation", icon("brain")),
@@ -1232,16 +1216,49 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       req(values$analysis_results)
       req(input$selected_gene_pair)
       
-      all_sigs <- values$analysis_results$all_signatures
+      # Get analysis results with better validation
+      analysis_results <- values$analysis_results
+      
+      # Debug what we actually have
+      cat("[GENE PAIR DEBUG] Analysis results class:", class(analysis_results), "\n")
+      if (is.list(analysis_results)) {
+        cat("[GENE PAIR DEBUG] Analysis results elements:", names(analysis_results), "\n")
+      }
+      
+      # Get all_signatures with robust error checking
+      all_sigs <- NULL
+      if (is.list(analysis_results) && "all_signatures" %in% names(analysis_results)) {
+        all_sigs <- analysis_results$all_signatures
+      }
+      
       selected_pair <- input$selected_gene_pair
       
       # Better error handling for data structure
-      if (is.null(all_sigs) || !is.data.frame(all_sigs) || nrow(all_sigs) == 0) {
+      if (is.null(all_sigs)) {
+        cat("[GENE PAIR DEBUG] all_signatures is NULL\n")
         return(DT::datatable(
-          data.frame(Message = "No signature data available"),
+          data.frame(Message = "No signature data available - all_signatures is NULL"),
           options = list(dom = 't'), rownames = FALSE
         ))
       }
+      
+      if (!is.data.frame(all_sigs)) {
+        cat("[GENE PAIR DEBUG] all_signatures is not a data frame, class:", class(all_sigs), "\n")
+        return(DT::datatable(
+          data.frame(Message = paste("Signature data is not a data frame, got:", class(all_sigs))),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      if (nrow(all_sigs) == 0) {
+        cat("[GENE PAIR DEBUG] all_signatures data frame is empty\n")
+        return(DT::datatable(
+          data.frame(Message = "No signature data available - empty data frame"),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      cat("[GENE PAIR DEBUG] all_signatures is valid data frame with", nrow(all_sigs), "rows and columns:", paste(names(all_sigs), collapse = ", "), "\n")
       
       pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
       

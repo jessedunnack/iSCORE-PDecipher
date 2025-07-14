@@ -295,8 +295,9 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
       # Run analysis with error handling
       tryCatch({
         # Convert signature results to expected format
-        # analysis_results() returns the actual signature analysis results
-        signature_data <- analysis_results()
+        # analysis_results() returns list(analysis_results = reactive, analysis_running = reactive)
+        # We need to get the actual analysis results from the reactive
+        signature_data <- analysis_results()$analysis_results()
         
         # Debug: Check what we're actually getting
         cat("[TRENDS DEBUG] Signature data structure:", class(signature_data), "\n")
