@@ -525,8 +525,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         cat("[PRECOMPUTED]   Pan-cluster:", nrow(precomputed_data$pan_cluster_signatures), "\n")
         cat("[PRECOMPUTED]   Analysis time:", metadata$analysis_duration_minutes %||% "unknown", "minutes\n")
         
-        # Show results immediately if user is viewing the overview tab
-        if (!is.null(input$results_tabs) && input$results_tabs == "overview") {
+        # Show results immediately if user is viewing any results tab
+        if (!is.null(input$results_tabs)) {
           display_precomputed_results()
         }
         
@@ -544,26 +544,77 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       cat("[PRECOMPUTED] Displaying precomputed results in UI\n")
       
       # Set the analysis results to the precomputed data
-      values$analysis_results <- values$precomputed_results
+      results <- values$precomputed_results
+      
+      # Generate PD analysis if missing (for PD Biology Focus tab)
+      if (is.null(results$pd_analysis)) {
+        cat("[PRECOMPUTED] Generating PD analysis from precomputed signatures...\n")
+        
+        tryCatch({
+          # Check if function exists
+          if (exists("analyze_pd_signatures", mode = "function")) {
+            # Generate PD analysis using precomputed signatures
+            pd_analysis <- analyze_pd_signatures(
+              signature_results = results,
+              enrichment_data = NULL,  # Not needed for basic PD analysis
+              focus_on_pan_cluster = TRUE
+            )
+            results$pd_analysis <- pd_analysis
+            cat("[PRECOMPUTED] ✓ PD analysis generated successfully\n")
+          } else {
+            cat("[PRECOMPUTED] ⚠ analyze_pd_signatures function not available\n")
+            # Create minimal pd_analysis structure
+            results$pd_analysis <- list(
+              pd_summary = NULL,
+              enhanced_signatures = list(),
+              biological_categories = NULL
+            )
+          }
+        }, error = function(e) {
+          cat("[PRECOMPUTED] Error generating PD analysis:", e$message, "\n")
+          # Create empty pd_analysis structure
+          results$pd_analysis <- list(
+            pd_summary = NULL,
+            enhanced_signatures = list(),
+            biological_categories = NULL
+          )
+        })
+      }
+      
+      values$analysis_results <- results
       values$is_showing_precomputed <- TRUE
       
-      # Update the gene pair selector if available
+      # Update UI selectors if available
       if (!is.null(values$analysis_results$all_signatures) && 
           nrow(values$analysis_results$all_signatures) > 0) {
+        
+        # Update gene pair selector
         gene_pair_choices <- unique(values$analysis_results$all_signatures$gene_pair)
         updateSelectInput(session, "selected_gene_pair",
                          choices = gene_pair_choices,
                          selected = gene_pair_choices[1])
+        
+        # Update cluster selector for cluster-specific tab
+        if (!is.null(values$analysis_results$cluster_specific_signatures)) {
+          cluster_choices <- names(values$analysis_results$cluster_specific_signatures)
+          if (length(cluster_choices) > 0) {
+            updateSelectInput(session, "selected_cluster_detail",
+                             choices = setNames(cluster_choices, paste("Cluster", gsub("cluster_", "", cluster_choices))),
+                             selected = cluster_choices[1])
+          }
+        }
       }
     }
     
-    # NEW: Observer to display precomputed results when user switches to overview tab
+    # NEW: Observer to display precomputed results when user switches to ANY results tab
     observeEvent(input$results_tabs, {
-      if (input$results_tabs == "overview" && 
+      # Load precomputed results for any results tab if no analysis has been run
+      if (!is.null(input$results_tabs) && 
           is.null(values$analysis_results) && 
           !is.null(values$precomputed_results) &&
           values$precomputation_status == "loaded") {
         
+        cat("[PRECOMPUTED] Loading precomputed results for tab:", input$results_tabs, "\n")
         display_precomputed_results()
       }
     })
