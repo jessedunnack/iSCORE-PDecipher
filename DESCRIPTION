@@ -2,8 +2,8 @@ Package: iSCORE.PDecipher
 Title: Integrated Analysis of Parkinson's Disease Mutations and Perturbations
 Version: 0.2.5
 Authors@R: 
-    person("Jesse", "Dunnack", , "jesse.dunnack@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = ""))
+    person("Jesse", "Dunnack", , c("jessedunnack@berkeley.edu", "jessedunnack@gmail.com"), role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-0387-0090"))
 Description: iSCORE-PDecipher provides integrated analysis tools for Parkinson's disease
     research, combining iSCORE-PD mutation data with PerturbSeq (CRISPRi/CRISPRa) experiments.
     It includes differential expression analysis using MAST and MixScale, comprehensive
