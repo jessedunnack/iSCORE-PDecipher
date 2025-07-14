@@ -493,7 +493,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         cat("[PRECOMPUTED] Loading precomputed results from:", precomputed_file, "\n")
         
         # Load the precomputed results
-        if (grepl("\.gz$", precomputed_file)) {
+        if (grepl("\\.gz$", precomputed_file)) {
           # Gzipped JSON
           con <- gzfile(precomputed_file, "r")
           json_text <- readLines(con, warn = FALSE)
