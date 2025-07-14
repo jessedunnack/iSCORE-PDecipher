@@ -1259,8 +1259,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       }
       
       cat("[GENE PAIR DEBUG] all_signatures is valid data frame with", nrow(all_sigs), "rows and columns:", paste(names(all_sigs), collapse = ", "), "\n")
+      cat("[GENE PAIR DEBUG] Selected gene pair:", selected_pair, "\n")
+      cat("[GENE PAIR DEBUG] Available gene pairs:", paste(unique(all_sigs$gene_pair), collapse = ", "), "\n")
       
       pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      cat("[GENE PAIR DEBUG] Filtered pair_data rows:", nrow(pair_data), "\n")
       
       if (nrow(pair_data) > 0) {
         # Handle different column names for signature strength

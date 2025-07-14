@@ -514,6 +514,93 @@ mod_signature_trends_server <- function(id, analysis_results, enrichment_data) {
       plotly::ggplotly(p, tooltip = c("x", "y"))
     })
     
+    # MISSING VISUALIZATIONS FOR TREND VISUALIZATIONS TAB
+    
+    # Frequency vs Impact scatter plot
+    output$frequency_vs_impact_plot <- renderPlotly({
+      req(values$trends_results)
+      
+      freq_data <- values$trends_results$frequency_analysis$top_frequent_signatures
+      impact_data <- values$trends_results$impact_analysis$top_impact_signatures
+      
+      if (is.null(freq_data) || nrow(freq_data) == 0 || 
+          is.null(impact_data) || nrow(impact_data) == 0) {
+        return(plotly_empty("No frequency vs impact data available"))
+      }
+      
+      # Merge frequency and impact data
+      tryCatch({
+        # Assume both have gene_pair column for merging
+        if ("gene_pair" %in% colnames(freq_data) && "gene_pair" %in% colnames(impact_data)) {
+          merged_data <- merge(freq_data, impact_data, by = "gene_pair", all = FALSE)
+          
+          if (nrow(merged_data) == 0) {
+            return(plotly_empty("No overlapping signatures between frequency and impact analysis"))
+          }
+          
+          # Create scatter plot
+          p <- ggplot2::ggplot(merged_data, ggplot2::aes(x = frequency_score, y = impact_score)) +
+            ggplot2::geom_point(ggplot2::aes(size = signature_strength.x), alpha = 0.7, color = "#2166ac") +
+            ggplot2::labs(title = "Signature Frequency vs Impact",
+                         x = "Frequency Score", 
+                         y = "Impact Score",
+                         size = "Signature Strength") +
+            ggplot2::theme_minimal()
+          
+          plotly::ggplotly(p, tooltip = c("x", "y", "size"))
+        } else {
+          return(plotly_empty("Cannot merge frequency and impact data - missing gene_pair column"))
+        }
+      }, error = function(e) {
+        return(plotly_empty(paste("Error creating frequency vs impact plot:", e$message)))
+      })
+    })
+    
+    # Signature heatmap for trends
+    output$signature_heatmap <- renderPlotly({
+      req(values$trends_results)
+      
+      freq_data <- values$trends_results$frequency_analysis$top_frequent_signatures
+      
+      if (is.null(freq_data) || nrow(freq_data) == 0) {
+        return(plotly_empty("No signature data available for heatmap"))
+      }
+      
+      tryCatch({
+        # Create a simple heatmap of signature metrics
+        # Assume freq_data has columns like frequency_score, mean_strength, max_strength
+        if (all(c("gene_pair", "frequency_score", "mean_strength") %in% colnames(freq_data))) {
+          
+          # Take top 20 signatures for readability
+          plot_data <- head(freq_data, 20)
+          
+          # Reshape data for heatmap
+          library(tidyr)
+          heatmap_data <- plot_data %>%
+            dplyr::select(gene_pair, frequency_score, mean_strength) %>%
+            tidyr::pivot_longer(cols = c(frequency_score, mean_strength), 
+                               names_to = "metric", values_to = "value")
+          
+          # Create heatmap
+          p <- ggplot2::ggplot(heatmap_data, ggplot2::aes(x = metric, y = gene_pair, fill = value)) +
+            ggplot2::geom_tile() +
+            ggplot2::scale_fill_viridis_c() +
+            ggplot2::labs(title = "Top Signatures Heatmap",
+                         x = "Metric", 
+                         y = "Gene Pair",
+                         fill = "Value") +
+            ggplot2::theme_minimal() +
+            ggplot2::theme(axis.text.y = ggplot2::element_text(size = 8))
+          
+          plotly::ggplotly(p, tooltip = c("x", "y", "fill"))
+        } else {
+          return(plotly_empty("Insufficient columns for heatmap - need gene_pair, frequency_score, mean_strength"))
+        }
+      }, error = function(e) {
+        return(plotly_empty(paste("Error creating signature heatmap:", e$message)))
+      })
+    })
+    
     # Helper function for empty plots
     plotly_empty <- function(message) {
       plotly::plot_ly() %>%
