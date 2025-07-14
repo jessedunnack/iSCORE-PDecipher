@@ -275,6 +275,41 @@ mod_signature_nomination_ui <- function(id) {
                            choices = c(), selected = NULL)
               ),
               
+              # Contextual overview explaining the analysis
+              div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
+                icon("info-circle"),
+                h5("Understanding Cross-Method Gene Overlap Analysis", style = "margin-top: 0;"),
+                p(
+                  strong("What this analysis shows:"), " For the selected gene pair (e.g., LRRK2 mutation vs LRRK2 knockdown), ",
+                  "we compare differentially expressed (DE) genes identified in MAST (genetic mutations) with those from CRISPRi (gene knockdown) ",
+                  "within each cell cluster."
+                ),
+                p(
+                  strong("Statistical Testing:"), " We use Fisher's exact test to determine if the overlap in DE genes between methods ",
+                  "is greater than expected by chance. Two approaches are shown:"
+                ),
+                tags$ul(
+                  tags$li(tags$strong("Intersection Approach (Conservative):"), " Tests overlap among genes that both methods could detect (more stringent)"),
+                  tags$li(tags$strong("Union Approach (Liberal):"), " Tests overlap among all genes either method could detect (more inclusive)")
+                ),
+                p(
+                  strong("Significance Levels:"), " ",
+                  tags$span("*", style = "color: #28a745; font-weight: bold;"), " = p < 0.05 (suggestive), ",
+                  tags$span("**", style = "color: #17a2b8; font-weight: bold;"), " = p < 0.01 (significant), ",
+                  tags$span("***", style = "color: #dc3545; font-weight: bold;"), " = p < 0.001 (highly significant), ",
+                  tags$span("ns", style = "color: #6c757d;"), " = not significant"
+                ),
+                p(
+                  tags$em("Note: Gene overlap may be non-significant even when pathway overlap is significant, ",
+                  "as different genes can converge on the same biological functions.")
+                )
+              ),
+              
+              # Dynamic summary of significant clusters
+              div(style = "margin-bottom: 15px;",
+                uiOutput(ns("gene_pair_summary"))
+              ),
+              
               # Detailed results for selected pair
               div(
                 DT::dataTableOutput(ns("gene_pair_table"))
@@ -1399,8 +1434,28 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cat("[GENE PAIR DEBUG] DT::datatable created successfully\n")
           
           # Apply formatting only if base datatable succeeds
-          dt_result %>%
+          final_dt <- dt_result %>%
             DT::formatRound(intersect(c("Signature Score", "Jaccard Index"), names(display_data)), digits = 2)
+          
+          # Add color coding for Intersection Sig column if it exists
+          if ("Intersection Sig" %in% names(display_data)) {
+            final_dt <- final_dt %>%
+              DT::formatStyle("Intersection Sig",
+                            backgroundColor = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("#dc3545", "#17a2b8", "#28a745", "#e9ecef", "#f8f9fa")  # Red, Blue, Green, Light gray, Very light gray
+                            ),
+                            color = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("white", "white", "white", "#6c757d", "#6c757d")  # White text for colored cells, gray for others
+                            ),
+                            fontWeight = styleEqual(
+                              c("***", "**", "*"),
+                              c("bold", "bold", "bold")
+                            ))
+          }
+          
+          return(final_dt)
           
         }, error = function(e) {
           cat("[GENE PAIR DEBUG] ERROR in DT::datatable:", e$message, "\n")
@@ -1416,6 +1471,92 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         DT::datatable(data.frame(Message = "No data found for this gene pair"),
                      options = list(dom = 't'), rownames = FALSE)
       }
+    })
+    
+    # Gene pair summary output - dynamic summary of significant clusters
+    output$gene_pair_summary <- renderUI({
+      req(values$analysis_results)
+      req(input$selected_gene_pair)
+      
+      all_sigs <- values$analysis_results$all_signatures
+      selected_pair <- input$selected_gene_pair
+      
+      if (is.null(all_sigs) || !is.data.frame(all_sigs) || nrow(all_sigs) == 0) {
+        return(NULL)
+      }
+      
+      pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      
+      if (nrow(pair_data) == 0) {
+        return(NULL)
+      }
+      
+      # Check if we have intersection/union data
+      has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p") %in% colnames(pair_data))
+      
+      if (has_intersection_union) {
+        # Analyze intersection significance (more stringent)
+        sig_clusters_strict <- pair_data[pair_data$intersection_fisher_p < 0.05, ]
+        highly_sig_clusters <- pair_data[pair_data$intersection_fisher_p < 0.001, ]
+        
+        # Parse gene names from the pair
+        genes <- strsplit(selected_pair, "_vs_")[[1]]
+        mast_gene <- genes[1]
+        crispri_gene <- genes[2]
+        
+        # Create summary message
+        if (nrow(sig_clusters_strict) == 0) {
+          summary_html <- div(
+            class = "alert alert-warning",
+            h5(icon("chart-line"), " Overlap Analysis Summary", style = "margin-top: 0;"),
+            p(strong("No significant gene overlap detected"), " between ", 
+              tags$span(mast_gene, style = "color: #d73027; font-weight: bold;"), " (MAST mutation) and ",
+              tags$span(crispri_gene, style = "color: #4575b4; font-weight: bold;"), " (CRISPRi knockdown) ",
+              "in any cluster using the conservative intersection approach."),
+            p(tags$em("This is common and expected - check the pathway overlap results which may still show biological convergence."))
+          )
+        } else {
+          # Build cluster summary
+          cluster_summary <- lapply(1:nrow(sig_clusters_strict), function(i) {
+            row <- sig_clusters_strict[i, ]
+            cluster_name <- gsub("cluster_", "", row$cluster)
+            p_val <- row$intersection_fisher_p
+            overlap_count <- row$gene_overlap_count
+            
+            sig_level <- if (p_val < 0.001) "***" else if (p_val < 0.01) "**" else "*"
+            sig_color <- if (p_val < 0.001) "#dc3545" else if (p_val < 0.01) "#17a2b8" else "#28a745"
+            
+            tags$li(
+              tags$strong(paste0("Cluster ", cluster_name, ":")),
+              " ", overlap_count, " overlapping DE genes ",
+              tags$span(paste0("(p = ", formatC(p_val, format = "e", digits = 2), " ", sig_level, ")"),
+                       style = paste0("color: ", sig_color, "; font-weight: bold;"))
+            )
+          })
+          
+          summary_html <- div(
+            class = "alert alert-success",
+            h5(icon("check-circle"), " Significant Gene Overlap Detected!", style = "margin-top: 0;"),
+            p(strong(nrow(sig_clusters_strict), " cluster(s)"), " show significant overlap between ",
+              tags$span(mast_gene, style = "color: #d73027; font-weight: bold;"), " (MAST mutation) and ",
+              tags$span(crispri_gene, style = "color: #4575b4; font-weight: bold;"), " (CRISPRi knockdown):"),
+            tags$ul(cluster_summary),
+            if (nrow(highly_sig_clusters) > 0) {
+              p(tags$strong(nrow(highly_sig_clusters), " cluster(s)"), 
+                " show ", tags$span("highly significant (***)", style = "color: #dc3545; font-weight: bold;"), 
+                " overlap, suggesting robust cross-method agreement.")
+            } else NULL
+          )
+        }
+      } else {
+        # Legacy data format
+        summary_html <- div(
+          class = "alert alert-info",
+          p("Detailed overlap statistics not available for this analysis. Re-run the analysis for enhanced statistics.")
+        )
+      }
+      
+      return(summary_html)
     })
     
     # === HEATMAP OUTPUTS ===
