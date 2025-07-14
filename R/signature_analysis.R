@@ -538,6 +538,63 @@ identify_pd_relevant_enrichments <- function(enrichment_data, pd_pathway_terms =
   return(pd_enrichments)
 }
 
+#' Calculate database-specific pathway overlap significance
+#'
+#' @param mast_data Enrichment data for MAST method
+#' @param crispri_data Enrichment data for CRISPRi method
+#' @param databases Character vector of databases to analyze (e.g., "GO_BP", "KEGG", "Reactome")
+#' @return List with database-specific pathway overlap statistics
+#' @export
+calculate_pathway_overlap_by_database <- function(mast_data, crispri_data, 
+                                                 databases = c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING")) {
+  
+  results <- list()
+  
+  for (database in databases) {
+    # Filter data for this specific database
+    mast_db <- mast_data[mast_data$enrichment_type == database, ]
+    crispri_db <- crispri_data[crispri_data$enrichment_type == database, ]
+    
+    if (nrow(mast_db) > 0 && nrow(crispri_db) > 0) {
+      # Extract pathway terms for this database
+      mast_pathways <- mast_db$Description
+      crispri_pathways <- crispri_db$Description
+      
+      # Calculate overlap using existing function
+      overlap_stats <- calculate_gene_overlap_significance(
+        mast_pathways, crispri_pathways, 
+        background_genes = unique(c(mast_pathways, crispri_pathways))
+      )
+      
+      results[[database]] <- list(
+        database = database,
+        mast_pathway_count = length(mast_pathways),
+        crispri_pathway_count = length(crispri_pathways),
+        overlap_count = overlap_stats$overlap_count,
+        fisher_p = overlap_stats$fisher_p,
+        fisher_or = overlap_stats$fisher_or,
+        jaccard_index = overlap_stats$jaccard_index,
+        overlapping_pathways = overlap_stats$overlap_genes
+      )
+    } else {
+      # No data for this database in this comparison
+      results[[database]] <- list(
+        database = database,
+        mast_pathway_count = nrow(mast_db),
+        crispri_pathway_count = nrow(crispri_db),
+        overlap_count = 0,
+        fisher_p = NA,
+        fisher_or = NA,
+        jaccard_index = 0,
+        overlapping_pathways = character(0),
+        error = paste("Insufficient data: MAST =", nrow(mast_db), "CRISPRi =", nrow(crispri_db))
+      )
+    }
+  }
+  
+  return(results)
+}
+
 #' Perform comprehensive signature analysis for a gene pair
 #'
 #' @param gene_pair List with mast_gene and crispri_gene names
@@ -718,9 +775,11 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = N
       cat("[OVERLAP DEBUG]", cluster, "- ERROR: No valid gene lists extracted\n")
     }
     
-    # Pathway overlap analysis
+    # Pathway overlap analysis (database-specific)
     pathway_overlap_stats <- NULL
+    database_specific_pathway_stats <- NULL
     if (include_pathways) {
+      # Legacy pathway overlap (all pathways combined)
       mast_pathways <- cluster_mast$Description
       crispri_pathways <- cluster_crispri$Description
       
@@ -730,12 +789,32 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = N
           background_genes = unique(c(mast_pathways, crispri_pathways))
         )
       }
+      
+      # Database-specific pathway overlap analysis (NEW)
+      if (nrow(cluster_mast) > 0 && nrow(cluster_crispri) > 0) {
+        database_specific_pathway_stats <- calculate_pathway_overlap_by_database(
+          cluster_mast, cluster_crispri
+        )
+        
+        cat("[PATHWAY DEBUG]", cluster, "- Database-specific pathway analysis completed for",
+            length(database_specific_pathway_stats), "databases\n")
+        
+        # Log results for each database
+        for (db in names(database_specific_pathway_stats)) {
+          db_result <- database_specific_pathway_stats[[db]]
+          cat("  ", db, ": MAST=", db_result$mast_pathway_count, 
+              ", CRISPRi=", db_result$crispri_pathway_count,
+              ", overlap=", db_result$overlap_count,
+              ", p=", db_result$fisher_p %||% "NA", "\n")
+        }
+      }
     }
     
     cluster_results[[cluster]] <- list(
       cluster = cluster,
       overlap_stats = overlap_stats,
       pathway_overlap_stats = pathway_overlap_stats,
+      database_specific_pathway_stats = database_specific_pathway_stats,
       mast_term_count = nrow(cluster_mast),
       crispri_term_count = nrow(cluster_crispri)
     )

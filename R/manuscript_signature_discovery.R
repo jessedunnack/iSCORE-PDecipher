@@ -132,6 +132,149 @@ discover_top_signatures <- function(enrichment_data, de_data = NULL, top_n = 10,
   return(results)
 }
 
+#' Apply hierarchical FDR correction to Fisher's exact test p-values
+#'
+#' @param signature_rankings Data frame with signature rankings and p-values
+#' @return Data frame with FDR-corrected p-values added
+apply_hierarchical_fdr_correction <- function(signature_rankings) {
+  
+  if (nrow(signature_rankings) == 0) {
+    return(signature_rankings)
+  }
+  
+  cat("[FDR DEBUG] Starting hierarchical FDR correction for", nrow(signature_rankings), "signatures\n")
+  
+  # Step 1: Within-gene-pair FDR correction
+  signature_rankings$gene_fisher_p_fdr <- NA
+  signature_rankings$intersection_fisher_p_fdr <- NA  
+  signature_rankings$union_fisher_p_fdr <- NA
+  signature_rankings$pathway_fisher_p_fdr <- NA
+  
+  # Add database-specific FDR columns
+  databases <- c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING")
+  for (db in databases) {
+    signature_rankings[[paste0(db, "_fisher_p_fdr")]] <- NA
+  }
+  
+  # Correct within each gene pair
+  gene_pairs <- unique(signature_rankings$gene_pair)
+  cat("[FDR DEBUG] Applying within-gene-pair correction for", length(gene_pairs), "gene pairs\n")
+  
+  for (gene_pair in gene_pairs) {
+    pair_indices <- which(signature_rankings$gene_pair == gene_pair)
+    pair_data <- signature_rankings[pair_indices, ]
+    
+    # Collect all p-values for this gene pair
+    all_p_values <- c()
+    p_value_info <- list()
+    
+    # Gene-level Fisher's tests
+    if ("gene_fisher_p" %in% names(pair_data)) {
+      valid_gene_p <- !is.na(pair_data$gene_fisher_p)
+      if (any(valid_gene_p)) {
+        all_p_values <- c(all_p_values, pair_data$gene_fisher_p[valid_gene_p])
+        p_value_info <- c(p_value_info, lapply(which(valid_gene_p), function(i) list(type = "gene_fisher_p", index = pair_indices[i])))
+      }
+    }
+    
+    # Intersection approach Fisher's tests
+    if ("intersection_fisher_p" %in% names(pair_data)) {
+      valid_int_p <- !is.na(pair_data$intersection_fisher_p)
+      if (any(valid_int_p)) {
+        all_p_values <- c(all_p_values, pair_data$intersection_fisher_p[valid_int_p])
+        p_value_info <- c(p_value_info, lapply(which(valid_int_p), function(i) list(type = "intersection_fisher_p", index = pair_indices[i])))
+      }
+    }
+    
+    # Union approach Fisher's tests
+    if ("union_fisher_p" %in% names(pair_data)) {
+      valid_union_p <- !is.na(pair_data$union_fisher_p)
+      if (any(valid_union_p)) {
+        all_p_values <- c(all_p_values, pair_data$union_fisher_p[valid_union_p])
+        p_value_info <- c(p_value_info, lapply(which(valid_union_p), function(i) list(type = "union_fisher_p", index = pair_indices[i])))
+      }
+    }
+    
+    # Legacy pathway Fisher's tests
+    if ("pathway_fisher_p" %in% names(pair_data)) {
+      valid_pathway_p <- !is.na(pair_data$pathway_fisher_p)
+      if (any(valid_pathway_p)) {
+        all_p_values <- c(all_p_values, pair_data$pathway_fisher_p[valid_pathway_p])
+        p_value_info <- c(p_value_info, lapply(which(valid_pathway_p), function(i) list(type = "pathway_fisher_p", index = pair_indices[i])))
+      }
+    }
+    
+    # Database-specific pathway Fisher's tests
+    for (db in databases) {
+      db_col <- paste0(db, "_fisher_p")
+      if (db_col %in% names(pair_data)) {
+        valid_db_p <- !is.na(pair_data[[db_col]])
+        if (any(valid_db_p)) {
+          all_p_values <- c(all_p_values, pair_data[[db_col]][valid_db_p])
+          p_value_info <- c(p_value_info, lapply(which(valid_db_p), function(i) list(type = db_col, index = pair_indices[i])))
+        }
+      }
+    }
+    
+    # Apply FDR correction within this gene pair
+    if (length(all_p_values) > 0) {
+      fdr_corrected <- p.adjust(all_p_values, method = "BH")
+      
+      cat("[FDR DEBUG]", gene_pair, "- correcting", length(all_p_values), "p-values within gene pair\n")
+      
+      # Assign FDR-corrected values back to appropriate columns
+      for (i in seq_along(fdr_corrected)) {
+        info <- p_value_info[[i]]
+        fdr_col <- gsub("_p$", "_p_fdr", info$type)
+        signature_rankings[info$index, fdr_col] <- fdr_corrected[i]
+      }
+    }
+  }
+  
+  # Step 2: Across-gene-pair FDR correction 
+  cat("[FDR DEBUG] Applying across-gene-pair correction\n")
+  
+  # Collect all FDR-corrected p-values for second level correction
+  all_fdr_p_values <- c()
+  fdr_p_value_info <- list()
+  
+  fdr_columns <- c("gene_fisher_p_fdr", "intersection_fisher_p_fdr", "union_fisher_p_fdr", "pathway_fisher_p_fdr",
+                   paste0(databases, "_fisher_p_fdr"))
+  
+  for (col in fdr_columns) {
+    if (col %in% names(signature_rankings)) {
+      valid_fdr_p <- !is.na(signature_rankings[[col]])
+      if (any(valid_fdr_p)) {
+        all_fdr_p_values <- c(all_fdr_p_values, signature_rankings[[col]][valid_fdr_p])
+        fdr_p_value_info <- c(fdr_p_value_info, lapply(which(valid_fdr_p), function(i) list(column = col, index = i)))
+      }
+    }
+  }
+  
+  # Apply second level FDR correction across all gene pairs
+  if (length(all_fdr_p_values) > 0) {
+    final_fdr_corrected <- p.adjust(all_fdr_p_values, method = "BH")
+    
+    cat("[FDR DEBUG] Final hierarchical correction on", length(all_fdr_p_values), "FDR-corrected p-values\n")
+    
+    # Create final FDR columns
+    for (col in fdr_columns) {
+      final_col <- gsub("_fdr$", "_fdr_hierarchical", col)
+      signature_rankings[[final_col]] <- NA
+    }
+    
+    # Assign final FDR-corrected values
+    for (i in seq_along(final_fdr_corrected)) {
+      info <- fdr_p_value_info[[i]]
+      final_col <- gsub("_fdr$", "_fdr_hierarchical", info$column)
+      signature_rankings[info$index, final_col] <- final_fdr_corrected[i]
+    }
+  }
+  
+  cat("[FDR DEBUG] Hierarchical FDR correction completed\n")
+  return(signature_rankings)
+}
+
 #' Compute signature strength rankings
 #'
 #' @param all_signatures List of signature analysis results
@@ -218,10 +361,38 @@ compute_signature_rankings <- function(all_signatures) {
             stringsAsFactors = FALSE
           )
           
+          # Add database-specific pathway Fisher's test results (NEW)
+          database_pathway_stats <- cluster_result$database_specific_pathway_stats
+          databases <- c("GO_BP", "GO_CC", "GO_MF", "KEGG", "Reactome", "WikiPathways", "STRING")
+          
+          for (db in databases) {
+            if (!is.null(database_pathway_stats) && db %in% names(database_pathway_stats)) {
+              db_result <- database_pathway_stats[[db]]
+              signature_entry[[paste0(db, "_overlap_count")]] <- db_result$overlap_count %||% 0
+              signature_entry[[paste0(db, "_fisher_p")]] <- db_result$fisher_p %||% NA
+              signature_entry[[paste0(db, "_jaccard")]] <- db_result$jaccard_index %||% 0
+              signature_entry[[paste0(db, "_mast_pathway_count")]] <- db_result$mast_pathway_count %||% 0
+              signature_entry[[paste0(db, "_crispri_pathway_count")]] <- db_result$crispri_pathway_count %||% 0
+            } else {
+              # No data for this database
+              signature_entry[[paste0(db, "_overlap_count")]] <- 0
+              signature_entry[[paste0(db, "_fisher_p")]] <- NA
+              signature_entry[[paste0(db, "_jaccard")]] <- 0
+              signature_entry[[paste0(db, "_mast_pathway_count")]] <- 0
+              signature_entry[[paste0(db, "_crispri_pathway_count")]] <- 0
+            }
+          }
+          
           signature_rankings <- rbind(signature_rankings, signature_entry)
         }
       }
     }
+  }
+  
+  # Apply hierarchical FDR correction (NEW)
+  if (nrow(signature_rankings) > 0) {
+    cat("[COMPUTE RANKINGS] Applying hierarchical FDR correction to", nrow(signature_rankings), "signatures\n")
+    signature_rankings <- apply_hierarchical_fdr_correction(signature_rankings)
   }
   
   # Sort by signature strength (descending)

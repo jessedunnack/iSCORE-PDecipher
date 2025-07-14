@@ -293,10 +293,15 @@ mod_signature_nomination_ui <- function(id) {
                   tags$li(tags$strong("Union Approach (Liberal):"), " Tests overlap among all genes either method could detect (more inclusive)")
                 ),
                 p(
+                  strong("FDR Correction (NEW):"), " P-values are corrected for multiple testing using hierarchical FDR correction: ",
+                  "first within each gene pair (across clusters and test types), then across all gene pairs. ",
+                  "FDR-corrected values are shown as 'Sig (FDR)' columns when available."
+                ),
+                p(
                   strong("Significance Levels:"), " ",
-                  tags$span("*", style = "color: #28a745; font-weight: bold;"), " = p < 0.05 (suggestive), ",
-                  tags$span("**", style = "color: #17a2b8; font-weight: bold;"), " = p < 0.01 (significant), ",
-                  tags$span("***", style = "color: #dc3545; font-weight: bold;"), " = p < 0.001 (highly significant), ",
+                  tags$span("*", style = "color: #28a745; font-weight: bold;"), " = FDR < 0.05 (suggestive), ",
+                  tags$span("**", style = "color: #17a2b8; font-weight: bold;"), " = FDR < 0.01 (significant), ",
+                  tags$span("***", style = "color: #dc3545; font-weight: bold;"), " = FDR < 0.001 (highly significant), ",
                   tags$span("ns", style = "color: #6c757d;"), " = not significant"
                 ),
                 p(
@@ -1384,30 +1389,64 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         cat("[GENE PAIR DEBUG] display_data dimensions:", dim(display_data), "\n")
         cat("[GENE PAIR DEBUG] display_data is.data.frame:", is.data.frame(display_data), "\n")
         
-        # Add significance interpretation based on which columns are available
+        # Add significance interpretation based on FDR-corrected p-values (DEFAULT)
         if (has_intersection_union) {
-          # Add significance for both approaches
-          display_data$`Intersection Sig` <- ifelse(
-            is.na(display_data$`Fisher p (Intersection)`), "n/a",
-            ifelse(display_data$`Fisher p (Intersection)` < 0.001, "***",
-                   ifelse(display_data$`Fisher p (Intersection)` < 0.01, "**",
-                          ifelse(display_data$`Fisher p (Intersection)` < 0.05, "*", "ns")))
-          )
-          
-          display_data$`Union Sig` <- ifelse(
-            is.na(display_data$`Fisher p (Union)`), "n/a",
-            ifelse(display_data$`Fisher p (Union)` < 0.001, "***",
-                   ifelse(display_data$`Fisher p (Union)` < 0.01, "**",
-                          ifelse(display_data$`Fisher p (Union)` < 0.05, "*", "ns")))
-          )
+          # Use FDR-corrected p-values for significance (NEW - hierarchical FDR)
+          if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            cat("[FDR DEBUG] Using hierarchical FDR-corrected p-values for significance\n")
+            # Map FDR-corrected p-values to display_data
+            fdr_intersection_p <- pair_data$intersection_fisher_p_fdr_hierarchical[match(display_data$Cluster, pair_data$cluster)]
+            fdr_union_p <- pair_data$union_fisher_p_fdr_hierarchical[match(display_data$Cluster, pair_data$cluster)]
+            
+            display_data$`Intersection Sig (FDR)` <- ifelse(
+              is.na(fdr_intersection_p), "n/a",
+              ifelse(fdr_intersection_p < 0.001, "***",
+                     ifelse(fdr_intersection_p < 0.01, "**",
+                            ifelse(fdr_intersection_p < 0.05, "*", "ns")))
+            )
+            
+            display_data$`Union Sig (FDR)` <- ifelse(
+              is.na(fdr_union_p), "n/a",
+              ifelse(fdr_union_p < 0.001, "***",
+                     ifelse(fdr_union_p < 0.01, "**",
+                            ifelse(fdr_union_p < 0.05, "*", "ns")))
+            )
+          } else {
+            cat("[FDR DEBUG] FDR-corrected p-values not available, using raw p-values\n")
+            # Fallback to raw p-values if FDR not available
+            display_data$`Intersection Sig` <- ifelse(
+              is.na(display_data$`Fisher p (Intersection)`), "n/a",
+              ifelse(display_data$`Fisher p (Intersection)` < 0.001, "***",
+                     ifelse(display_data$`Fisher p (Intersection)` < 0.01, "**",
+                            ifelse(display_data$`Fisher p (Intersection)` < 0.05, "*", "ns")))
+            )
+            
+            display_data$`Union Sig` <- ifelse(
+              is.na(display_data$`Fisher p (Union)`), "n/a",
+              ifelse(display_data$`Fisher p (Union)` < 0.001, "***",
+                     ifelse(display_data$`Fisher p (Union)` < 0.01, "**",
+                            ifelse(display_data$`Fisher p (Union)` < 0.05, "*", "ns")))
+            )
+          }
         } else {
           # Legacy significance interpretation
-          display_data$Significance <- ifelse(
-            is.na(display_data$`DE Overlap p-value`), "n/a",
-            ifelse(display_data$`DE Overlap p-value` < 0.001, "***",
-                   ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
-                          ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns")))
-          )
+          if ("gene_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            cat("[FDR DEBUG] Using hierarchical FDR-corrected p-values for legacy significance\n")
+            fdr_gene_p <- pair_data$gene_fisher_p_fdr_hierarchical[match(display_data$Cluster, pair_data$cluster)]
+            display_data$`Significance (FDR)` <- ifelse(
+              is.na(fdr_gene_p), "n/a",
+              ifelse(fdr_gene_p < 0.001, "***",
+                     ifelse(fdr_gene_p < 0.01, "**",
+                            ifelse(fdr_gene_p < 0.05, "*", "ns")))
+            )
+          } else {
+            display_data$Significance <- ifelse(
+              is.na(display_data$`DE Overlap p-value`), "n/a",
+              ifelse(display_data$`DE Overlap p-value` < 0.001, "***",
+                     ifelse(display_data$`DE Overlap p-value` < 0.01, "**",
+                            ifelse(display_data$`DE Overlap p-value` < 0.05, "*", "ns")))
+            )
+          }
         }
         
         # FINAL VALIDATION: Right before DT::datatable call
@@ -1437,8 +1476,23 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           final_dt <- dt_result %>%
             DT::formatRound(intersect(c("Signature Score", "Jaccard Index"), names(display_data)), digits = 2)
           
-          # Add color coding for Intersection Sig column if it exists
-          if ("Intersection Sig" %in% names(display_data)) {
+          # Add color coding for FDR-corrected significance columns (PRIORITIZE FDR)
+          if ("Intersection Sig (FDR)" %in% names(display_data)) {
+            final_dt <- final_dt %>%
+              DT::formatStyle("Intersection Sig (FDR)",
+                            backgroundColor = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("#dc3545", "#17a2b8", "#28a745", "#e9ecef", "#f8f9fa")  # Red, Blue, Green, Light gray, Very light gray
+                            ),
+                            color = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("white", "white", "white", "#6c757d", "#6c757d")  # White text for colored cells, gray for others
+                            ),
+                            fontWeight = styleEqual(
+                              c("***", "**", "*"),
+                              c("bold", "bold", "bold")
+                            ))
+          } else if ("Intersection Sig" %in% names(display_data)) {
             final_dt <- final_dt %>%
               DT::formatStyle("Intersection Sig",
                             backgroundColor = styleEqual(
@@ -1448,6 +1502,42 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                             color = styleEqual(
                               c("***", "**", "*", "ns", "n/a"),
                               c("white", "white", "white", "#6c757d", "#6c757d")  # White text for colored cells, gray for others
+                            ),
+                            fontWeight = styleEqual(
+                              c("***", "**", "*"),
+                              c("bold", "bold", "bold")
+                            ))
+          }
+          
+          # Also add color coding for Union Sig (FDR) if available
+          if ("Union Sig (FDR)" %in% names(display_data)) {
+            final_dt <- final_dt %>%
+              DT::formatStyle("Union Sig (FDR)",
+                            backgroundColor = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("#dc3545", "#17a2b8", "#28a745", "#e9ecef", "#f8f9fa")  
+                            ),
+                            color = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("white", "white", "white", "#6c757d", "#6c757d")  
+                            ),
+                            fontWeight = styleEqual(
+                              c("***", "**", "*"),
+                              c("bold", "bold", "bold")
+                            ))
+          }
+          
+          # Color coding for legacy FDR significance
+          if ("Significance (FDR)" %in% names(display_data)) {
+            final_dt <- final_dt %>%
+              DT::formatStyle("Significance (FDR)",
+                            backgroundColor = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("#dc3545", "#17a2b8", "#28a745", "#e9ecef", "#f8f9fa")  
+                            ),
+                            color = styleEqual(
+                              c("***", "**", "*", "ns", "n/a"),
+                              c("white", "white", "white", "#6c757d", "#6c757d")  
                             ),
                             fontWeight = styleEqual(
                               c("***", "**", "*"),
@@ -1495,9 +1585,23 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p") %in% colnames(pair_data))
       
       if (has_intersection_union) {
-        # Analyze intersection significance (more stringent)
-        sig_clusters_strict <- pair_data[pair_data$intersection_fisher_p < 0.05, ]
-        highly_sig_clusters <- pair_data[pair_data$intersection_fisher_p < 0.001, ]
+        # Analyze intersection significance (more stringent) using FDR-corrected p-values
+        if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+          sig_clusters_strict <- pair_data[!is.na(pair_data$intersection_fisher_p_fdr_hierarchical) & 
+                                          pair_data$intersection_fisher_p_fdr_hierarchical < 0.05, ]
+          cat("[FDR SUMMARY] Using FDR-corrected intersection p-values for summary\n")
+        } else {
+          sig_clusters_strict <- pair_data[!is.na(pair_data$intersection_fisher_p) & 
+                                          pair_data$intersection_fisher_p < 0.05, ]
+          cat("[FDR SUMMARY] FDR-corrected p-values not available, using raw intersection p-values\n")
+        }
+        if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+          highly_sig_clusters <- pair_data[!is.na(pair_data$intersection_fisher_p_fdr_hierarchical) & 
+                                          pair_data$intersection_fisher_p_fdr_hierarchical < 0.001, ]
+        } else {
+          highly_sig_clusters <- pair_data[!is.na(pair_data$intersection_fisher_p) & 
+                                          pair_data$intersection_fisher_p < 0.001, ]
+        }
         
         # Parse gene names from the pair
         genes <- strsplit(selected_pair, "_vs_")[[1]]
