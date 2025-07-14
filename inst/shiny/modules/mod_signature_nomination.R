@@ -1344,6 +1344,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         colnames(display_data) <- col_names
         
+        # CRITICAL: Validate display_data right before DT operations
+        cat("[GENE PAIR DEBUG] display_data class after colnames:", class(display_data), "\n")
+        cat("[GENE PAIR DEBUG] display_data dimensions:", dim(display_data), "\n")
+        cat("[GENE PAIR DEBUG] display_data is.data.frame:", is.data.frame(display_data), "\n")
+        
         # Add significance interpretation based on which columns are available
         if (has_intersection_union) {
           # Add significance for both approaches
@@ -1370,42 +1375,43 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           )
         }
         
-        DT::datatable(display_data,
-                     options = list(
-                       pageLength = 10, 
-                       scrollX = TRUE,
-                       order = list(list(1, 'desc'))  # Sort by signature score if available
-                     ),
-                     rownames = FALSE,
-                     caption = paste("Gene pair analysis for", selected_pair, 
-                                   "- showing cross-method signatures across clusters")) %>%
-          DT::formatRound(c("Signature Score", "Jaccard Index"), digits = 2) %>%
-          {
-            if (has_intersection_union) {
-              # Format both intersection and union p-values and add color coding
-              . %>%
-                DT::formatSignif(c("Fisher p (Intersection)", "Fisher p (Union)"), digits = 3) %>%
-                DT::formatStyle("Intersection Sig", 
-                               backgroundColor = DT::styleEqual(
-                                 c("***", "**", "*", "ns", "n/a"),
-                                 c("#d4edda", "#d1ecf1", "#fff3cd", "#f8d7da", "#e2e3e5")
-                               )) %>%
-                DT::formatStyle("Union Sig",
-                               backgroundColor = DT::styleEqual(
-                                 c("***", "**", "*", "ns", "n/a"),
-                                 c("#e8f5e8", "#e6f3ff", "#fffacd", "#ffe6e6", "#f5f5f5")
-                               ))
-            } else {
-              # Legacy formatting
-              . %>%
-                DT::formatSignif(c("DE Overlap p-value"), digits = 3) %>%
-                DT::formatStyle("Significance",
-                               backgroundColor = DT::styleEqual(
-                                 c("***", "**", "*", "ns", "n/a"),
-                                 c("#d4edda", "#d1ecf1", "#fff3cd", "#f8d7da", "#e2e3e5")
-                               ))
-            }
-          }
+        # FINAL VALIDATION: Right before DT::datatable call
+        cat("[GENE PAIR DEBUG] FINAL CHECK - display_data class:", class(display_data), "\n")
+        cat("[GENE PAIR DEBUG] FINAL CHECK - display_data is.data.frame:", is.data.frame(display_data), "\n")
+        cat("[GENE PAIR DEBUG] FINAL CHECK - display_data nrow:", nrow(display_data), "\n")
+        cat("[GENE PAIR DEBUG] FINAL CHECK - display_data ncol:", ncol(display_data), "\n")
+        
+        # Force display_data to be a proper data.frame
+        display_data <- as.data.frame(display_data, stringsAsFactors = FALSE)
+        
+        cat("[GENE PAIR DEBUG] AFTER as.data.frame - class:", class(display_data), "\n")
+        
+        # SIMPLIFIED DT call to isolate the issue
+        tryCatch({
+          dt_result <- DT::datatable(display_data,
+                           options = list(
+                             pageLength = 10, 
+                             scrollX = TRUE
+                           ),
+                           rownames = FALSE,
+                           caption = paste("Gene pair analysis for", selected_pair))
+          
+          cat("[GENE PAIR DEBUG] DT::datatable created successfully\n")
+          
+          # Apply formatting only if base datatable succeeds
+          dt_result %>%
+            DT::formatRound(intersect(c("Signature Score", "Jaccard Index"), names(display_data)), digits = 2)
+          
+        }, error = function(e) {
+          cat("[GENE PAIR DEBUG] ERROR in DT::datatable:", e$message, "\n")
+          # Return a simple fallback datatable
+          return(DT::datatable(
+            data.frame(Error = paste("Failed to create datatable:", e$message), 
+                      DataClass = paste(class(display_data), collapse = ", "),
+                      Dimensions = paste(dim(display_data), collapse = " x ")),
+            options = list(dom = 't'), rownames = FALSE
+          ))
+        })
       } else {
         DT::datatable(data.frame(Message = "No data found for this gene pair"),
                      options = list(dom = 't'), rownames = FALSE)
