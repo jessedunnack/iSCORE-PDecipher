@@ -366,7 +366,33 @@ mod_signature_nomination_ui <- function(id) {
               # Correlation plot for selected pair
               div(style = "margin-top: 20px;",
                 h5("Effect Size Correlation"),
-                plotlyOutput(ns("gene_pair_correlation"), height = "400px")
+                div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.85em;",
+                  icon("info-circle"),
+                  tags$strong(" Purpose: "), 
+                  "Compare log2 fold changes between MAST (mutations) and CRISPRi (knockdowns) for overlapping genes. ",
+                  "High correlation indicates similar effect sizes between methods."
+                ),
+                
+                # Correlation plot controls
+                fluidRow(
+                  column(6,
+                    selectInput(ns("crispri_experiment"), 
+                               "CRISPRi Experiment:",
+                               choices = c("C12_FPD-23" = "C12_FPD-23",
+                                         "C12_FPD-24" = "C12_FPD-24", 
+                                         "C18_FPD-23" = "C18_FPD-23"),
+                               selected = "C12_FPD-23")
+                  ),
+                  column(6,
+                    div(style = "margin-top: 25px;",
+                      checkboxInput(ns("show_all_experiments"), 
+                                   "Show all experiments on one plot", 
+                                   value = FALSE)
+                    )
+                  )
+                ),
+                
+                plotlyOutput(ns("gene_pair_correlation"), height = "450px")
               )
             )
           ),
@@ -656,6 +682,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Combine results
         final_results <- signature_results
         final_results$pd_analysis <- pd_analysis
+        final_results$de_data <- de_data  # Add DE data for correlation analysis
         
         progress$set(message = "Analysis complete!", value = 1.0)
         
@@ -1939,6 +1966,312 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           paper_bgcolor = "rgba(0,0,0,0)"
         )
     }
+    
+    # === EFFECT SIZE CORRELATION PLOT ===
+    
+    # Effect size correlation plot (MISSING IMPLEMENTATION - now implemented!)
+    output$gene_pair_correlation <- renderPlotly({
+      req(values$analysis_results)
+      req(input$selected_gene_pair)
+      
+      # Check if DE data is available in analysis results
+      analysis_results <- values$analysis_results
+      if (!"de_data" %in% names(analysis_results) || is.null(analysis_results$de_data)) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = "DE data not available for correlation analysis",
+                               textfont = list(size = 16, color = "gray")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      de_data <- analysis_results$de_data
+      selected_pair <- input$selected_gene_pair
+      
+      # Parse gene pair (format: "MAST_GENE_vs_CRISPRI_GENE")
+      genes <- strsplit(selected_pair, "_vs_")[[1]]
+      if (length(genes) != 2) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = "Invalid gene pair format",
+                               textfont = list(size = 16, color = "red")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      mast_gene <- genes[1]
+      crispri_gene <- genes[2]
+      
+      cat("[CORRELATION] Analyzing", mast_gene, "vs", crispri_gene, "\n")
+      
+      # Get available clusters from current analysis
+      all_sigs <- values$analysis_results$all_signatures
+      if (is.null(all_sigs) || nrow(all_sigs) == 0) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = "No signature analysis results available",
+                               textfont = list(size = 16, color = "gray")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      # Get clusters for this gene pair
+      pair_clusters <- unique(all_sigs[all_sigs$gene_pair == selected_pair, "cluster"])
+      if (length(pair_clusters) == 0) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = "No clusters found for this gene pair",
+                               textfont = list(size = 16, color = "gray")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      cat("[CORRELATION] Found", length(pair_clusters), "clusters:", paste(pair_clusters, collapse = ", "), "\n")
+      
+      # Extract log2FC data across all clusters
+      all_correlation_data <- list()
+      
+      for (cluster in pair_clusters) {
+        cat("[CORRELATION] Processing cluster:", cluster, "\n")
+        
+        # Extract MAST data
+        mast_data <- NULL
+        if (mast_gene %in% names(de_data$iSCORE_PD_MAST) && 
+            cluster %in% names(de_data$iSCORE_PD_MAST[[mast_gene]])) {
+          mast_results <- de_data$iSCORE_PD_MAST[[mast_gene]][[cluster]]$results
+          if (!is.null(mast_results) && "avg_log2FC" %in% colnames(mast_results)) {
+            mast_data <- data.frame(
+              gene_name = rownames(mast_results),
+              log2FC = mast_results$avg_log2FC,
+              stringsAsFactors = FALSE
+            )
+            mast_data <- mast_data[!is.na(mast_data$log2FC), ]
+            cat("[CORRELATION] MAST data: ", nrow(mast_data), "genes\n")
+          }
+        }
+        
+        # Extract CRISPRi data
+        if (!is.null(mast_data) && nrow(mast_data) > 0 && 
+            crispri_gene %in% names(de_data$CRISPRi_Mixscale) && 
+            cluster %in% names(de_data$CRISPRi_Mixscale[[crispri_gene]])) {
+          
+          crispri_results <- de_data$CRISPRi_Mixscale[[crispri_gene]][[cluster]]$results
+          if (!is.null(crispri_results)) {
+            
+            # Get available experiments
+            available_experiments <- c("C12_FPD-23", "C12_FPD-24", "C18_FPD-23")
+            
+            if (input$show_all_experiments) {
+              # Multi-experiment mode: include all experiments
+              for (exp in available_experiments) {
+                log2fc_col <- paste0("log2FC_", exp)
+                if (log2fc_col %in% colnames(crispri_results)) {
+                  crispri_data <- data.frame(
+                    gene_name = rownames(crispri_results),
+                    log2FC = crispri_results[[log2fc_col]],
+                    experiment = exp,
+                    stringsAsFactors = FALSE
+                  )
+                  crispri_data <- crispri_data[!is.na(crispri_data$log2FC), ]
+                  
+                  if (nrow(crispri_data) > 0) {
+                    # Calculate correlation for this cluster and experiment
+                    cor_result <- calculate_effect_size_correlation(mast_data, crispri_data[, c("gene_name", "log2FC")])
+                    if (!is.null(cor_result) && !is.na(cor_result$correlation)) {
+                      all_correlation_data[[paste(cluster, exp, sep = "_")]] <- list(
+                        cluster = cluster,
+                        experiment = exp,
+                        correlation = cor_result,
+                        mast_data = mast_data,
+                        crispri_data = crispri_data
+                      )
+                    }
+                  }
+                }
+              }
+            } else {
+              # Single experiment mode
+              selected_exp <- input$crispri_experiment %||% "C12_FPD-23"
+              log2fc_col <- paste0("log2FC_", selected_exp)
+              
+              if (log2fc_col %in% colnames(crispri_results)) {
+                crispri_data <- data.frame(
+                  gene_name = rownames(crispri_results),
+                  log2FC = crispri_results[[log2fc_col]],
+                  stringsAsFactors = FALSE
+                )
+                crispri_data <- crispri_data[!is.na(crispri_data$log2FC), ]
+                
+                if (nrow(crispri_data) > 0) {
+                  # Calculate correlation for this cluster
+                  cor_result <- calculate_effect_size_correlation(mast_data, crispri_data)
+                  if (!is.null(cor_result) && !is.na(cor_result$correlation)) {
+                    all_correlation_data[[cluster]] <- list(
+                      cluster = cluster,
+                      experiment = selected_exp,
+                      correlation = cor_result,
+                      mast_data = mast_data,
+                      crispri_data = crispri_data
+                    )
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      if (length(all_correlation_data) == 0) {
+        return(plotly::plot_ly() %>% 
+               plotly::add_text(x = 0.5, y = 0.5, 
+                               text = "No overlapping genes found between MAST and CRISPRi",
+                               textfont = list(size = 16, color = "orange")) %>%
+               plotly::layout(
+                 xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                 yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+               ))
+      }
+      
+      cat("[CORRELATION] Generated", length(all_correlation_data), "correlation datasets\n")
+      
+      # Create plotly visualization
+      if (input$show_all_experiments) {
+        # Multi-experiment plot with different colors
+        plot_data <- data.frame()
+        experiment_colors <- c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")
+        
+        for (data_key in names(all_correlation_data)) {
+          corr_data <- all_correlation_data[[data_key]]
+          merged_data <- corr_data$correlation$merged_data
+          merged_data$cluster <- corr_data$cluster
+          merged_data$experiment <- corr_data$experiment
+          plot_data <- rbind(plot_data, merged_data)
+        }
+        
+        if (nrow(plot_data) > 0) {
+          p <- plot_ly(plot_data, 
+                      x = ~log2FC_mast, 
+                      y = ~log2FC_crispri,
+                      color = ~experiment,
+                      colors = experiment_colors,
+                      text = ~paste("Gene:", gene_name, 
+                                   "<br>Cluster:", cluster,
+                                   "<br>Experiment:", experiment,
+                                   "<br>MAST log2FC:", round(log2FC_mast, 3),
+                                   "<br>CRISPRi log2FC:", round(log2FC_crispri, 3)),
+                      hovertemplate = "%{text}<extra></extra>",
+                      type = "scatter",
+                      mode = "markers",
+                      marker = list(size = 6, opacity = 0.7)) %>%
+            layout(
+              title = paste("Effect Size Correlation:", mast_gene, "vs", crispri_gene, "(All Experiments)"),
+              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
+              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
+              showlegend = TRUE
+            )
+          
+          # Add trend lines for each experiment
+          for (exp in unique(plot_data$experiment)) {
+            exp_data <- plot_data[plot_data$experiment == exp, ]
+            if (nrow(exp_data) > 2) {
+              lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = exp_data)
+              x_range <- range(exp_data$log2FC_mast, na.rm = TRUE)
+              x_seq <- seq(x_range[1], x_range[2], length.out = 100)
+              y_pred <- predict(lm_fit, newdata = data.frame(log2FC_mast = x_seq))
+              
+              p <- p %>% add_lines(
+                x = x_seq,
+                y = y_pred,
+                line = list(color = experiment_colors[exp]),
+                showlegend = FALSE,
+                hoverinfo = "skip"
+              )
+            }
+          }
+          
+          return(p)
+        }
+      } else {
+        # Single experiment plot
+        # Combine data from all clusters for overall correlation
+        combined_plot_data <- data.frame()
+        
+        for (data_key in names(all_correlation_data)) {
+          corr_data <- all_correlation_data[[data_key]]
+          merged_data <- corr_data$correlation$merged_data
+          merged_data$cluster <- corr_data$cluster
+          combined_plot_data <- rbind(combined_plot_data, merged_data)
+        }
+        
+        if (nrow(combined_plot_data) > 0) {
+          # Calculate overall correlation
+          overall_cor <- calculate_effect_size_correlation(
+            data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_mast),
+            data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_crispri)
+          )
+          
+          selected_exp <- input$crispri_experiment %||% "C12_FPD-23"
+          
+          p <- plot_ly(combined_plot_data, 
+                      x = ~log2FC_mast, 
+                      y = ~log2FC_crispri,
+                      text = ~paste("Gene:", gene_name, 
+                                   "<br>Cluster:", cluster,
+                                   "<br>MAST log2FC:", round(log2FC_mast, 3),
+                                   "<br>CRISPRi log2FC:", round(log2FC_crispri, 3)),
+                      hovertemplate = "%{text}<extra></extra>",
+                      type = "scatter",
+                      mode = "markers",
+                      marker = list(size = 6, color = "#1f77b4", opacity = 0.7)) %>%
+            layout(
+              title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, 
+                           " (", selected_exp, ")<br>",
+                           "r = ", round(overall_cor$correlation, 3), 
+                           ", p = ", format.pval(overall_cor$p_value, digits = 3),
+                           ", n = ", overall_cor$n_genes, " genes"),
+              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
+              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
+              showlegend = FALSE
+            )
+          
+          # Add trend line
+          if (nrow(combined_plot_data) > 2) {
+            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = combined_plot_data)
+            x_range <- range(combined_plot_data$log2FC_mast, na.rm = TRUE)
+            x_seq <- seq(x_range[1], x_range[2], length.out = 100)
+            y_pred <- predict(lm_fit, newdata = data.frame(log2FC_mast = x_seq))
+            
+            p <- p %>% add_lines(
+              x = x_seq,
+              y = y_pred,
+              line = list(color = "red", dash = "dash"),
+              showlegend = FALSE,
+              hoverinfo = "skip"
+            )
+          }
+          
+          return(p)
+        }
+      }
+      
+      # Fallback empty plot
+      return(plotly::plot_ly() %>% 
+             plotly::add_text(x = 0.5, y = 0.5, 
+                             text = "Unable to generate correlation plot",
+                             textfont = list(size = 16, color = "red")) %>%
+             plotly::layout(
+               xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+               yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+             ))
+    })
     
     # Helper function for null coalescing
     `%||%` <- function(a, b) if (is.null(a)) b else a
