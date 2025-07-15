@@ -454,7 +454,7 @@ mod_signature_nomination_ui <- function(id) {
                   )
                 ),
                 
-                plotlyOutput(ns("gene_pair_correlation"), height = "450px")
+                plotOutput(ns("gene_pair_correlation"), height = "450px")
               )
             )
           ),
@@ -2108,7 +2108,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # === EFFECT SIZE CORRELATION PLOT ===
     
     # Effect size correlation plot (MISSING IMPLEMENTATION - now implemented!)
-    output$gene_pair_correlation <- renderPlotly({
+    output$gene_pair_correlation <- renderPlot({
       req(values$analysis_results)
       req(input$selected_gene_pair)
       
@@ -2326,41 +2326,25 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[MULTI EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
           
-          p <- plot_ly(plot_data_sampled, 
-                      x = ~log2FC_mast, 
-                      y = ~log2FC_crispri,
-                      color = ~experiment,
-                      colors = experiment_colors,
-                      text = ~hover_text,
-                      hovertemplate = "%{text}<extra></extra>",
-                      type = "scatter",
-                      mode = "markers",
-                      marker = list(size = 6, opacity = 0.7)) %>%
-            layout(
+          # Create static ggplot instead of problematic plotly  
+          library(ggplot2)
+          p <- ggplot(plot_data_sampled, aes(x = log2FC_mast, y = log2FC_crispri, color = experiment)) +
+            geom_point(alpha = 0.6, size = 1.5) +
+            geom_smooth(method = "lm", se = TRUE, linetype = "dashed") +
+            scale_color_manual(values = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")) +
+            labs(
               title = paste("Effect Size Correlation:", mast_gene, "vs", crispri_gene, "(All Experiments)"),
-              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
-              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
-              showlegend = TRUE
+              x = paste("MAST log2FC (", mast_gene, "mutation)"),
+              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"),
+              color = "Experiment"
+            ) +
+            theme_minimal() +
+            theme(
+              plot.title = element_text(size = 14, face = "bold"),
+              legend.position = "bottom"
             )
           
-          # Add trend lines for each experiment
-          for (exp in unique(plot_data_sampled$experiment)) {
-            exp_data <- plot_data_sampled[plot_data_sampled$experiment == exp, ]
-            if (nrow(exp_data) > 2) {
-              lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = exp_data)
-              x_range <- range(exp_data$log2FC_mast, na.rm = TRUE)
-              x_seq <- seq(x_range[1], x_range[2], length.out = 100)
-              y_pred <- predict(lm_fit, newdata = data.frame(log2FC_mast = x_seq))
-              
-              p <- p %>% add_lines(
-                x = x_seq,
-                y = y_pred,
-                line = list(color = experiment_colors[exp]),
-                showlegend = FALSE,
-                hoverinfo = "skip"
-              )
-            }
-          }
+          # ggplot already includes trend lines via geom_smooth
           
           return(p)
         }
@@ -2433,37 +2417,24 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[SINGLE EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
           
-          p <- plot_ly(plot_data_sampled, 
-                      x = ~log2FC_mast, 
-                      y = ~log2FC_crispri,
-                      text = ~hover_text,
-                      hovertemplate = "%{text}<extra></extra>",
-                      type = "scatter",
-                      mode = "markers",
-                      marker = list(size = 6, color = "#1f77b4", opacity = 0.7)) %>%
-            layout(
-              title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, 
-                           " (", selected_exp, ")<br>", cor_text),
-              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
-              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
-              showlegend = FALSE
+          # Create static ggplot instead of problematic plotly
+          library(ggplot2)
+          p <- ggplot(plot_data_sampled, aes(x = log2FC_mast, y = log2FC_crispri)) +
+            geom_point(alpha = 0.6, size = 1.5, color = "#1f77b4") +
+            geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+            labs(
+              title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")"),
+              subtitle = cor_text,
+              x = paste("MAST log2FC (", mast_gene, "mutation)"),
+              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")
+            ) +
+            theme_minimal() +
+            theme(
+              plot.title = element_text(size = 14, face = "bold"),
+              plot.subtitle = element_text(size = 12, color = "gray40")
             )
           
-          # Add trend line
-          if (nrow(plot_data_sampled) > 2) {
-            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = plot_data_sampled)
-            x_range <- range(plot_data_sampled$log2FC_mast, na.rm = TRUE)
-            x_seq <- seq(x_range[1], x_range[2], length.out = 100)
-            y_pred <- predict(lm_fit, newdata = data.frame(log2FC_mast = x_seq))
-            
-            p <- p %>% add_lines(
-              x = x_seq,
-              y = y_pred,
-              line = list(color = "red", dash = "dash"),
-              showlegend = FALSE,
-              hoverinfo = "skip"
-            )
-          }
+          # ggplot already includes trend line via geom_smooth
           
           return(p)
         }
