@@ -1453,8 +1453,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p", 
                                        "intersection_background_size", "union_background_size") %in% colnames(pair_data))
         
-        # Determine whether to show FDR-corrected or raw p-values
-        has_fdr_correction <- "intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)
+        # Determine whether to show FDR-corrected or raw p-values (check for enhanced hierarchical columns)
+        has_fdr_correction <- any(c("intersection_fisher_p_fdr_hierarchical", "intersection_fisher_p_fdr_enhanced_hierarchical") %in% names(pair_data))
         
         # Check if we have enhanced direction analysis results (v0.2.6)
         has_enhanced_analysis <- any(c("biological_expectation", "primary_direction_pattern", 
@@ -1467,28 +1467,34 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           # PRIORITIZE SIGNIFICANCE COLUMNS FIRST (after cluster)
           
           if (selected_approach == "intersection") {
-            # Show intersection approach with significance column first
-            if (has_fdr_correction) {
+            # Show intersection approach - prioritize FDR when available
+            if ("intersection_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+              display_cols <- c(display_cols, "intersection_fisher_p_fdr_enhanced_hierarchical", "intersection_background_size")
+              col_names <- c(col_names, "p-value (FDR)", "Background Genes")
+            } else if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
               display_cols <- c(display_cols, "intersection_fisher_p_fdr_hierarchical", "intersection_background_size")
-              col_names <- c(col_names, "Significance (FDR)", "Background Size")
+              col_names <- c(col_names, "p-value (FDR)", "Background Genes")
             } else {
               display_cols <- c(display_cols, "intersection_fisher_p", "intersection_background_size")
-              col_names <- c(col_names, "Significance (raw)", "Background Size")
+              col_names <- c(col_names, "p-value", "Background Genes")
             }
           } else {
-            # Show union approach with significance column first
-            if (has_fdr_correction && "union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            # Show union approach - prioritize FDR when available  
+            if ("union_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+              display_cols <- c(display_cols, "union_fisher_p_fdr_enhanced_hierarchical", "union_background_size")  
+              col_names <- c(col_names, "p-value (FDR)", "Background Genes")
+            } else if ("union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
               display_cols <- c(display_cols, "union_fisher_p_fdr_hierarchical", "union_background_size")  
-              col_names <- c(col_names, "Significance (FDR)", "Background Size")
+              col_names <- c(col_names, "p-value (FDR)", "Background Genes")
             } else {
               display_cols <- c(display_cols, "union_fisher_p", "union_background_size")  
-              col_names <- c(col_names, "Significance (raw)", "Background Size")
+              col_names <- c(col_names, "p-value", "Background Genes")
             }
           }
           
           # Add supporting data columns after significance
           display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_jaccard")
-          col_names <- c(col_names, "Pathway Genes", "Shared Pathways", "Jaccard Index")
+          col_names <- c(col_names, "Shared DE Genes*", "Enriched Pathways", "Jaccard Index")
           
           # Add enhanced direction analysis indicators (v0.2.6)
           if (has_enhanced_analysis) {
@@ -1652,13 +1658,25 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         # SIMPLIFIED DT call to isolate the issue
         tryCatch({
+          # Create descriptive caption with footnote explanation
+          caption_text <- tags$caption(
+            style = "caption-side: bottom; text-align: left; font-size: 0.9em; color: #666;",
+            tags$div(
+              tags$strong(paste("Cross-Method Analysis:", selected_pair)),
+              tags$br(),
+              tags$span("*Shared DE Genes: Differentially expressed genes that are significantly overlapping between MAST (genetic mutation) and CRISPRi (gene knockdown) experiments, as determined by Fisher's exact test."),
+              tags$br(),
+              tags$span("p-values test if gene overlap exceeds chance expectation. FDR correction controls for multiple testing across clusters and gene pairs.")
+            )
+          )
+          
           dt_result <- DT::datatable(display_data,
                            options = list(
                              pageLength = 15, 
                              scrollX = TRUE
                            ),
                            rownames = FALSE,
-                           caption = paste("Gene pair analysis for", selected_pair))
+                           caption = caption_text)
           
           cat("[GENE PAIR DEBUG] DT::datatable created successfully\n")
           
