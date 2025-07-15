@@ -2315,7 +2315,18 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cat("[MULTI EXP DEBUG] x data length:", length(plot_data_clean$log2FC_mast), "\n")
           cat("[MULTI EXP DEBUG] y data length:", length(plot_data_clean$log2FC_crispri), "\n")
           
-          p <- plot_ly(plot_data_clean, 
+          # Sample data if too large to prevent plotly internal filtering issues
+          if (nrow(plot_data_clean) > 5000) {
+            cat("[MULTI EXP DEBUG] Sampling large dataset from", nrow(plot_data_clean), "to 5000 points\n")
+            sample_indices <- sample(nrow(plot_data_clean), 5000)
+            plot_data_sampled <- plot_data_clean[sample_indices, ]
+          } else {
+            plot_data_sampled <- plot_data_clean
+          }
+          
+          cat("[MULTI EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
+          
+          p <- plot_ly(plot_data_sampled, 
                       x = ~log2FC_mast, 
                       y = ~log2FC_crispri,
                       color = ~experiment,
@@ -2333,8 +2344,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             )
           
           # Add trend lines for each experiment
-          for (exp in unique(plot_data_clean$experiment)) {
-            exp_data <- plot_data_clean[plot_data_clean$experiment == exp, ]
+          for (exp in unique(plot_data_sampled$experiment)) {
+            exp_data <- plot_data_sampled[plot_data_sampled$experiment == exp, ]
             if (nrow(exp_data) > 2) {
               lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = exp_data)
               x_range <- range(exp_data$log2FC_mast, na.rm = TRUE)
@@ -2411,7 +2422,18 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cat("[SINGLE EXP DEBUG] x data length:", length(plot_data_clean$log2FC_mast), "\n")
           cat("[SINGLE EXP DEBUG] y data length:", length(plot_data_clean$log2FC_crispri), "\n")
           
-          p <- plot_ly(plot_data_clean, 
+          # Sample data if too large to prevent plotly internal filtering issues
+          if (nrow(plot_data_clean) > 5000) {
+            cat("[SINGLE EXP DEBUG] Sampling large dataset from", nrow(plot_data_clean), "to 5000 points\n")
+            sample_indices <- sample(nrow(plot_data_clean), 5000)
+            plot_data_sampled <- plot_data_clean[sample_indices, ]
+          } else {
+            plot_data_sampled <- plot_data_clean
+          }
+          
+          cat("[SINGLE EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
+          
+          p <- plot_ly(plot_data_sampled, 
                       x = ~log2FC_mast, 
                       y = ~log2FC_crispri,
                       text = ~hover_text,
@@ -2428,9 +2450,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             )
           
           # Add trend line
-          if (nrow(combined_plot_data) > 2) {
-            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = combined_plot_data)
-            x_range <- range(combined_plot_data$log2FC_mast, na.rm = TRUE)
+          if (nrow(plot_data_sampled) > 2) {
+            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = plot_data_sampled)
+            x_range <- range(plot_data_sampled$log2FC_mast, na.rm = TRUE)
             x_seq <- seq(x_range[1], x_range[2], length.out = 100)
             y_pred <- predict(lm_fit, newdata = data.frame(log2FC_mast = x_seq))
             
