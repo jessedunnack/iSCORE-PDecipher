@@ -894,9 +894,15 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       # Update gene pair selector
       if (nrow(results$top_signatures) > 0) {
         gene_pair_choices <- unique(results$top_signatures$gene_pair)
+        # Set PRKN_vs_PARK2 as default if available (best statistical correlation)
+        default_pair <- if ("PRKN_vs_PARK2" %in% gene_pair_choices) {
+          "PRKN_vs_PARK2"
+        } else {
+          gene_pair_choices[1]
+        }
         updateSelectInput(session, "selected_gene_pair",
                          choices = gene_pair_choices,
-                         selected = gene_pair_choices[1])
+                         selected = default_pair)
       }
     }
     
@@ -2367,9 +2373,10 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       }
       
       # Get gene of interest for current pair
-      mast_gene <- strsplit(gene_pair_id, "_vs_")[[1]][1]
-      crispri_gene <- strsplit(gene_pair_id, "_vs_")[[1]][2]
-      genes_of_interest <- identify_gene_of_interest(gene_pair_id)
+      selected_pair <- input$selected_gene_pair
+      mast_gene <- strsplit(selected_pair, "_vs_")[[1]][1]
+      crispri_gene <- strsplit(selected_pair, "_vs_")[[1]][2]
+      genes_of_interest <- identify_gene_of_interest(selected_pair)
       
       # Create plotly visualization
       if (input$cluster_grid_view %||% TRUE) {
