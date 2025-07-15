@@ -2427,7 +2427,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                                   "<br>Experiment:", cluster_data_clean$experiment,
                                                   "<br>MAST log2FC:", round(cluster_data_clean$log2FC_mast, 3),
                                                   "<br>CRISPRi log2FC:", round(cluster_data_clean$log2FC_crispri, 3),
-                                                  if (cluster_data_clean$is_gene_of_interest) "<br><b>Gene of Interest</b>" else "")
+                                                  ifelse(cluster_data_clean$is_gene_of_interest, "<br><b>Gene of Interest</b>", ""))
             
             # Create ggplot for this cluster
             p_cluster <- ggplot2::ggplot(cluster_data_clean, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
