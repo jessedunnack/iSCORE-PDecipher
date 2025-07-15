@@ -2526,6 +2526,20 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           # Convert to interactive plotly
           p <- plotly::ggplotly(p, tooltip = "text")
           
+          # STATIC PLOT FALLBACK (uncomment if ggplotly still fails):
+          # p <- ggplot2::ggplot(plot_data_sampled, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+          #   ggplot2::geom_point(size = 2, alpha = 0.7, color = "#1f77b4") +
+          #   ggplot2::labs(
+          #     title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")\n",
+          #                  "Based on ", gene_filter_text, " most changed genes per method | ", cor_text),
+          #     x = paste("MAST log2FC (", mast_gene, "mutation)"),
+          #     y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")
+          #   ) +
+          #   ggplot2::theme_minimal()
+          # if (nrow(plot_data_sampled) >= 3) {
+          #   p <- p + ggplot2::geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed", linewidth = 0.8)
+          # }
+          
           return(p)
         }
       }
