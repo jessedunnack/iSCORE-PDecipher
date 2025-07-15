@@ -2415,6 +2415,38 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             # Clean data
             cluster_data_clean <- cluster_data[complete.cases(cluster_data[c("log2FC_mast", "log2FC_crispri")]), ]
             
+            # Calculate overall correlation for this cluster (across all experiments)
+            cluster_cor_result <- NULL
+            if (nrow(cluster_data_clean) >= 3) {
+              tryCatch({
+                cor_test <- cor.test(cluster_data_clean$log2FC_mast, cluster_data_clean$log2FC_crispri, method = "pearson")
+                cluster_cor_result <- list(
+                  correlation = cor_test$estimate,
+                  p_value = cor_test$p.value,
+                  n_genes = nrow(cluster_data_clean)
+                )
+              }, error = function(e) {
+                cluster_cor_result <- NULL
+              })
+            }
+            
+            # Create plot title with correlation statistics
+            cluster_title <- paste("Cluster", cluster)
+            if (!is.null(cluster_cor_result)) {
+              r_val <- round(cluster_cor_result$correlation, 3)
+              p_val <- cluster_cor_result$p_value
+              n_genes <- cluster_cor_result$n_genes
+              
+              # Format p-value
+              if (p_val < 0.001) {
+                p_text <- "p < 0.001"
+              } else {
+                p_text <- paste("p =", round(p_val, 3))
+              }
+              
+              cluster_title <- paste0(cluster_title, "\n", "r = ", r_val, ", ", p_text, " (n = ", n_genes, ")")
+            }
+            
             # Add gene highlighting
             cluster_data_clean$is_gene_of_interest <- cluster_data_clean$gene_name %in% genes_of_interest
             cluster_data_clean$point_color <- ifelse(cluster_data_clean$is_gene_of_interest, "red", 
@@ -2437,7 +2469,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                  alpha = ifelse(cluster_data_clean$is_gene_of_interest, 1, 0.7)) +
               ggplot2::scale_color_manual(values = experiment_colors) +
               ggplot2::scale_shape_manual(values = c("Gene of Interest" = 17, "Other" = 16)) +
-              ggplot2::labs(title = paste("Cluster", cluster),
+              ggplot2::labs(title = cluster_title,
                            x = paste("MAST log2FC (", mast_gene, ")"),
                            y = paste("CRISPRi log2FC (", crispri_gene, ")")) +
               ggplot2::theme_minimal() +
@@ -2501,6 +2533,21 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           plot_data_clean <- plot_data[complete.cases(plot_data[c("log2FC_mast", "log2FC_crispri")]), ]
           cat("[CORRELATION DEBUG] Total plot_data_clean after filtering - rows:", nrow(plot_data_clean), "\n")
           
+          # Calculate overall correlation for pan-cluster view
+          pan_cluster_cor_result <- NULL
+          if (nrow(plot_data_clean) >= 3) {
+            tryCatch({
+              cor_test <- cor.test(plot_data_clean$log2FC_mast, plot_data_clean$log2FC_crispri, method = "pearson")
+              pan_cluster_cor_result <- list(
+                correlation = cor_test$estimate,
+                p_value = cor_test$p.value,
+                n_genes = nrow(plot_data_clean)
+              )
+            }, error = function(e) {
+              pan_cluster_cor_result <- NULL
+            })
+          }
+          
           # Add gene highlighting for pan-cluster view
           plot_data_clean$is_gene_of_interest <- plot_data_clean$gene_name %in% genes_of_interest
           
@@ -2538,6 +2585,26 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                    "all_genes" = "all",
                                    "top 200")
           
+          # Create plot title with correlation statistics
+          plot_title <- paste0("Pan-Cluster Correlation: ", mast_gene, " vs ", crispri_gene, " (All Experiments)")
+          if (!is.null(pan_cluster_cor_result)) {
+            r_val <- round(pan_cluster_cor_result$correlation, 3)
+            p_val <- pan_cluster_cor_result$p_value
+            n_genes <- pan_cluster_cor_result$n_genes
+            
+            # Format p-value
+            if (p_val < 0.001) {
+              p_text <- "p < 0.001"
+            } else {
+              p_text <- paste("p =", round(p_val, 3))
+            }
+            
+            plot_title <- paste0(plot_title, "\nr = ", r_val, ", ", p_text, " (n = ", n_genes, ") | ",
+                               "Based on ", gene_filter_text, " most changed genes per method")
+          } else {
+            plot_title <- paste0(plot_title, "\nBased on ", gene_filter_text, " most changed genes per method")
+          }
+          
           # Create ggplot2 scatter plot with gene highlighting
           p <- ggplot2::ggplot(plot_data_sampled, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
             ggplot2::geom_point(ggplot2::aes(text = hover_text, color = experiment, 
@@ -2547,8 +2614,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             ggplot2::scale_color_manual(values = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")) +
             ggplot2::scale_shape_manual(values = c("Gene of Interest" = 17, "Other" = 16)) +
             ggplot2::labs(
-              title = paste0("Pan-Cluster Correlation: ", mast_gene, " vs ", crispri_gene, " (All Experiments)\n",
-                           "Based on ", gene_filter_text, " most changed genes per method"),
+              title = plot_title,
               x = paste("MAST log2FC (", mast_gene, "mutation)"),
               y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"),
               color = "Experiment",
