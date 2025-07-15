@@ -2508,12 +2508,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                    "top 200")
           
           # Create interactive plotly scatter plot with trend line
-          p <- plotly::plot_ly(plot_data_sampled, 
-                              x = ~log2FC_mast, 
-                              y = ~log2FC_crispri,
+          p <- plotly::plot_ly(
+                              x = plot_data_sampled$log2FC_mast, 
+                              y = plot_data_sampled$log2FC_crispri,
                               type = "scatter",
                               mode = "markers",
-                              text = ~hover_text,
+                              text = plot_data_sampled$hover_text,
                               hovertemplate = "%{text}<extra></extra>",
                               marker = list(size = 6, opacity = 0.7, color = "#1f77b4")) %>%
             plotly::layout(
@@ -2539,9 +2539,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             )
             
             p <- p %>% plotly::add_trace(
-              data = trend_data,
-              x = ~x, 
-              y = ~y,
+              x = trend_data$x, 
+              y = trend_data$y,
               type = "scatter",
               mode = "lines",
               line = list(color = "red", dash = "dash", width = 2),
