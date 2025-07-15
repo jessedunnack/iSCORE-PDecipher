@@ -2523,10 +2523,23 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             trend_x <- seq(x_range[1], x_range[2], length.out = 100)
             trend_y <- predict(lm_fit, newdata = data.frame(log2FC_mast = trend_x))
             
-            p <- p %>% plotly::add_lines(x = trend_x, y = trend_y, 
-                                        line = list(color = "red", dash = "dash", width = 2),
-                                        name = "Trend line",
-                                        hovertemplate = "Trend line<extra></extra>")
+            # Create separate data frame for trend line
+            trend_data <- data.frame(
+              x = trend_x,
+              y = trend_y
+            )
+            
+            p <- p %>% plotly::add_trace(
+              data = trend_data,
+              x = ~x, 
+              y = ~y,
+              type = "scatter",
+              mode = "lines",
+              line = list(color = "red", dash = "dash", width = 2),
+              name = "Trend line",
+              hovertemplate = "Trend line<extra></extra>",
+              showlegend = FALSE
+            )
           }
           
           return(p)
