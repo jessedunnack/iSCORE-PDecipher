@@ -121,6 +121,47 @@ mod_signature_nomination_ui <- function(id) {
             )
           ),
           
+          # Enhanced Analysis Transparency (v0.2.6)
+          div(style = "margin-top: 15px;",
+            actionLink(ns("show_enhanced_info"), "Enhanced Analysis Information", 
+                      icon = icon("microscope"),
+                      style = "font-size: 12px; color: #17a2b8;")
+          ),
+          conditionalPanel(
+            condition = "input.show_enhanced_info % 2 == 1",
+            ns = ns,
+            div(class = "alert alert-info", style = "margin-top: 10px; font-size: 11px;",
+              h5("Enhanced Direction-Aware Analysis (v0.2.6)", style = "margin-top: 0; color: #2c3e50;"),
+              
+              div(style = "margin-bottom: 10px;",
+                h6(tags$b("Direction Analysis"), style = "color: #8b4513;"),
+                tags$ul(
+                  tags$li(tags$b("LRRK2:"), " Opposing effects (gain-of-function mutation vs loss-of-function CRISPRi)"),
+                  tags$li(tags$b("SNCA variants:"), " Same-direction effects (aggregation-related pathways)"),
+                  tags$li(tags$b("Other mutations:"), " Same-direction effects (loss-of-function patterns)")
+                )
+              ),
+              
+              div(style = "margin-bottom: 10px;",
+                h6(tags$b("Experiment Weighting"), style = "color: #1f77b4;"),
+                tags$ul(
+                  tags$li(tags$b("Primary:"), " C12_FPD-24 (highest cell count)"),
+                  tags$li(tags$b("Secondary:"), " C12_FPD-23, C18_FPD-23"),
+                  tags$li(tags$b("Meta-analysis:"), " Weighted by perturbed cell counts per cluster")
+                )
+              ),
+              
+              div(
+                h6(tags$b("Statistical Enhancements"), style = "color: #d73027;"),
+                tags$ul(
+                  tags$li(tags$b("Hierarchical FDR:"), " Benjamini-Yekutieli correction for dependent tests"),
+                  tags$li(tags$b("Fisher's Method:"), " Weighted p-value combination across experiments"),
+                  tags$li(tags$b("Background Genes:"), " Intersection approach (conservative) & Union approach (liberal)")
+                )
+              )
+            )
+          ),
+          
           # Advanced settings (collapsible)
           div(style = "margin-top: 15px;",
             actionButton(ns("toggle_advanced"), "Advanced Settings", 
@@ -1404,6 +1445,10 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Determine whether to show FDR-corrected or raw p-values
         has_fdr_correction <- "intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)
         
+        # Check if we have enhanced direction analysis results (v0.2.6)
+        has_enhanced_analysis <- any(c("biological_expectation", "primary_direction_pattern", 
+                                     "same_direction_count", "opposite_direction_count") %in% colnames(pair_data))
+        
         # Get user's selected approach (intersection vs union)
         selected_approach <- input$analysis_approach %||% "intersection"
         
@@ -1434,6 +1479,26 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_jaccard")
           col_names <- c(col_names, "Pathway Genes", "Shared Pathways", "Jaccard Index")
           
+          # Add enhanced direction analysis indicators (v0.2.6)
+          if (has_enhanced_analysis) {
+            if ("biological_expectation" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "biological_expectation")
+              col_names <- c(col_names, "Direction Expectation")
+            }
+            if ("primary_direction_pattern" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "primary_direction_pattern") 
+              col_names <- c(col_names, "Detected Pattern")
+            }
+            if ("same_direction_count" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "same_direction_count")
+              col_names <- c(col_names, "Same Direction")
+            }
+            if ("opposite_direction_count" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "opposite_direction_count")
+              col_names <- c(col_names, "Opposite Direction")
+            }
+          }
+          
         } else {
           # LEGACY: Display old single approach for backwards compatibility
           
@@ -1449,6 +1514,26 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           # Add supporting data columns
           display_cols <- c(display_cols, "gene_overlap_count", "pathway_overlap_count", "gene_jaccard")
           col_names <- c(col_names, "Pathway Genes", "Shared Pathways", "Jaccard Index")
+          
+          # Add enhanced direction analysis indicators (v0.2.6) - Legacy section
+          if (has_enhanced_analysis) {
+            if ("biological_expectation" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "biological_expectation")
+              col_names <- c(col_names, "Direction Expectation")
+            }
+            if ("primary_direction_pattern" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "primary_direction_pattern") 
+              col_names <- c(col_names, "Detected Pattern")
+            }
+            if ("same_direction_count" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "same_direction_count")
+              col_names <- c(col_names, "Same Direction")
+            }
+            if ("opposite_direction_count" %in% colnames(pair_data)) {
+              display_cols <- c(display_cols, "opposite_direction_count")
+              col_names <- c(col_names, "Opposite Direction")
+            }
+          }
           
           # Add background information if available (legacy)
           if ("background_size" %in% colnames(pair_data) && "background_type" %in% colnames(pair_data)) {
