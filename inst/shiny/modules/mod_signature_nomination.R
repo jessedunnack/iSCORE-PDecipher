@@ -479,10 +479,10 @@ mod_signature_nomination_ui <- function(id) {
                   selectInput(ns("heatmap_metric"), "Display Metric:",
                              choices = c("Signature Strength" = "signature_strength",
                                        "Gene Overlap Count" = "gene_overlap_count", 
-                                       "Fisher p-value (FDR)" = "intersection_fisher_p_fdr_hierarchical",
+                                       "Fisher p-value (FDR)" = "intersection_fisher_p_fdr_enhanced_hierarchical",
                                        "Fisher p-value (raw)" = "gene_fisher_p",
                                        "Jaccard Index" = "gene_jaccard"),
-                             selected = "intersection_fisher_p_fdr_hierarchical")
+                             selected = "intersection_fisher_p_fdr_enhanced_hierarchical")
                 ),
                 column(3,
                   selectInput(ns("heatmap_clustering"), "Clustering:",
@@ -2287,16 +2287,22 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         }
         
         if (nrow(plot_data) > 0) {
-          p <- plot_ly(plot_data, 
+          # Clean data for plotly to prevent tibble column size mismatches
+          plot_data_clean <- plot_data[complete.cases(plot_data[c("log2FC_mast", "log2FC_crispri")]), ]
+          
+          # Create hover text AFTER filtering to ensure size matches
+          plot_data_clean$hover_text <- paste("Gene:", plot_data_clean$gene_name, 
+                                             "<br>Cluster:", plot_data_clean$cluster,
+                                             "<br>Experiment:", plot_data_clean$experiment,
+                                             "<br>MAST log2FC:", round(plot_data_clean$log2FC_mast, 3),
+                                             "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3))
+          
+          p <- plot_ly(plot_data_clean, 
                       x = ~log2FC_mast, 
                       y = ~log2FC_crispri,
                       color = ~experiment,
                       colors = experiment_colors,
-                      text = ~paste("Gene:", gene_name, 
-                                   "<br>Cluster:", cluster,
-                                   "<br>Experiment:", experiment,
-                                   "<br>MAST log2FC:", round(log2FC_mast, 3),
-                                   "<br>CRISPRi log2FC:", round(log2FC_crispri, 3)),
+                      text = ~hover_text,
                       hovertemplate = "%{text}<extra></extra>",
                       type = "scatter",
                       mode = "markers",
@@ -2309,8 +2315,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             )
           
           # Add trend lines for each experiment
-          for (exp in unique(plot_data$experiment)) {
-            exp_data <- plot_data[plot_data$experiment == exp, ]
+          for (exp in unique(plot_data_clean$experiment)) {
+            exp_data <- plot_data_clean[plot_data_clean$experiment == exp, ]
             if (nrow(exp_data) > 2) {
               lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = exp_data)
               x_range <- range(exp_data$log2FC_mast, na.rm = TRUE)
