@@ -414,6 +414,17 @@ mod_signature_nomination_ui <- function(id) {
                 DT::dataTableOutput(ns("gene_pair_table"))
               ),
               
+              # Explanatory footnote for table
+              div(class = "alert alert-info", style = "margin-top: 10px; font-size: 0.85em; padding: 8px;",
+                icon("info-circle", style = "margin-right: 5px;"),
+                tags$strong("Table Explanation:"), tags$br(),
+                tags$span(style = "margin-left: 15px;",
+                  "• ", tags$strong("Shared DE Genes*:"), " Differentially expressed genes with statistically significant overlap between MAST (genetic mutation) and CRISPRi (gene knockdown), determined by Fisher's exact test.", tags$br(),
+                  "• ", tags$strong("p-values:"), " Test if gene overlap exceeds chance expectation. FDR correction controls for multiple testing.", tags$br(),
+                  "• ", tags$strong("Background Genes:"), " Total number of genes tested in the selected approach (intersection=conservative, union=liberal)."
+                )
+              ),
+              
               # Correlation plot for selected pair
               div(style = "margin-top: 20px;",
                 h5("Effect Size Correlation"),
@@ -1658,17 +1669,8 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         # SIMPLIFIED DT call to isolate the issue
         tryCatch({
-          # Create descriptive caption with footnote explanation
-          caption_text <- tags$caption(
-            style = "caption-side: bottom; text-align: left; font-size: 0.9em; color: #666;",
-            tags$div(
-              tags$strong(paste("Cross-Method Analysis:", selected_pair)),
-              tags$br(),
-              tags$span("*Shared DE Genes: Differentially expressed genes that are significantly overlapping between MAST (genetic mutation) and CRISPRi (gene knockdown) experiments, as determined by Fisher's exact test."),
-              tags$br(),
-              tags$span("p-values test if gene overlap exceeds chance expectation. FDR correction controls for multiple testing across clusters and gene pairs.")
-            )
-          )
+          # Simple caption to avoid DT::datatable issues
+          simple_caption <- paste("Cross-Method Analysis:", selected_pair)
           
           dt_result <- DT::datatable(display_data,
                            options = list(
@@ -1676,7 +1678,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                              scrollX = TRUE
                            ),
                            rownames = FALSE,
-                           caption = caption_text)
+                           caption = simple_caption)
           
           cat("[GENE PAIR DEBUG] DT::datatable created successfully\n")
           
@@ -2352,11 +2354,16 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           selected_exp <- input$crispri_experiment %||% "C12_FPD-23"
           
-          # Safe correlation display
+          # Safe correlation display - extract only scalar values to avoid serialization issues
           cor_text <- if (!is.null(overall_cor) && !is.na(overall_cor$correlation)) {
-            paste0("r = ", round(overall_cor$correlation, 3), 
-                   ", p = ", format.pval(overall_cor$p_value, digits = 3),
-                   ", n = ", overall_cor$n_genes, " genes")
+            # Extract scalar values to prevent "[object Object]" errors in plotly
+            cor_val <- as.numeric(overall_cor$correlation)
+            p_val <- as.numeric(overall_cor$p_value) 
+            n_genes <- as.numeric(overall_cor$n_genes)
+            
+            paste0("r = ", round(cor_val, 3), 
+                   ", p = ", format.pval(p_val, digits = 3),
+                   ", n = ", n_genes, " genes")
           } else {
             "Correlation calculation failed"
           }
