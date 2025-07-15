@@ -25,8 +25,6 @@
       "Bash(git tag:*)",
       "Bash(chmod:*)",
       "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\")",
-      "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\")",
-      "Bash(ISCORE_HAS_DATA=FALSE timeout 10s Rscript -e \"shiny::runApp(host=''0.0.0.0'', port=3838)\")",
       "Bash(mkdir:*)",
       "Bash(git mv:*)",
       "Bash(git rm:*)",
@@ -39,7 +37,9 @@
       "Bash(git merge:*)",
       "Bash(git branch:*)",
       "Bash(git check-ignore:*)",
-      "Bash(conda run:*)"
+      "Bash(conda run:*)",
+      "Bash(cut:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }
