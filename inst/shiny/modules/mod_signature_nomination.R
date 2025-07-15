@@ -175,6 +175,16 @@ mod_signature_nomination_ui <- function(id) {
             div(id = ns("advanced_panel"), style = "margin-top: 15px;",
               h5("Advanced Parameters", style = "color: #f39c12;"),
               
+              # Enhanced Analysis Control (v0.2.6)
+              div(style = "margin-bottom: 15px;",
+                checkboxInput(ns("use_enhanced_analysis"), 
+                             "Enhanced Direction-Aware Analysis (v0.2.6)", 
+                             value = TRUE),
+                div(style = "font-size: 11px; color: #666; margin-top: 5px;",
+                  "Includes experiment weighting, direction analysis, and hierarchical FDR correction"
+                )
+              ),
+              
               # Statistical thresholds
               numericInput(ns("min_overlap"), "Minimum Gene Overlap:", 
                           value = 2, min = 1, max = 50),
@@ -654,6 +664,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           top_n = input$top_signatures %||% 20,
           min_cluster_breadth = input$min_cluster_breadth %||% 8,
           combine_variants = input$combine_snca && input$combine_vps13c,
+          use_enhanced_analysis = input$use_enhanced_analysis %||% TRUE,
           progress_callback = function(msg, value = NULL, detail = NULL) {
             current_time <- Sys.time()
             elapsed <- as.numeric(difftime(current_time, start_time, units = "mins"))

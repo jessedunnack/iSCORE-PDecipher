@@ -602,15 +602,24 @@ calculate_pathway_overlap_by_database <- function(mast_data, crispri_data,
 #' @param de_data Original differential expression data structure (optional, for proper background genes)
 #' @param clusters Character vector of clusters to analyze (NULL for all)
 #' @param include_pathways Logical, whether to include pathway analysis
+#' @param use_enhanced_analysis Logical, whether to use enhanced direction-aware analysis (default TRUE)
 #' @param progress_callback Function to call for progress updates (optional)
 #' @return List with comprehensive signature analysis results
 #' @export
 analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = NULL, clusters = NULL,
-                                        include_pathways = TRUE, progress_callback = NULL) {
+                                        include_pathways = TRUE, use_enhanced_analysis = TRUE, 
+                                        progress_callback = NULL) {
   
   if (!is.null(progress_callback)) {
     progress_callback(paste("Analyzing", gene_pair$mast_gene, "vs", gene_pair$crispri_gene))
   }
+  
+  # Set enhanced analysis option for this analysis
+  old_enhanced_setting <- getOption("iscore.use_enhanced_analysis", TRUE)
+  options(iscore.use_enhanced_analysis = use_enhanced_analysis)
+  
+  # Ensure option is restored on function exit
+  on.exit(options(iscore.use_enhanced_analysis = old_enhanced_setting))
   
   # Filter data for this gene pair (handle variant combining)
   if (gene_pair$mast_gene == "SNCA_combined") {
