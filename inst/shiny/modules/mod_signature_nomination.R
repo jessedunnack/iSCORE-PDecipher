@@ -460,7 +460,14 @@ mod_signature_nomination_ui <- function(id) {
                     div(style = "margin-top: 25px;",
                       checkboxInput(ns("show_all_experiments"), 
                                    "Show all experiments", 
-                                   value = FALSE)
+                                   value = TRUE)
+                    )
+                  ),
+                  column(4,
+                    div(style = "margin-top: 25px;",
+                      checkboxInput(ns("cluster_grid_view"), 
+                                   "Cluster grid view", 
+                                   value = TRUE)
                     )
                   )
                 ),
@@ -2343,9 +2350,131 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       
       cat("[CORRELATION] Generated", length(all_correlation_data), "correlation datasets\n")
       
+      # Helper function to identify gene of interest for highlighting
+      identify_gene_of_interest <- function(gene_pair) {
+        # Extract the actual gene names for highlighting
+        if (grepl("PRKN_vs_PARK2", gene_pair)) {
+          return(c("PRKN", "PARK2"))  # Both genes are relevant
+        } else if (grepl("VPS13C.*_vs_VPS13C", gene_pair)) {
+          return("VPS13C")
+        } else if (grepl("SNCA.*_vs_SNCA", gene_pair)) {
+          return("SNCA")
+        } else {
+          # For cases like PARK7_vs_PARK7, DNAJC6_vs_DNAJC6, etc.
+          gene_name <- strsplit(gene_pair, "_vs_")[[1]][1]
+          return(gene_name)
+        }
+      }
+      
+      # Get gene of interest for current pair
+      mast_gene <- strsplit(gene_pair_id, "_vs_")[[1]][1]
+      crispri_gene <- strsplit(gene_pair_id, "_vs_")[[1]][2]
+      genes_of_interest <- identify_gene_of_interest(gene_pair_id)
+      
       # Create plotly visualization
-      if (input$show_all_experiments) {
-        # Multi-experiment plot with different colors
+      if (input$cluster_grid_view %||% TRUE) {
+        # CLUSTER GRID VIEW: Create subplots for each cluster
+        unique_clusters <- unique(sapply(all_correlation_data, function(x) x$cluster))
+        unique_clusters <- sort(unique_clusters)
+        
+        # Calculate grid dimensions
+        n_clusters <- length(unique_clusters)
+        n_cols <- min(3, n_clusters)
+        n_rows <- ceiling(n_clusters / n_cols)
+        
+        # Create subplot titles
+        subplot_titles <- paste("Cluster", unique_clusters)
+        
+        # Create individual plots for each cluster
+        cluster_plots <- list()
+        experiment_colors <- c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")
+        
+        for (i in seq_along(unique_clusters)) {
+          cluster <- unique_clusters[i]
+          
+          # Get data for this cluster
+          cluster_data <- data.frame()
+          for (data_key in names(all_correlation_data)) {
+            corr_data <- all_correlation_data[[data_key]]
+            if (corr_data$cluster == cluster) {
+              merged_data <- corr_data$correlation$merged_data
+              merged_data$cluster <- corr_data$cluster
+              merged_data$experiment <- corr_data$experiment
+              cluster_data <- rbind(cluster_data, merged_data)
+            }
+          }
+          
+          if (nrow(cluster_data) > 0) {
+            # Clean data
+            cluster_data_clean <- cluster_data[complete.cases(cluster_data[c("log2FC_mast", "log2FC_crispri")]), ]
+            
+            # Add gene highlighting
+            cluster_data_clean$is_gene_of_interest <- cluster_data_clean$gene_name %in% genes_of_interest
+            cluster_data_clean$point_color <- ifelse(cluster_data_clean$is_gene_of_interest, "red", 
+                                                     experiment_colors[cluster_data_clean$experiment])
+            cluster_data_clean$point_symbol <- ifelse(cluster_data_clean$is_gene_of_interest, "star", "circle")
+            
+            # Create hover text
+            cluster_data_clean$hover_text <- paste("Gene:", cluster_data_clean$gene_name, 
+                                                  "<br>Cluster:", cluster_data_clean$cluster,
+                                                  "<br>Experiment:", cluster_data_clean$experiment,
+                                                  "<br>MAST log2FC:", round(cluster_data_clean$log2FC_mast, 3),
+                                                  "<br>CRISPRi log2FC:", round(cluster_data_clean$log2FC_crispri, 3),
+                                                  if (cluster_data_clean$is_gene_of_interest) "<br><b>Gene of Interest</b>" else "")
+            
+            # Create ggplot for this cluster
+            p_cluster <- ggplot2::ggplot(cluster_data_clean, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+              ggplot2::geom_point(ggplot2::aes(text = hover_text, color = experiment, 
+                                              shape = ifelse(is_gene_of_interest, "Gene of Interest", "Other")), 
+                                 size = ifelse(cluster_data_clean$is_gene_of_interest, 3, 2), 
+                                 alpha = ifelse(cluster_data_clean$is_gene_of_interest, 1, 0.7)) +
+              ggplot2::scale_color_manual(values = experiment_colors) +
+              ggplot2::scale_shape_manual(values = c("Gene of Interest" = 17, "Other" = 16)) +
+              ggplot2::labs(title = paste("Cluster", cluster),
+                           x = paste("MAST log2FC (", mast_gene, ")"),
+                           y = paste("CRISPRi log2FC (", crispri_gene, ")")) +
+              ggplot2::theme_minimal() +
+              ggplot2::theme(legend.position = "none")  # Remove individual legends
+            
+            # Add trend line if enough points
+            if (nrow(cluster_data_clean) >= 3) {
+              p_cluster <- p_cluster + ggplot2::geom_smooth(method = "lm", se = FALSE, color = "gray", linetype = "dashed", linewidth = 0.5)
+            }
+            
+            cluster_plots[[i]] <- p_cluster
+          } else {
+            # Create empty plot for clusters with no data
+            cluster_plots[[i]] <- ggplot2::ggplot() + 
+              ggplot2::annotate("text", x = 0, y = 0, label = "No data", size = 4, color = "gray") +
+              ggplot2::labs(title = paste("Cluster", cluster)) +
+              ggplot2::theme_void()
+          }
+        }
+        
+        # Combine plots into grid using subplot
+        if (length(cluster_plots) > 1) {
+          p <- plotly::subplot(
+            lapply(cluster_plots, plotly::ggplotly, tooltip = "text"),
+            nrows = n_rows, 
+            shareX = TRUE, 
+            shareY = TRUE,
+            titleX = TRUE,
+            titleY = TRUE
+          ) %>%
+          plotly::layout(
+            title = list(text = paste0("Cluster-Specific Correlations: ", mast_gene, " vs ", crispri_gene, 
+                                      " (", ifelse(input$show_all_experiments, "All Experiments", "Single Experiment"), ")"),
+                        font = list(size = 16)),
+            showlegend = TRUE
+          )
+        } else {
+          p <- plotly::ggplotly(cluster_plots[[1]], tooltip = "text")
+        }
+        
+        return(p)
+        
+      } else if (input$show_all_experiments) {
+        # PAN-CLUSTER VIEW: Multi-experiment plot with different colors
         plot_data <- data.frame()
         experiment_colors <- c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")
         
@@ -2365,12 +2494,16 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           plot_data_clean <- plot_data[complete.cases(plot_data[c("log2FC_mast", "log2FC_crispri")]), ]
           cat("[CORRELATION DEBUG] Total plot_data_clean after filtering - rows:", nrow(plot_data_clean), "\n")
           
+          # Add gene highlighting for pan-cluster view
+          plot_data_clean$is_gene_of_interest <- plot_data_clean$gene_name %in% genes_of_interest
+          
           # Create hover text AFTER filtering to ensure size matches
           plot_data_clean$hover_text <- paste("Gene:", plot_data_clean$gene_name, 
                                              "<br>Cluster:", plot_data_clean$cluster,
                                              "<br>Experiment:", plot_data_clean$experiment,
                                              "<br>MAST log2FC:", round(plot_data_clean$log2FC_mast, 3),
-                                             "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3))
+                                             "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3),
+                                             ifelse(plot_data_clean$is_gene_of_interest, "<br><b>Gene of Interest</b>", ""))
           
           cat("[MULTI EXP DEBUG] Final plot_data_clean before plotly - rows:", nrow(plot_data_clean), 
               "cols:", ncol(plot_data_clean), "\n")
@@ -2389,7 +2522,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[MULTI EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
           
-          # Create interactive plotly visualization
+          # Create interactive visualization using ggplot2 + ggplotly for gene highlighting
           gene_filter_text <- switch(input$gene_filter_approach %||% "top_200",
                                    "top_100" = "top 100",
                                    "top_200" = "top 200", 
@@ -2398,25 +2531,31 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                    "all_genes" = "all",
                                    "top 200")
           
-          # Create plotly scatter plot
-          p <- plotly::plot_ly(plot_data_sampled, 
-                              x = ~log2FC_mast, 
-                              y = ~log2FC_crispri,
-                              color = ~experiment,
-                              colors = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c"),
-                              type = "scatter",
-                              mode = "markers",
-                              text = ~hover_text,
-                              hovertemplate = "%{text}<extra></extra>",
-                              marker = list(size = 6, opacity = 0.7)) %>%
-            plotly::layout(
-              title = list(text = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (All Experiments)<br>",
-                                        "<sub>Based on ", gene_filter_text, " most changed genes per method</sub>"),
-                          font = list(size = 14)),
-              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
-              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
-              legend = list(title = list(text = "Experiment"))
-            )
+          # Create ggplot2 scatter plot with gene highlighting
+          p <- ggplot2::ggplot(plot_data_sampled, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+            ggplot2::geom_point(ggplot2::aes(text = hover_text, color = experiment, 
+                                            shape = ifelse(is_gene_of_interest, "Gene of Interest", "Other")), 
+                               size = ifelse(plot_data_sampled$is_gene_of_interest, 3, 2), 
+                               alpha = ifelse(plot_data_sampled$is_gene_of_interest, 1, 0.7)) +
+            ggplot2::scale_color_manual(values = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")) +
+            ggplot2::scale_shape_manual(values = c("Gene of Interest" = 17, "Other" = 16)) +
+            ggplot2::labs(
+              title = paste0("Pan-Cluster Correlation: ", mast_gene, " vs ", crispri_gene, " (All Experiments)\n",
+                           "Based on ", gene_filter_text, " most changed genes per method"),
+              x = paste("MAST log2FC (", mast_gene, "mutation)"),
+              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"),
+              color = "Experiment",
+              shape = "Gene Type"
+            ) +
+            ggplot2::theme_minimal()
+          
+          # Add trend line if enough points
+          if (nrow(plot_data_sampled) >= 3) {
+            p <- p + ggplot2::geom_smooth(method = "lm", se = FALSE, color = "gray", linetype = "dashed", linewidth = 0.8)
+          }
+          
+          # Convert to interactive plotly
+          p <- plotly::ggplotly(p, tooltip = "text")
           
           return(p)
         }
