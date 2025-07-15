@@ -466,7 +466,7 @@ mod_signature_nomination_ui <- function(id) {
                   column(4,
                     div(style = "margin-top: 25px;",
                       checkboxInput(ns("cluster_grid_view"), 
-                                   "Cluster grid view", 
+                                   "Cluster-specific view (vertical)", 
                                    value = TRUE)
                     )
                   )
@@ -2380,17 +2380,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       
       # Create plotly visualization
       if (input$cluster_grid_view %||% TRUE) {
-        # CLUSTER GRID VIEW: Create subplots for each cluster
+        # CLUSTER VERTICAL VIEW: Create vertically stacked plots for each cluster
         unique_clusters <- unique(sapply(all_correlation_data, function(x) x$cluster))
         unique_clusters <- sort(unique_clusters)
         
-        # Calculate grid dimensions
+        # Vertical stacking - no grid calculations needed
         n_clusters <- length(unique_clusters)
-        n_cols <- min(3, n_clusters)
-        n_rows <- ceiling(n_clusters / n_cols)
-        
-        # Create subplot titles
-        subplot_titles <- paste("Cluster", unique_clusters)
         
         # Create individual plots for each cluster
         cluster_plots <- list()
@@ -2493,21 +2488,25 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           }
         }
         
-        # Combine plots into grid using subplot
+        # Stack plots vertically for better readability
         if (length(cluster_plots) > 1) {
           p <- plotly::subplot(
             lapply(cluster_plots, plotly::ggplotly, tooltip = "text"),
-            nrows = n_rows, 
-            shareX = TRUE, 
-            shareY = TRUE,
-            titleX = TRUE,
-            titleY = TRUE
+            nrows = length(cluster_plots), 
+            ncols = 1,
+            shareX = FALSE,  # Don't share X axis so each plot can have its own scale
+            shareY = FALSE,  # Don't share Y axis so each plot can have its own scale
+            titleX = TRUE,   # Show X axis titles for each plot
+            titleY = TRUE,   # Show Y axis titles for each plot
+            margin = 0.08    # Add some margin between plots
           ) %>%
           plotly::layout(
             title = list(text = paste0("Cluster-Specific Correlations: ", mast_gene, " vs ", crispri_gene, 
-                                      " (", ifelse(input$show_all_experiments, "All Experiments", "Single Experiment"), ")"),
+                                      " (", ifelse(input$show_all_experiments, "All Experiments", "Single Experiment"), 
+                                      ") - Scroll to view all clusters"),
                         font = list(size = 16)),
-            showlegend = TRUE
+            showlegend = TRUE,
+            height = 400 * length(cluster_plots)  # Dynamic height based on number of clusters
           )
         } else {
           p <- plotly::ggplotly(cluster_plots[[1]], tooltip = "text")
