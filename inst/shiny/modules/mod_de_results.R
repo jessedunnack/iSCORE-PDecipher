@@ -61,8 +61,12 @@ process_mast_for_volcano <- function(mast_data) {
   return(volcano_data)
 }
 
-process_mixscale_for_volcano <- function(mixscale_data) {
-  # Convert MixScale data structure to volcano plot format
+process_mixscale_for_volcano_enhanced <- function(mixscale_data, experiment_preference = "C12_FPD-24", 
+                                                 use_weighted_meta_analysis = FALSE, 
+                                                 experiment_weights = NULL) {
+  # Enhanced version that properly handles multiple CRISPRi experiments
+  # Fixes critical issue: previous version only used first experiment (arbitrary selection)
+  
   volcano_data <- data.frame()
   
   for (gene in names(mixscale_data)) {
@@ -70,34 +74,195 @@ process_mixscale_for_volcano <- function(mixscale_data) {
       if (!is.null(mixscale_data[[gene]][[cluster]]$results)) {
         de_results <- mixscale_data[[gene]][[cluster]]$results
         
-        # Find log2FC and p-value columns
+        # Find all available log2FC and p-value columns
         log2fc_cols <- grep("^log2FC_", names(de_results), value = TRUE)
         
         if (length(log2fc_cols) > 0) {
-          # Use the first log2FC column and corresponding p-value
-          log2fc_col <- log2fc_cols[1]
-          # Extract experiment name from column
-          exp <- gsub("^log2FC_", "", log2fc_col)
-          pval_col <- paste0("p_cell_type", exp, ":weight")
-          
-          if (pval_col %in% colnames(de_results)) {
-            cluster_data <- data.frame(
-              gene = gene,
-              cluster = cluster,
-              gene_name = rownames(de_results),
-              log2FC = de_results[[log2fc_col]],
-              pvalue = de_results[[pval_col]],
-              experiment = exp,
-              stringsAsFactors = FALSE
+          if (use_weighted_meta_analysis && !is.null(experiment_weights)) {
+            # Option 1: Weighted meta-analysis across experiments
+            meta_result <- calculate_weighted_volcano_data(
+              de_results, log2fc_cols, gene, cluster, experiment_weights
             )
-            volcano_data <- rbind(volcano_data, cluster_data)
+            if (!is.null(meta_result)) {
+              volcano_data <- rbind(volcano_data, meta_result)
+            }
+            
+          } else {
+            # Option 2: Use preferred experiment or fallback strategy
+            selected_experiment <- select_experiment_for_volcano(
+              log2fc_cols, experiment_preference
+            )
+            
+            if (!is.null(selected_experiment)) {
+              log2fc_col <- paste0("log2FC_", selected_experiment)
+              pval_col <- paste0("p_cell_type", selected_experiment, ":weight")
+              
+              if (log2fc_col %in% names(de_results) && pval_col %in% names(de_results)) {
+                cluster_data <- data.frame(
+                  gene = gene,
+                  cluster = cluster,
+                  gene_name = rownames(de_results),
+                  log2FC = de_results[[log2fc_col]],
+                  pvalue = de_results[[pval_col]],
+                  experiment = selected_experiment,
+                  experiment_selection_method = ifelse(selected_experiment == experiment_preference, 
+                                                     "preferred", "fallback"),
+                  total_experiments_available = length(log2fc_cols),
+                  stringsAsFactors = FALSE
+                )
+                volcano_data <- rbind(volcano_data, cluster_data)
+              }
+            }
           }
         }
       }
     }
   }
   
+  # Add metadata about experiment handling
+  attr(volcano_data, "experiment_handling") <- list(
+    method = ifelse(use_weighted_meta_analysis, "weighted_meta_analysis", "experiment_preference"),
+    preference = experiment_preference,
+    weighted_analysis = use_weighted_meta_analysis,
+    total_experiments_processed = length(unique(volcano_data$experiment))
+  )
+  
   return(volcano_data)
+}
+
+#' Select best available experiment for volcano plot
+#'
+#' @param log2fc_cols Available log2FC columns
+#' @param experiment_preference Preferred experiment (default "C12_FPD-24")
+#' @return Selected experiment name or NULL
+select_experiment_for_volcano <- function(log2fc_cols, experiment_preference = "C12_FPD-24") {
+  
+  # Extract experiment names from column names
+  available_experiments <- gsub("^log2FC_", "", log2fc_cols)
+  
+  # Priority order based on user guidance: C12_FPD-24 is strongest
+  experiment_priority <- c("C12_FPD-24", "C12_FPD-23", "C18_FPD-23")
+  
+  # First, try preferred experiment
+  if (experiment_preference %in% available_experiments) {
+    return(experiment_preference)
+  }
+  
+  # Fall back to priority order
+  for (exp in experiment_priority) {
+    if (exp %in% available_experiments) {
+      return(exp)
+    }
+  }
+  
+  # Last resort: use first available
+  if (length(available_experiments) > 0) {
+    return(available_experiments[1])
+  }
+  
+  return(NULL)
+}
+
+#' Calculate weighted meta-analysis volcano data
+#'
+#' @param de_results DE results data frame
+#' @param log2fc_cols Available log2FC columns
+#' @param gene Gene name
+#' @param cluster Cluster name
+#' @param experiment_weights Experiment weights
+#' @return Data frame with weighted meta-analysis results
+calculate_weighted_volcano_data <- function(de_results, log2fc_cols, gene, cluster, experiment_weights) {
+  
+  # Extract experiments and their data
+  experiments <- gsub("^log2FC_", "", log2fc_cols)
+  experiment_data <- list()
+  experiment_weights_for_cluster <- list()
+  
+  for (exp in experiments) {
+    log2fc_col <- paste0("log2FC_", exp)
+    pval_col <- paste0("p_cell_type", exp, ":weight")
+    
+    if (log2fc_col %in% names(de_results) && pval_col %in% names(de_results)) {
+      # Get weight for this experiment and cluster
+      weight_key <- paste0(exp, "_", cluster)
+      
+      if (!is.null(experiment_weights) && weight_key %in% names(experiment_weights$weights)) {
+        exp_weight <- experiment_weights$weights[[weight_key]]
+        
+        if (exp_weight > 0) {
+          experiment_data[[exp]] <- list(
+            log2fc = de_results[[log2fc_col]],
+            pvalue = de_results[[pval_col]],
+            weight = exp_weight
+          )
+          experiment_weights_for_cluster[[exp]] <- exp_weight
+        }
+      }
+    }
+  }
+  
+  if (length(experiment_data) == 0) {
+    return(NULL)
+  }
+  
+  # Calculate weighted averages for each gene
+  gene_names <- rownames(de_results)
+  weighted_log2fc <- rep(NA, length(gene_names))
+  weighted_pvalue <- rep(NA, length(gene_names))
+  
+  for (i in seq_along(gene_names)) {
+    exp_log2fc <- c()
+    exp_pvalues <- c()
+    exp_weights <- c()
+    
+    for (exp in names(experiment_data)) {
+      if (!is.na(experiment_data[[exp]]$log2fc[i]) && !is.na(experiment_data[[exp]]$pvalue[i])) {
+        exp_log2fc <- c(exp_log2fc, experiment_data[[exp]]$log2fc[i])
+        exp_pvalues <- c(exp_pvalues, experiment_data[[exp]]$pvalue[i])
+        exp_weights <- c(exp_weights, experiment_data[[exp]]$weight)
+      }
+    }
+    
+    if (length(exp_weights) > 0) {
+      # Weighted average log2FC
+      weighted_log2fc[i] <- sum(exp_log2fc * exp_weights) / sum(exp_weights)
+      
+      # Weighted p-value using Fisher's method
+      chi_square_stats <- -2 * log(exp_pvalues)
+      weighted_chi_square <- sum(chi_square_stats * exp_weights) / sum(exp_weights)
+      weighted_pvalue[i] <- pchisq(weighted_chi_square * 2 * length(exp_pvalues), 
+                                  df = 2 * length(exp_pvalues), lower.tail = FALSE)
+    }
+  }
+  
+  # Create result data frame
+  cluster_data <- data.frame(
+    gene = gene,
+    cluster = cluster,
+    gene_name = gene_names,
+    log2FC = weighted_log2fc,
+    pvalue = weighted_pvalue,
+    experiment = paste(names(experiment_data), collapse = ","),
+    experiment_selection_method = "weighted_meta_analysis",
+    total_experiments_available = length(experiment_data),
+    experiments_included = length(experiment_data),
+    stringsAsFactors = FALSE
+  )
+  
+  return(cluster_data)
+}
+
+# Legacy function for backward compatibility
+process_mixscale_for_volcano <- function(mixscale_data) {
+  # Wrapper that uses enhanced version with C12_FPD-24 preference
+  # This maintains backward compatibility while fixing the arbitrary selection issue
+  
+  return(process_mixscale_for_volcano_enhanced(
+    mixscale_data = mixscale_data,
+    experiment_preference = "C12_FPD-24",  # Use strongest experiment by default
+    use_weighted_meta_analysis = FALSE,
+    experiment_weights = NULL
+  ))
 }
 
 # UI function
