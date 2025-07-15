@@ -1818,7 +1818,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         # Select appropriate p-value column based on approach
         if (approach == "intersection") {
-          if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+          if ("intersection_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+            p_col <- "intersection_fisher_p_fdr_enhanced_hierarchical"
+            p_col_raw <- "intersection_fisher_p"
+            cat("[FDR SUMMARY] Using enhanced FDR-corrected intersection p-values for summary\n")
+          } else if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
             p_col <- "intersection_fisher_p_fdr_hierarchical"
             p_col_raw <- "intersection_fisher_p"
             cat("[FDR SUMMARY] Using FDR-corrected intersection p-values for summary\n")
@@ -1828,7 +1832,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             cat("[FDR SUMMARY] FDR-corrected p-values not available, using raw intersection p-values\n")
           }
         } else {  # union approach
-          if ("union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+          if ("union_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+            p_col <- "union_fisher_p_fdr_enhanced_hierarchical"
+            p_col_raw <- "union_fisher_p"
+            cat("[FDR SUMMARY] Using enhanced FDR-corrected union p-values for summary\n")
+          } else if ("union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
             p_col <- "union_fisher_p_fdr_hierarchical"
             p_col_raw <- "union_fisher_p"
             cat("[FDR SUMMARY] Using FDR-corrected union p-values for summary\n")
@@ -2281,14 +2289,18 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         for (data_key in names(all_correlation_data)) {
           corr_data <- all_correlation_data[[data_key]]
           merged_data <- corr_data$correlation$merged_data
+          cat("[CORRELATION DEBUG] Adding data for", data_key, "- rows:", nrow(merged_data), "\n")
           merged_data$cluster <- corr_data$cluster
           merged_data$experiment <- corr_data$experiment
           plot_data <- rbind(plot_data, merged_data)
         }
         
+        cat("[CORRELATION DEBUG] Total plot_data before cleaning - rows:", nrow(plot_data), "\n")
+        
         if (nrow(plot_data) > 0) {
           # Clean data for plotly to prevent tibble column size mismatches
           plot_data_clean <- plot_data[complete.cases(plot_data[c("log2FC_mast", "log2FC_crispri")]), ]
+          cat("[CORRELATION DEBUG] Total plot_data_clean after filtering - rows:", nrow(plot_data_clean), "\n")
           
           # Create hover text AFTER filtering to ensure size matches
           plot_data_clean$hover_text <- paste("Gene:", plot_data_clean$gene_name, 
@@ -2296,6 +2308,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                              "<br>Experiment:", plot_data_clean$experiment,
                                              "<br>MAST log2FC:", round(plot_data_clean$log2FC_mast, 3),
                                              "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3))
+          
+          cat("[MULTI EXP DEBUG] Final plot_data_clean before plotly - rows:", nrow(plot_data_clean), 
+              "cols:", ncol(plot_data_clean), "\n")
+          cat("[MULTI EXP DEBUG] hover_text length:", length(plot_data_clean$hover_text), "\n")
+          cat("[MULTI EXP DEBUG] x data length:", length(plot_data_clean$log2FC_mast), "\n")
+          cat("[MULTI EXP DEBUG] y data length:", length(plot_data_clean$log2FC_crispri), "\n")
           
           p <- plot_ly(plot_data_clean, 
                       x = ~log2FC_mast, 
@@ -2343,9 +2361,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         for (data_key in names(all_correlation_data)) {
           corr_data <- all_correlation_data[[data_key]]
           merged_data <- corr_data$correlation$merged_data
+          cat("[SINGLE EXP DEBUG] Adding data for", data_key, "- rows:", nrow(merged_data), "\n")
           merged_data$cluster <- corr_data$cluster
           combined_plot_data <- rbind(combined_plot_data, merged_data)
         }
+        
+        cat("[SINGLE EXP DEBUG] Total combined_plot_data before cleaning - rows:", nrow(combined_plot_data), "\n")
         
         if (nrow(combined_plot_data) > 0) {
           # Calculate overall correlation with error handling
@@ -2383,6 +2404,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                              "<br>Cluster:", plot_data_clean$cluster,
                                              "<br>MAST log2FC:", round(plot_data_clean$log2FC_mast, 3),
                                              "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3))
+          
+          cat("[SINGLE EXP DEBUG] Final plot_data_clean before plotly - rows:", nrow(plot_data_clean), 
+              "cols:", ncol(plot_data_clean), "\n")
+          cat("[SINGLE EXP DEBUG] hover_text length:", length(plot_data_clean$hover_text), "\n")
+          cat("[SINGLE EXP DEBUG] x data length:", length(plot_data_clean$log2FC_mast), "\n")
+          cat("[SINGLE EXP DEBUG] y data length:", length(plot_data_clean$log2FC_crispri), "\n")
           
           p <- plot_ly(plot_data_clean, 
                       x = ~log2FC_mast, 
