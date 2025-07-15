@@ -2,6 +2,7 @@
 
 export(analyze_pd_signatures)
 export(analyze_signature_trends)
+export(calculate_effect_size_correlation)
 export(calculate_pd_relevance_score)
 export(categorize_biological_processes)
 export(check_dataset_files)

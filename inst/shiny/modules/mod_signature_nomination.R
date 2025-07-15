@@ -481,9 +481,9 @@ mod_signature_nomination_ui <- function(id) {
                 ),
                 column(3,
                   selectInput(ns("color_scale"), "Color Scale:",
-                             choices = c("Viridis" = "viridis", "RdBu" = "RdBu", 
-                                       "Red" = "Reds", "Blue" = "Blues"),
-                             selected = "viridis")
+                             choices = c("Red" = "Reds", "Viridis" = "viridis", "RdBu" = "RdBu", 
+                                       "Blue" = "Blues"),
+                             selected = "Reds")
                 ),
                 column(3,
                   downloadButton(ns("download_heatmap_html"), "Download Interactive",
@@ -1793,23 +1793,37 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       has_intersection_union <- all(c("intersection_fisher_p", "union_fisher_p") %in% colnames(pair_data))
       
       if (has_intersection_union) {
-        # Analyze intersection significance (more stringent) using FDR-corrected p-values
-        if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
-          sig_clusters_strict <- pair_data[!is.na(pair_data$intersection_fisher_p_fdr_hierarchical) & 
-                                          pair_data$intersection_fisher_p_fdr_hierarchical < 0.05, ]
-          cat("[FDR SUMMARY] Using FDR-corrected intersection p-values for summary\n")
-        } else {
-          sig_clusters_strict <- pair_data[!is.na(pair_data$intersection_fisher_p) & 
-                                          pair_data$intersection_fisher_p < 0.05, ]
-          cat("[FDR SUMMARY] FDR-corrected p-values not available, using raw intersection p-values\n")
+        # Determine which approach to use based on user selection
+        approach <- input$analysis_approach %||% "intersection"
+        
+        # Select appropriate p-value column based on approach
+        if (approach == "intersection") {
+          if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            p_col <- "intersection_fisher_p_fdr_hierarchical"
+            p_col_raw <- "intersection_fisher_p"
+            cat("[FDR SUMMARY] Using FDR-corrected intersection p-values for summary\n")
+          } else {
+            p_col <- "intersection_fisher_p"
+            p_col_raw <- "intersection_fisher_p"
+            cat("[FDR SUMMARY] FDR-corrected p-values not available, using raw intersection p-values\n")
+          }
+        } else {  # union approach
+          if ("union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
+            p_col <- "union_fisher_p_fdr_hierarchical"
+            p_col_raw <- "union_fisher_p"
+            cat("[FDR SUMMARY] Using FDR-corrected union p-values for summary\n")
+          } else {
+            p_col <- "union_fisher_p"
+            p_col_raw <- "union_fisher_p"
+            cat("[FDR SUMMARY] FDR-corrected p-values not available, using raw union p-values\n")
+          }
         }
-        if ("intersection_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
-          highly_sig_clusters <- pair_data[!is.na(pair_data$intersection_fisher_p_fdr_hierarchical) & 
-                                          pair_data$intersection_fisher_p_fdr_hierarchical < 0.001, ]
-        } else {
-          highly_sig_clusters <- pair_data[!is.na(pair_data$intersection_fisher_p) & 
-                                          pair_data$intersection_fisher_p < 0.001, ]
-        }
+        
+        # Filter for significant clusters using selected approach
+        sig_clusters_strict <- pair_data[!is.na(pair_data[[p_col]]) & 
+                                        pair_data[[p_col]] < 0.05, ]
+        highly_sig_clusters <- pair_data[!is.na(pair_data[[p_col]]) & 
+                                        pair_data[[p_col]] < 0.001, ]
         
         # Parse gene names from the pair
         genes <- strsplit(selected_pair, "_vs_")[[1]]
@@ -1824,7 +1838,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             p(strong("No significant gene overlap detected"), " between ", 
               tags$span(mast_gene, style = "color: #d73027; font-weight: bold;"), " (MAST mutation) and ",
               tags$span(crispri_gene, style = "color: #4575b4; font-weight: bold;"), " (CRISPRi knockdown) ",
-              "in any cluster using the conservative intersection approach."),
+              "in any cluster using the ", ifelse(approach == "intersection", "conservative intersection", "liberal union"), " approach."),
             p(tags$em("This is common and expected - check the pathway overlap results which may still show biological convergence."))
           )
         } else {
@@ -1832,7 +1846,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cluster_summary <- lapply(1:nrow(sig_clusters_strict), function(i) {
             row <- sig_clusters_strict[i, ]
             cluster_name <- gsub("cluster_", "", row$cluster)
-            p_val <- row$intersection_fisher_p
+            p_val <- row[[p_col_raw]]  # Use the raw p-value for display (not FDR-corrected)
             overlap_count <- row$gene_overlap_count
             
             sig_level <- if (p_val < 0.001) "***" else if (p_val < 0.01) "**" else "*"
@@ -1900,7 +1914,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           metric = input$heatmap_metric %||% "signature_strength",
           cluster_filter = NULL,  # Include all clusters
           clustering = input$heatmap_clustering %||% "both",
-          color_scale = input$color_scale %||% "viridis"
+          color_scale = input$color_scale %||% "Reds"
         )
         
         cat("[SIGNATURE HEATMAP] Heatmap generated successfully\n")
@@ -1933,7 +1947,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           metric = input$heatmap_metric %||% "signature_strength",
           cluster_filter = NULL,
           clustering = input$heatmap_clustering %||% "both",
-          color_scale = input$color_scale %||% "viridis"
+          color_scale = input$color_scale %||% "Reds"
         )
         
         # Save as HTML
