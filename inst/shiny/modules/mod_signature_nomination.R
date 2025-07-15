@@ -1608,16 +1608,16 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cat("[FDR DEBUG] FDR correction available:", has_fdr_correction, "\n")
           
           if (selected_approach == "intersection") {
-            if (has_fdr_correction) {
-              selected_p_values <- pair_data$intersection_fisher_p_fdr_hierarchical[match(display_data$Cluster, pair_data$cluster)]
+            if (has_fdr_correction && "intersection_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+              selected_p_values <- pair_data$intersection_fisher_p_fdr_enhanced_hierarchical[match(display_data$Cluster, pair_data$cluster)]
               cat("[FDR DEBUG] Using intersection FDR-corrected p-values\n")
             } else {
               selected_p_values <- pair_data$intersection_fisher_p[match(display_data$Cluster, pair_data$cluster)]
               cat("[FDR DEBUG] Using intersection raw p-values\n")
             }
           } else {
-            if (has_fdr_correction && "union_fisher_p_fdr_hierarchical" %in% names(pair_data)) {
-              selected_p_values <- pair_data$union_fisher_p_fdr_hierarchical[match(display_data$Cluster, pair_data$cluster)]
+            if (has_fdr_correction && "union_fisher_p_fdr_enhanced_hierarchical" %in% names(pair_data)) {
+              selected_p_values <- pair_data$union_fisher_p_fdr_enhanced_hierarchical[match(display_data$Cluster, pair_data$cluster)]
               cat("[FDR DEBUG] Using union FDR-corrected p-values\n")
             } else {
               selected_p_values <- pair_data$union_fisher_p[match(display_data$Cluster, pair_data$cluster)]
@@ -2368,7 +2368,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             "Correlation calculation failed"
           }
           
-          p <- plot_ly(combined_plot_data, 
+          # Clean data for plotly to prevent tibble column size mismatches
+          plot_data_clean <- combined_plot_data[, c("gene_name", "log2FC_mast", "log2FC_crispri", "cluster")]
+          plot_data_clean <- plot_data_clean[complete.cases(plot_data_clean), ]
+          
+          p <- plot_ly(plot_data_clean, 
                       x = ~log2FC_mast, 
                       y = ~log2FC_crispri,
                       text = ~paste("Gene:", gene_name, 
