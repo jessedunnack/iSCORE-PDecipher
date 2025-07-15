@@ -2340,13 +2340,26 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         }
         
         if (nrow(combined_plot_data) > 0) {
-          # Calculate overall correlation
-          overall_cor <- calculate_effect_size_correlation(
-            data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_mast),
-            data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_crispri)
-          )
+          # Calculate overall correlation with error handling
+          overall_cor <- tryCatch({
+            calculate_effect_size_correlation(
+              data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_mast),
+              data.frame(gene_name = combined_plot_data$gene_name, log2FC = combined_plot_data$log2FC_crispri)
+            )
+          }, error = function(e) {
+            list(correlation = NA, p_value = NA, n_genes = 0, error = e$message)
+          })
           
           selected_exp <- input$crispri_experiment %||% "C12_FPD-23"
+          
+          # Safe correlation display
+          cor_text <- if (!is.null(overall_cor) && !is.na(overall_cor$correlation)) {
+            paste0("r = ", round(overall_cor$correlation, 3), 
+                   ", p = ", format.pval(overall_cor$p_value, digits = 3),
+                   ", n = ", overall_cor$n_genes, " genes")
+          } else {
+            "Correlation calculation failed"
+          }
           
           p <- plot_ly(combined_plot_data, 
                       x = ~log2FC_mast, 
@@ -2361,10 +2374,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                       marker = list(size = 6, color = "#1f77b4", opacity = 0.7)) %>%
             layout(
               title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, 
-                           " (", selected_exp, ")<br>",
-                           "r = ", round(overall_cor$correlation, 3), 
-                           ", p = ", format.pval(overall_cor$p_value, digits = 3),
-                           ", n = ", overall_cor$n_genes, " genes"),
+                           " (", selected_exp, ")<br>", cor_text),
               xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
               yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
               showlegend = FALSE
