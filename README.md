@@ -2,11 +2,21 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.2.3-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.2.6-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
 iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). The package provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and interactive visualizations.
+
+## Enhanced Cross-Method Correlation Analysis (v0.2.6)
+
+Gene filtering improves correlations between MAST mutations and CRISPRi knockdowns:
+- **All genes**: mean |r| = 0.053
+- **Top 200 genes**: mean |r| = 0.593 (11x improvement)
+- 61 gene pairs with |r| ≥ 0.5
+- Strong correlations observed for: DNAJC6 (r=0.99), VPS13C variants, SNCA variants
+
+[See correlation analysis documentation](docs/correlation_analysis_guide.md) for methodology.
 
 ## Cross-Platform Compatibility
 
@@ -29,7 +39,7 @@ The package supports Windows, Mac, and Linux systems with automatic setup and da
 ### 3. Cross-Method Signature Analysis (v0.2.0)
 - Signature discovery between MAST mutations and CRISPRi knockdowns
 - PD-focused biological interpretation with pathway categorization
-- Pan-cluster and cluster-specific signatures for manuscript prioritization
+- Pan-cluster and cluster-specific signatures for comprehensive analysis
 - Interactive signature nomination interface for rapid analysis
 
 **Total Dataset**: ~663,000+ significant enrichment terms (p.adjust < 0.05)
@@ -242,9 +252,7 @@ iSCORE.PDecipher:::get_parent_data_dir()
 
 ## Citation
 
-**Manuscript in preparation**
-
-Please cite this repository until the manuscript is published:
+Please cite this repository:
 
 ```
 Dunnack J. (2025). iSCORE-PDecipher: Integrated Analysis of 
@@ -265,12 +273,19 @@ GitHub Issues: [Report bugs or request features](https://github.com/jessedunnack
 
 ---
 
-## Key Features (v0.2.0)
+## Key Features (v0.2.6)
 
-### Cross-Method Signature Analysis (NEW v0.2.0)
+### Enhanced Correlation Analysis (v0.2.6)
+- Gene filtering improves cross-method correlations (11x with top 200 genes)
+- Interactive plotly correlation plots with gene hover information
+- Gene filtering options: Top 100/200/500 genes vs All genes
+- Trend line visualization and experiment comparison
+- Tested across 180 combinations (12 genes × 3 experiments × 5 clusters)
+
+### Cross-Method Signature Analysis (v0.2.0)
 - Shared signature discovery between MAST mutations and CRISPRi knockdowns
 - PD-focused biological interpretation with automated pathway categorization
-- Manuscript-ready prioritization of strongest cross-method signatures
+- Prioritization of strongest cross-method signatures
 - Interactive signature nomination interface for rapid hypothesis generation
 - Data-driven signature trends analysis with frequency rankings and impact scoring for unbiased discovery
 

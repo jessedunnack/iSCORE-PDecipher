@@ -1,3 +1,44 @@
+# iSCORE.PDecipher 0.2.6
+
+## Enhanced Cross-Method Correlation Analysis (2025-01-15)
+
+### New Features
+
+#### Gene Filtering for Correlation Analysis
+- **Improvement**: Gene filtering increases correlation strength by 11x (mean |r| = 0.593 vs 0.053)
+- **Methods**: Top 100/200/500 genes vs all genes comparison
+- **UI**: Interactive dropdown in Gene Pair Analysis with explanatory text
+- **Validation**: Tested across 180 combinations (12 gene pairs × 3 experiments × 5 clusters)
+
+#### Interactive Correlation Plots
+- **Visualization**: Interactive plotly plots with gene hover information
+- **Features**: Trend lines, experiment comparison, gene selection details
+- **Default**: C12_FPD-24 experiment set as default
+- **Location**: Signature Nomination module, Gene Pair Analysis tab
+
+#### Analysis Scripts
+- **Scripts**: Comprehensive correlation analysis pipeline
+- **Location**: `inst/scripts/correlation_analysis/`
+- **Results**: `inst/results/comprehensive_correlation_results.csv`
+
+#### Statistical Framework Enhancements
+- **Direction-aware analysis**: Same vs opposite direction overlap detection
+- **Hierarchical FDR correction**: Multi-level multiple comparison correction
+- **Experiment weighting**: Cell count-based weighting system
+
+### Strong Correlations Identified
+- **DNAJC6**: r = 0.99 (strongest correlation)
+- **VPS13C variants**: Consistent strong correlations
+- **SNCA variants**: Strong directional concordance
+- **Total**: 61 gene pairs with |r| ≥ 0.5
+
+### Documentation
+- **Guide**: `docs/correlation_analysis_guide.md`
+- **Methodology**: Complete description of gene filtering approach
+- **Results**: Comprehensive validation results
+
+---
+
 # iSCORE.PDecipher 0.2.3
 
 ## Critical Volcano Plot Fix (2025-01-13)
