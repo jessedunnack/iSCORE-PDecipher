@@ -2466,6 +2466,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           plot_data_clean <- combined_plot_data[, c("gene_name", "log2FC_mast", "log2FC_crispri", "cluster")]
           plot_data_clean <- plot_data_clean[complete.cases(plot_data_clean), ]
           
+          # Convert to data frame to ensure proper structure
+          plot_data_clean <- as.data.frame(plot_data_clean)
+          
           # Create hover text AFTER filtering to ensure size matches
           plot_data_clean$hover_text <- paste("Gene:", plot_data_clean$gene_name, 
                                              "<br>Cluster:", plot_data_clean$cluster,
@@ -2474,6 +2477,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[SINGLE EXP DEBUG] Final plot_data_clean before plotly - rows:", nrow(plot_data_clean), 
               "cols:", ncol(plot_data_clean), "\n")
+          cat("[SINGLE EXP DEBUG] Column names:", paste(colnames(plot_data_clean), collapse = ", "), "\n")
           cat("[SINGLE EXP DEBUG] hover_text length:", length(plot_data_clean$hover_text), "\n")
           cat("[SINGLE EXP DEBUG] x data length:", length(plot_data_clean$log2FC_mast), "\n")
           cat("[SINGLE EXP DEBUG] y data length:", length(plot_data_clean$log2FC_crispri), "\n")
@@ -2487,7 +2491,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             plot_data_sampled <- plot_data_clean
           }
           
+          # Ensure sampled data is also a proper data frame
+          plot_data_sampled <- as.data.frame(plot_data_sampled)
+          
           cat("[SINGLE EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
+          cat("[SINGLE EXP DEBUG] Sampled data columns:", paste(colnames(plot_data_sampled), collapse = ", "), "\n")
+          cat("[SINGLE EXP DEBUG] Sampled hover_text exists:", "hover_text" %in% colnames(plot_data_sampled), "\n")
           
           # Create gene filter text for subtitle
           gene_filter_text <- switch(input$gene_filter_approach %||% "top_200",
