@@ -2507,48 +2507,24 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                    "all_genes" = "all",
                                    "top 200")
           
-          # Create interactive plotly scatter plot with trend line
-          p <- plotly::plot_ly(
-                              x = plot_data_sampled$log2FC_mast, 
-                              y = plot_data_sampled$log2FC_crispri,
-                              type = "scatter",
-                              mode = "markers",
-                              text = plot_data_sampled$hover_text,
-                              hovertemplate = "%{text}<extra></extra>",
-                              marker = list(size = 6, opacity = 0.7, color = "#1f77b4")) %>%
-            plotly::layout(
-              title = list(text = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")<br>",
-                                        "<sub>Based on ", gene_filter_text, " most changed genes per method | ", cor_text, "</sub>"),
-                          font = list(size = 14)),
-              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
-              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"))
-            )
+          # Create ggplot2 scatter plot (more stable than pure plotly)
+          p <- ggplot2::ggplot(plot_data_sampled, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+            ggplot2::geom_point(ggplot2::aes(text = hover_text), size = 2, alpha = 0.7, color = "#1f77b4") +
+            ggplot2::labs(
+              title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")\n",
+                           "Based on ", gene_filter_text, " most changed genes per method | ", cor_text),
+              x = paste("MAST log2FC (", mast_gene, "mutation)"),
+              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")
+            ) +
+            ggplot2::theme_minimal()
           
           # Add trend line if we have enough data points
           if (nrow(plot_data_sampled) >= 3) {
-            # Calculate linear model for trend line
-            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = plot_data_sampled)
-            x_range <- range(plot_data_sampled$log2FC_mast, na.rm = TRUE)
-            trend_x <- seq(x_range[1], x_range[2], length.out = 100)
-            trend_y <- predict(lm_fit, newdata = data.frame(log2FC_mast = trend_x))
-            
-            # Create separate data frame for trend line
-            trend_data <- data.frame(
-              x = trend_x,
-              y = trend_y
-            )
-            
-            p <- p %>% plotly::add_trace(
-              x = trend_data$x, 
-              y = trend_data$y,
-              type = "scatter",
-              mode = "lines",
-              line = list(color = "red", dash = "dash", width = 2),
-              name = "Trend line",
-              hovertemplate = "Trend line<extra></extra>",
-              showlegend = FALSE
-            )
+            p <- p + ggplot2::geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed", linewidth = 0.8)
           }
+          
+          # Convert to interactive plotly
+          p <- plotly::ggplotly(p, tooltip = "text")
           
           return(p)
         }
