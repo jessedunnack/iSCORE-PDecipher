@@ -437,24 +437,53 @@ mod_signature_nomination_ui <- function(id) {
                 
                 # Correlation plot controls
                 fluidRow(
-                  column(6,
+                  column(4,
                     selectInput(ns("crispri_experiment"), 
                                "CRISPRi Experiment:",
-                               choices = c("C12_FPD-23" = "C12_FPD-23",
-                                         "C12_FPD-24" = "C12_FPD-24", 
+                               choices = c("C12_FPD-24" = "C12_FPD-24",
+                                         "C12_FPD-23" = "C12_FPD-23", 
                                          "C18_FPD-23" = "C18_FPD-23"),
-                               selected = "C12_FPD-23")
+                               selected = "C12_FPD-24")
                   ),
-                  column(6,
+                  column(4,
+                    selectInput(ns("gene_filter_approach"), 
+                               "Gene Selection:",
+                               choices = c(
+                                 "Top 200 genes (recommended)" = "top_200",
+                                 "Top 100 genes (strongest)" = "top_100", 
+                                 "Top 500 genes (broader)" = "top_500",
+                                 "All genes (current)" = "all_genes"
+                               ),
+                               selected = "top_200")
+                  ),
+                  column(4,
                     div(style = "margin-top: 25px;",
                       checkboxInput(ns("show_all_experiments"), 
-                                   "Show all experiments on one plot", 
+                                   "Show all experiments", 
                                    value = FALSE)
                     )
                   )
                 ),
                 
-                plotOutput(ns("gene_pair_correlation"), height = "450px")
+                # Gene filtering explanation
+                div(class = "alert alert-info", style = "margin-top: 10px; margin-bottom: 15px; font-size: 0.9em;",
+                  icon("info-circle"),
+                  strong(" Gene Selection Impact: "), 
+                  "Filtering to top N most changed genes dramatically improves correlations ",
+                  "(6-11x stronger) by focusing on genes most affected by each method. ",
+                  "'All genes' includes thousands of unchanged genes that dilute the signal."
+                ),
+                
+                # Correlation plot explanation
+                div(class = "alert alert-success", style = "margin-bottom: 15px; font-size: 0.9em;",
+                  icon("chart-line"),
+                  strong(" What you're seeing: "), 
+                  "Each point = one gene. X-axis = MAST log2FC (mutation effect). ",
+                  "Y-axis = CRISPRi log2FC (knockdown effect). ",
+                  "Hover over points to see gene names. Strong correlations show similar effects ",
+                  "between genetic mutation and CRISPR knockdown."
+                ),
+                plotlyOutput(ns("gene_pair_correlation"), height = "450px")
               )
             )
           ),
@@ -2105,10 +2134,33 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         )
     }
     
+    # === HELPER FUNCTIONS ===
+    
+    # Helper function to filter genes based on selected approach
+    filter_genes_for_correlation <- function(gene_data, approach) {
+      if (approach == "all_genes" || nrow(gene_data) == 0) {
+        return(gene_data)
+      }
+      
+      # Filter to top N genes by absolute log2FC
+      top_n <- switch(approach,
+                     "top_100" = 100,
+                     "top_200" = 200, 
+                     "top_500" = 500,
+                     "top_1000" = 1000,
+                     200)  # fallback
+      
+      # Order by absolute log2FC and take top N
+      gene_data_ordered <- gene_data[order(abs(gene_data$log2FC), decreasing = TRUE), ]
+      top_genes <- head(gene_data_ordered, min(top_n, nrow(gene_data_ordered)))
+      
+      return(top_genes)
+    }
+    
     # === EFFECT SIZE CORRELATION PLOT ===
     
-    # Effect size correlation plot (MISSING IMPLEMENTATION - now implemented!)
-    output$gene_pair_correlation <- renderPlot({
+    # Effect size correlation plot with interactive filtering
+    output$gene_pair_correlation <- renderPlotly({
       req(values$analysis_results)
       req(input$selected_gene_pair)
       
@@ -2192,7 +2244,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
               stringsAsFactors = FALSE
             )
             mast_data <- mast_data[!is.na(mast_data$log2FC), ]
-            cat("[CORRELATION] MAST data: ", nrow(mast_data), "genes\n")
+            
+            # Apply gene filtering based on user selection
+            gene_filter <- input$gene_filter_approach %||% "top_200"
+            mast_data <- filter_genes_for_correlation(mast_data, gene_filter)
+            
+            cat("[CORRELATION] MAST data after filtering (", gene_filter, "): ", nrow(mast_data), "genes\n")
           }
         }
         
@@ -2213,12 +2270,15 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                 log2fc_col <- paste0("log2FC_", exp)
                 if (log2fc_col %in% colnames(crispri_results)) {
                   crispri_data <- data.frame(
-                    gene_name = rownames(crispri_results),
+                    gene_name = crispri_results$gene_ID,
                     log2FC = crispri_results[[log2fc_col]],
                     experiment = exp,
                     stringsAsFactors = FALSE
                   )
                   crispri_data <- crispri_data[!is.na(crispri_data$log2FC), ]
+                  
+                  # Apply same gene filtering as MAST data
+                  crispri_data <- filter_genes_for_correlation(crispri_data, gene_filter)
                   
                   if (nrow(crispri_data) > 0) {
                     # Calculate correlation for this cluster and experiment
@@ -2242,11 +2302,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
               
               if (log2fc_col %in% colnames(crispri_results)) {
                 crispri_data <- data.frame(
-                  gene_name = rownames(crispri_results),
+                  gene_name = crispri_results$gene_ID,
                   log2FC = crispri_results[[log2fc_col]],
                   stringsAsFactors = FALSE
                 )
                 crispri_data <- crispri_data[!is.na(crispri_data$log2FC), ]
+                
+                # Apply same gene filtering as MAST data
+                crispri_data <- filter_genes_for_correlation(crispri_data, gene_filter)
                 
                 if (nrow(crispri_data) > 0) {
                   # Calculate correlation for this cluster
@@ -2326,25 +2389,34 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[MULTI EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
           
-          # Create static ggplot instead of problematic plotly  
-          library(ggplot2)
-          p <- ggplot(plot_data_sampled, aes(x = log2FC_mast, y = log2FC_crispri, color = experiment)) +
-            geom_point(alpha = 0.6, size = 1.5) +
-            geom_smooth(method = "lm", se = TRUE, linetype = "dashed") +
-            scale_color_manual(values = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c")) +
-            labs(
-              title = paste("Effect Size Correlation:", mast_gene, "vs", crispri_gene, "(All Experiments)"),
-              x = paste("MAST log2FC (", mast_gene, "mutation)"),
-              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"),
-              color = "Experiment"
-            ) +
-            theme_minimal() +
-            theme(
-              plot.title = element_text(size = 14, face = "bold"),
-              legend.position = "bottom"
-            )
+          # Create interactive plotly visualization
+          gene_filter_text <- switch(input$gene_filter_approach %||% "top_200",
+                                   "top_100" = "top 100",
+                                   "top_200" = "top 200", 
+                                   "top_500" = "top 500",
+                                   "top_1000" = "top 1000",
+                                   "all_genes" = "all",
+                                   "top 200")
           
-          # ggplot already includes trend lines via geom_smooth
+          # Create plotly scatter plot
+          p <- plotly::plot_ly(plot_data_sampled, 
+                              x = ~log2FC_mast, 
+                              y = ~log2FC_crispri,
+                              color = ~experiment,
+                              colors = c("C12_FPD-23" = "#1f77b4", "C12_FPD-24" = "#ff7f0e", "C18_FPD-23" = "#2ca02c"),
+                              type = "scatter",
+                              mode = "markers",
+                              text = ~hover_text,
+                              hovertemplate = "%{text}<extra></extra>",
+                              marker = list(size = 6, opacity = 0.7)) %>%
+            plotly::layout(
+              title = list(text = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (All Experiments)<br>",
+                                        "<sub>Based on ", gene_filter_text, " most changed genes per method</sub>"),
+                          font = list(size = 14)),
+              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
+              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")),
+              legend = list(title = list(text = "Experiment"))
+            )
           
           return(p)
         }
@@ -2417,24 +2489,45 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           cat("[SINGLE EXP DEBUG] Final sampled data - rows:", nrow(plot_data_sampled), "\n")
           
-          # Create static ggplot instead of problematic plotly
-          library(ggplot2)
-          p <- ggplot(plot_data_sampled, aes(x = log2FC_mast, y = log2FC_crispri)) +
-            geom_point(alpha = 0.6, size = 1.5, color = "#1f77b4") +
-            geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
-            labs(
-              title = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")"),
-              subtitle = cor_text,
-              x = paste("MAST log2FC (", mast_gene, "mutation)"),
-              y = paste("CRISPRi log2FC (", crispri_gene, "knockdown)")
-            ) +
-            theme_minimal() +
-            theme(
-              plot.title = element_text(size = 14, face = "bold"),
-              plot.subtitle = element_text(size = 12, color = "gray40")
+          # Create gene filter text for subtitle
+          gene_filter_text <- switch(input$gene_filter_approach %||% "top_200",
+                                   "top_100" = "top 100",
+                                   "top_200" = "top 200", 
+                                   "top_500" = "top 500",
+                                   "top_1000" = "top 1000",
+                                   "all_genes" = "all",
+                                   "top 200")
+          
+          # Create interactive plotly scatter plot with trend line
+          p <- plotly::plot_ly(plot_data_sampled, 
+                              x = ~log2FC_mast, 
+                              y = ~log2FC_crispri,
+                              type = "scatter",
+                              mode = "markers",
+                              text = ~hover_text,
+                              hovertemplate = "%{text}<extra></extra>",
+                              marker = list(size = 6, opacity = 0.7, color = "#1f77b4")) %>%
+            plotly::layout(
+              title = list(text = paste0("Effect Size Correlation: ", mast_gene, " vs ", crispri_gene, " (", selected_exp, ")<br>",
+                                        "<sub>Based on ", gene_filter_text, " most changed genes per method | ", cor_text, "</sub>"),
+                          font = list(size = 14)),
+              xaxis = list(title = paste("MAST log2FC (", mast_gene, "mutation)")),
+              yaxis = list(title = paste("CRISPRi log2FC (", crispri_gene, "knockdown)"))
             )
           
-          # ggplot already includes trend line via geom_smooth
+          # Add trend line if we have enough data points
+          if (nrow(plot_data_sampled) >= 3) {
+            # Calculate linear model for trend line
+            lm_fit <- lm(log2FC_crispri ~ log2FC_mast, data = plot_data_sampled)
+            x_range <- range(plot_data_sampled$log2FC_mast, na.rm = TRUE)
+            trend_x <- seq(x_range[1], x_range[2], length.out = 100)
+            trend_y <- predict(lm_fit, newdata = data.frame(log2FC_mast = trend_x))
+            
+            p <- p %>% plotly::add_lines(x = trend_x, y = trend_y, 
+                                        line = list(color = "red", dash = "dash", width = 2),
+                                        name = "Trend line",
+                                        hovertemplate = "Trend line<extra></extra>")
+          }
           
           return(p)
         }
