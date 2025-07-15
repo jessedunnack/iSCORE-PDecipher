@@ -2,19 +2,22 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.2.6-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.2.7-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
 iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). The package provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and interactive visualizations.
 
-## Enhanced Cross-Method Correlation Analysis (v0.2.6)
+## Enhanced Interactive Correlation Plots (v0.2.7)
 
-Gene filtering improves correlations between MAST mutations and CRISPRi knockdowns:
-- **All genes**: mean |r| = 0.053
-- **Top 200 genes**: mean |r| = 0.593 (11x improvement)
-- 61 gene pairs with |r| ≥ 0.5
-- Strong correlations observed for: DNAJC6 (r=0.99), VPS13C variants, SNCA variants
+**Major visualization improvements for correlation analysis:**
+- **Vertical stacking layout**: Replaced compressed grid with scrollable vertical plots for better readability
+- **Correlation statistics display**: r-values, p-values, and sample sizes shown in plot titles
+- **Bold reference lines**: x=0 and y=0 lines for easy identification of effect directions
+- **Gene filtering methodology**: Top N most changed genes (default: 200) from both methods
+
+**Performance**: Gene filtering improves correlations by 11x (mean |r| = 0.593 vs 0.053)
+**Strong correlations**: 61 gene pairs with |r| ≥ 0.5, including DNAJC6 (r=0.99)
 
 [See correlation analysis documentation](docs/correlation_analysis_guide.md) for methodology.
 
@@ -273,14 +276,16 @@ GitHub Issues: [Report bugs or request features](https://github.com/jessedunnack
 
 ---
 
-## Key Features (v0.2.6)
+## Key Features (v0.2.7)
 
-### Enhanced Correlation Analysis (v0.2.6)
-- Gene filtering improves cross-method correlations (11x with top 200 genes)
-- Interactive plotly correlation plots with gene hover information
-- Gene filtering options: Top 100/200/500 genes vs All genes
-- Trend line visualization and experiment comparison
-- Tested across 180 combinations (12 genes × 3 experiments × 5 clusters)
+### Enhanced Interactive Correlation Plots (v0.2.7)
+- **Revolutionary vertical layout**: Replaced grid with scrollable stacked plots for optimal readability
+- **Statistical transparency**: r-values, p-values, and sample sizes displayed in plot titles
+- **Visual reference system**: Bold x=0, y=0 lines for effect direction identification
+- **Gene filtering methodology**: Top N most changed genes (11x correlation improvement)
+- **Independent scaling**: Each cluster plot has optimal axis ranges
+- **Dynamic sizing**: Automatic height adjustment based on cluster count
+- **Enhanced user experience**: Natural scrolling through clusters 0, 1, 2...
 
 ### Cross-Method Signature Analysis (v0.2.0)
 - Shared signature discovery between MAST mutations and CRISPRi knockdowns

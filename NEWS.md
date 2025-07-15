@@ -1,3 +1,61 @@
+# iSCORE.PDecipher 0.2.7
+
+## Major Correlation Plot Visualization Improvements (2025-01-15)
+
+### 🎯 **Enhanced Interactive Correlation Plots**
+
+#### Visual Reference Lines and Statistics Display
+- **Added bold reference lines**: x=0 and y=0 lines (black, 0.8 linewidth, 0.7 alpha) for easy identification of positive/negative effects
+- **Correlation statistics in titles**: Both cluster-specific and pan-cluster plots now display:
+  - Pearson correlation coefficient (r = 0.73)
+  - Statistical significance (p = 0.002 or p < 0.001)
+  - Sample size (n = 53 genes)
+- **Format**: "Cluster 3\nr = 0.81, p < 0.001 (n = 45)" for easy interpretation
+
+#### Revolutionary Layout Change: Grid to Vertical Stacking
+- **Problem Solved**: Compressed grid layout made text unreadable
+- **New Approach**: Vertical stacking of cluster-specific plots
+- **Benefits**:
+  - Much larger individual plots with readable axis labels
+  - Clear correlation statistics and gene names
+  - Natural scrolling through clusters (0, 1, 2, ...)
+  - Independent axis scaling per cluster
+  - Better focus on individual cluster correlations
+
+#### Technical Implementation Details
+- **Dynamic height**: 400px × number of clusters for optimal viewing
+- **Independent scaling**: `shareX = FALSE, shareY = FALSE` for proper axis ranges
+- **Enhanced spacing**: 8% margin between plots for clear separation
+- **User guidance**: "Scroll to view all clusters" in main title
+- **UI updates**: Changed from "Cluster grid view" to "Cluster-specific view (vertical)"
+
+### 🔧 **Critical Bug Fixes**
+- **Fixed "condition has length > 1" error**: Replaced vectorized `if()` with `ifelse()` in hover text generation
+- **Resolved plot rendering failures**: Proper vectorized operations for gene highlighting
+
+### 📊 **Gene Selection Methodology Confirmed**
+**Question**: Are genes significant in both approaches?
+**Answer**: Yes, but by effect size rather than p-value significance:
+- **MAST filtering**: Top N genes by absolute log2FC (highest effect size changes)
+- **CRISPRi filtering**: Top N genes by absolute log2FC (highest effect size changes)
+- **Final correlation**: Only genes present in BOTH filtered datasets (via merge by gene name)
+- **Default**: Top 200 most changed genes per method
+- **Options**: Top 100, 200, 500, 1000, or all genes
+
+### 🎨 **User Experience Improvements**
+- **Increased plot height**: From 450px to 700px for better spacing
+- **Reference lines**: Easy identification of origin (0,0) and effect quadrants
+- **Scrollable design**: Natural interaction pattern for cluster exploration
+- **Statistical transparency**: All correlation statistics visible at a glance
+
+### 📝 **Code Structure Updates**
+- **File**: `inst/shiny/modules/mod_signature_nomination.R`
+- **Functions enhanced**: `renderPlotly` correlation plot generation
+- **Layout logic**: Replaced `plotly::subplot()` grid with vertical stacking
+- **Statistical calculation**: Added real-time correlation computation per cluster
+
+---
+
 # iSCORE.PDecipher 0.2.6
 
 ## Enhanced Cross-Method Correlation Analysis (2025-01-15)
