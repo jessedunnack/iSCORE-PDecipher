@@ -250,7 +250,10 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
   })
   
   # Handle different metrics
-  if (metric == "intersection_fisher_p_fdr_hierarchical" && "intersection_fisher_p_fdr_hierarchical" %in% colnames(signature_data)) {
+  if (metric == "intersection_fisher_p_fdr_enhanced_hierarchical" && "intersection_fisher_p_fdr_enhanced_hierarchical" %in% colnames(signature_data)) {
+    plot_data$metric_value <- -log10(pmax(signature_data$intersection_fisher_p_fdr_enhanced_hierarchical, 1e-10))
+    metric_label <- "FDR p-value (-log10)"
+  } else if (metric == "intersection_fisher_p_fdr_hierarchical" && "intersection_fisher_p_fdr_hierarchical" %in% colnames(signature_data)) {
     plot_data$metric_value <- -log10(pmax(signature_data$intersection_fisher_p_fdr_hierarchical, 1e-10))
     metric_label <- "FDR p-value (-log10)"
   } else if (metric == "gene_fisher_p" && "gene_fisher_p" %in% colnames(signature_data)) {

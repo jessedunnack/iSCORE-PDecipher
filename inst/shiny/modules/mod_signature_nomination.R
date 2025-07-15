@@ -2372,13 +2372,16 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           plot_data_clean <- combined_plot_data[, c("gene_name", "log2FC_mast", "log2FC_crispri", "cluster")]
           plot_data_clean <- plot_data_clean[complete.cases(plot_data_clean), ]
           
+          # Create hover text AFTER filtering to ensure size matches
+          plot_data_clean$hover_text <- paste("Gene:", plot_data_clean$gene_name, 
+                                             "<br>Cluster:", plot_data_clean$cluster,
+                                             "<br>MAST log2FC:", round(plot_data_clean$log2FC_mast, 3),
+                                             "<br>CRISPRi log2FC:", round(plot_data_clean$log2FC_crispri, 3))
+          
           p <- plot_ly(plot_data_clean, 
                       x = ~log2FC_mast, 
                       y = ~log2FC_crispri,
-                      text = ~paste("Gene:", gene_name, 
-                                   "<br>Cluster:", cluster,
-                                   "<br>MAST log2FC:", round(log2FC_mast, 3),
-                                   "<br>CRISPRi log2FC:", round(log2FC_crispri, 3)),
+                      text = ~hover_text,
                       hovertemplate = "%{text}<extra></extra>",
                       type = "scatter",
                       mode = "markers",
