@@ -2490,26 +2490,79 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         # Stack plots vertically for better readability
         if (length(cluster_plots) > 1) {
-          p <- plotly::subplot(
-            lapply(cluster_plots, plotly::ggplotly, tooltip = "text"),
-            nrows = length(cluster_plots), 
-            ncols = 1,
-            shareX = FALSE,  # Don't share X axis so each plot can have its own scale
-            shareY = FALSE,  # Don't share Y axis so each plot can have its own scale
-            titleX = TRUE,   # Show X axis titles for each plot
-            titleY = TRUE,   # Show Y axis titles for each plot
-            margin = 0.08    # Add some margin between plots
-          ) %>%
-          plotly::layout(
-            title = list(text = paste0("Cluster-Specific Correlations: ", mast_gene, " vs ", crispri_gene, 
-                                      " (", ifelse(input$show_all_experiments, "All Experiments", "Single Experiment"), 
-                                      ") - Scroll to view all clusters"),
-                        font = list(size = 16)),
-            showlegend = TRUE,
-            height = 400 * length(cluster_plots)  # Dynamic height based on number of clusters
-          )
+          # Convert plots to plotly, handling empty plots carefully
+          plotly_plots <- list()
+          for (i in seq_along(cluster_plots)) {
+            tryCatch({
+              plotly_plots[[i]] <- plotly::ggplotly(cluster_plots[[i]], tooltip = "text")
+            }, error = function(e) {
+              # Create a simple plotly object for empty clusters
+              plotly_plots[[i]] <- plotly::plot_ly() %>%
+                plotly::add_annotations(
+                  text = paste("Cluster", unique_clusters[i], "- No data"),
+                  x = 0.5, y = 0.5,
+                  xref = "paper", yref = "paper",
+                  showarrow = FALSE,
+                  font = list(size = 14, color = "gray")
+                ) %>%
+                plotly::layout(
+                  xaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE),
+                  yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+                )
+            })
+          }
+          
+          # Remove any NULL plots
+          plotly_plots <- plotly_plots[!sapply(plotly_plots, is.null)]
+          
+          if (length(plotly_plots) > 0) {
+            p <- plotly::subplot(
+              plotly_plots,
+              nrows = length(plotly_plots), 
+              ncols = 1,
+              shareX = FALSE,  # Don't share X axis so each plot can have its own scale
+              shareY = FALSE,  # Don't share Y axis so each plot can have its own scale
+              titleX = TRUE,   # Show X axis titles for each plot
+              titleY = TRUE,   # Show Y axis titles for each plot
+              margin = 0.08    # Add some margin between plots
+            ) %>%
+            plotly::layout(
+              title = list(text = paste0("Cluster-Specific Correlations: ", mast_gene, " vs ", crispri_gene, 
+                                        " (", ifelse(input$show_all_experiments, "All Experiments", "Single Experiment"), 
+                                        ") - Scroll to view all clusters"),
+                          font = list(size = 16)),
+              showlegend = TRUE,
+              height = 400 * length(plotly_plots)  # Dynamic height based on number of clusters
+            )
+          } else {
+            p <- plotly::plot_ly() %>%
+              plotly::add_annotations(
+                text = "No correlation data available",
+                x = 0.5, y = 0.5,
+                xref = "paper", yref = "paper",
+                showarrow = FALSE
+              )
+          }
+        } else if (length(cluster_plots) == 1) {
+          tryCatch({
+            p <- plotly::ggplotly(cluster_plots[[1]], tooltip = "text")
+          }, error = function(e) {
+            p <- plotly::plot_ly() %>%
+              plotly::add_annotations(
+                text = "No correlation data available",
+                x = 0.5, y = 0.5,
+                xref = "paper", yref = "paper",
+                showarrow = FALSE
+              )
+          })
         } else {
-          p <- plotly::ggplotly(cluster_plots[[1]], tooltip = "text")
+          p <- plotly::plot_ly() %>%
+            plotly::add_annotations(
+              text = "No correlation data available",
+              x = 0.5, y = 0.5,
+              xref = "paper", yref = "paper",
+              showarrow = FALSE
+            )
         }
         
         return(p)
