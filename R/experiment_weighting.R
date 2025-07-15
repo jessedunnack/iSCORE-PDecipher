@@ -4,6 +4,9 @@
 #' across multiple CRISPRi experiments (C12_FPD-23, C12_FPD-24, C18_FPD-23)
 #' with C12_FPD-24 as the primary experiment due to highest cell count.
 
+# Required for data manipulation
+suppressPackageStartupMessages(library(dplyr))
+
 #' Load and process CRISPRi cell count data
 #'
 #' @param csv_path Path to CRISPRi analysis log CSV file

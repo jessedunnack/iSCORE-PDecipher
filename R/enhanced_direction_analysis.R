@@ -94,6 +94,23 @@ calculate_same_direction_overlap <- function(mast_data, crispri_data, background
     crispri_lfc_col <- "log2FC"  # Fallback
   }
   
+  # Find p-value column for CRISPRi (may be experiment-specific)
+  crispri_pval_col <- "p_val_adj"  # Default
+  if (!crispri_pval_col %in% names(crispri_data)) {
+    # Look for experiment-specific p-value columns
+    pval_cols <- names(crispri_data)[grepl("^p_cell_type.*:weight$", names(crispri_data))]
+    if (length(pval_cols) > 0) {
+      # Use the p-value column that matches the log2FC column experiment
+      exp_name <- gsub("log2FC_", "", crispri_lfc_col)
+      matching_pval <- pval_cols[grepl(exp_name, pval_cols)]
+      if (length(matching_pval) > 0) {
+        crispri_pval_col <- matching_pval[1]
+      } else {
+        crispri_pval_col <- pval_cols[1]  # Use first available
+      }
+    }
+  }
+  
   # Extract significantly upregulated genes
   mast_up <- rownames(mast_data)[mast_data$avg_log2FC > lfc_threshold & 
                                  mast_data$p_val_adj < p_threshold & 
@@ -118,14 +135,14 @@ calculate_same_direction_overlap <- function(mast_data, crispri_data, background
   }
   
   crispri_up <- crispri_genes[crispri_data[[crispri_lfc_col]] > lfc_threshold & 
-                              crispri_data$p_val_adj < p_threshold & 
+                              crispri_data[[crispri_pval_col]] < p_threshold & 
                               !is.na(crispri_data[[crispri_lfc_col]]) & 
-                              !is.na(crispri_data$p_val_adj)]
+                              !is.na(crispri_data[[crispri_pval_col]])]
   
   crispri_down <- crispri_genes[crispri_data[[crispri_lfc_col]] < -lfc_threshold & 
-                                crispri_data$p_val_adj < p_threshold & 
+                                crispri_data[[crispri_pval_col]] < p_threshold & 
                                 !is.na(crispri_data[[crispri_lfc_col]]) & 
-                                !is.na(crispri_data$p_val_adj)]
+                                !is.na(crispri_data[[crispri_pval_col]])]
   
   # Calculate same-direction overlaps
   same_up <- intersect(mast_up, crispri_up)  # Both methods upregulate
@@ -216,6 +233,23 @@ calculate_opposite_direction_overlap <- function(mast_data, crispri_data, backgr
     crispri_lfc_col <- "log2FC"  # Fallback
   }
   
+  # Find p-value column for CRISPRi (may be experiment-specific)
+  crispri_pval_col <- "p_val_adj"  # Default
+  if (!crispri_pval_col %in% names(crispri_data)) {
+    # Look for experiment-specific p-value columns
+    pval_cols <- names(crispri_data)[grepl("^p_cell_type.*:weight$", names(crispri_data))]
+    if (length(pval_cols) > 0) {
+      # Use the p-value column that matches the log2FC column experiment
+      exp_name <- gsub("log2FC_", "", crispri_lfc_col)
+      matching_pval <- pval_cols[grepl(exp_name, pval_cols)]
+      if (length(matching_pval) > 0) {
+        crispri_pval_col <- matching_pval[1]
+      } else {
+        crispri_pval_col <- pval_cols[1]  # Use first available
+      }
+    }
+  }
+  
   # Extract significantly regulated genes by direction
   mast_up <- rownames(mast_data)[mast_data$avg_log2FC > lfc_threshold & 
                                  mast_data$p_val_adj < p_threshold & 
@@ -239,14 +273,14 @@ calculate_opposite_direction_overlap <- function(mast_data, crispri_data, backgr
   }
   
   crispri_up <- crispri_genes[crispri_data[[crispri_lfc_col]] > lfc_threshold & 
-                              crispri_data$p_val_adj < p_threshold & 
+                              crispri_data[[crispri_pval_col]] < p_threshold & 
                               !is.na(crispri_data[[crispri_lfc_col]]) & 
-                              !is.na(crispri_data$p_val_adj)]
+                              !is.na(crispri_data[[crispri_pval_col]])]
   
   crispri_down <- crispri_genes[crispri_data[[crispri_lfc_col]] < -lfc_threshold & 
-                                crispri_data$p_val_adj < p_threshold & 
+                                crispri_data[[crispri_pval_col]] < p_threshold & 
                                 !is.na(crispri_data[[crispri_lfc_col]]) & 
-                                !is.na(crispri_data$p_val_adj)]
+                                !is.na(crispri_data[[crispri_pval_col]])]
   
   # Calculate opposite-direction overlaps
   mast_up_crispri_down <- intersect(mast_up, crispri_down)  # MAST up, CRISPRi down
@@ -486,7 +520,7 @@ enhanced_direction_analysis <- function(mast_data, crispri_data, gene_name,
     analysis_parameters = list(
       lfc_threshold = lfc_threshold,
       p_threshold = p_threshold,
-      background_size = length(background_genes %||% c())
+      background_size = length(if (is.null(background_genes)) c() else background_genes)
     )
   ))
 }
