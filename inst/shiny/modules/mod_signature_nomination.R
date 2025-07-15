@@ -490,7 +490,7 @@ mod_signature_nomination_ui <- function(id) {
                   "Hover over points to see gene names. Strong correlations show similar effects ",
                   "between genetic mutation and CRISPR knockdown."
                 ),
-                plotlyOutput(ns("gene_pair_correlation"), height = "450px")
+                plotlyOutput(ns("gene_pair_correlation"), height = "700px")
               )
             )
           ),
@@ -2463,6 +2463,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             
             # Create ggplot for this cluster
             p_cluster <- ggplot2::ggplot(cluster_data_clean, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+              # Add bold reference lines at x=0 and y=0
+              ggplot2::geom_hline(yintercept = 0, color = "black", linewidth = 0.8, alpha = 0.7) +
+              ggplot2::geom_vline(xintercept = 0, color = "black", linewidth = 0.8, alpha = 0.7) +
               ggplot2::geom_point(ggplot2::aes(text = hover_text, color = experiment, 
                                               shape = ifelse(is_gene_of_interest, "Gene of Interest", "Other")), 
                                  size = ifelse(cluster_data_clean$is_gene_of_interest, 3, 2), 
@@ -2607,6 +2610,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           
           # Create ggplot2 scatter plot with gene highlighting
           p <- ggplot2::ggplot(plot_data_sampled, ggplot2::aes(x = log2FC_mast, y = log2FC_crispri)) +
+            # Add bold reference lines at x=0 and y=0
+            ggplot2::geom_hline(yintercept = 0, color = "black", linewidth = 0.8, alpha = 0.7) +
+            ggplot2::geom_vline(xintercept = 0, color = "black", linewidth = 0.8, alpha = 0.7) +
             ggplot2::geom_point(ggplot2::aes(text = hover_text, color = experiment, 
                                             shape = ifelse(is_gene_of_interest, "Gene of Interest", "Other")), 
                                size = ifelse(plot_data_sampled$is_gene_of_interest, 3, 2), 
