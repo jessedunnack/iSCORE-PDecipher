@@ -15,11 +15,12 @@
 #' @param combine_variants Logical, whether to combine gene variants
 #' @param progress_callback Function for progress updates
 #' @param use_enhanced_analysis Logical, whether to use enhanced direction-aware analysis (default TRUE)
+#' @param direction Character, which direction to analyze ("ALL", "UP", "DOWN"). Default "ALL" prevents directionality inflation.
 #' @return List with ranked signature discoveries
 #' @export
 discover_top_signatures <- function(enrichment_data, de_data = NULL, top_n = 10, min_cluster_breadth = 8,
                                    combine_variants = TRUE, progress_callback = NULL, 
-                                   use_enhanced_analysis = TRUE) {
+                                   use_enhanced_analysis = TRUE, direction = "ALL") {
   
   if (!is.null(progress_callback)) {
     progress_callback("Initializing signature discovery...", value = 0.1)
@@ -62,6 +63,7 @@ discover_top_signatures <- function(enrichment_data, de_data = NULL, top_n = 10,
       de_data = de_data,
       include_pathways = TRUE,
       use_enhanced_analysis = use_enhanced_analysis,
+      direction = direction,
       progress_callback = function(msg) {
         if (!is.null(progress_callback)) {
           pair_elapsed <- as.numeric(difftime(Sys.time(), pair_start_time, units = "secs"))

@@ -249,19 +249,30 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
     stop("Failed to prepare heatmap data: ", e$message)
   })
   
-  # Handle different metrics
+  # Handle different metrics with enhanced p-value visualization
+  is_pvalue_metric <- FALSE
+  raw_pvalues <- NULL
+  
   if (metric == "intersection_fisher_p_fdr_enhanced_hierarchical" && "intersection_fisher_p_fdr_enhanced_hierarchical" %in% colnames(signature_data)) {
-    plot_data$metric_value <- -log10(pmax(signature_data$intersection_fisher_p_fdr_enhanced_hierarchical, 1e-10))
+    raw_pvalues <- signature_data$intersection_fisher_p_fdr_enhanced_hierarchical
+    plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
     metric_label <- "FDR p-value (-log10)"
+    is_pvalue_metric <- TRUE
   } else if (metric == "intersection_fisher_p_fdr_hierarchical" && "intersection_fisher_p_fdr_hierarchical" %in% colnames(signature_data)) {
-    plot_data$metric_value <- -log10(pmax(signature_data$intersection_fisher_p_fdr_hierarchical, 1e-10))
+    raw_pvalues <- signature_data$intersection_fisher_p_fdr_hierarchical
+    plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
     metric_label <- "FDR p-value (-log10)"
+    is_pvalue_metric <- TRUE
   } else if (metric == "gene_fisher_p" && "gene_fisher_p" %in% colnames(signature_data)) {
-    plot_data$metric_value <- -log10(pmax(signature_data$gene_fisher_p, 1e-10))
+    raw_pvalues <- signature_data$gene_fisher_p
+    plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
     metric_label <- "Gene Overlap -log10(p-value)"
+    is_pvalue_metric <- TRUE
   } else if (metric == "pathway_fisher_p" && "pathway_fisher_p" %in% colnames(signature_data)) {
-    plot_data$metric_value <- -log10(pmax(signature_data$pathway_fisher_p, 1e-10))
+    raw_pvalues <- signature_data$pathway_fisher_p
+    plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
     metric_label <- "Pathway Overlap -log10(p-value)"
+    is_pvalue_metric <- TRUE
   } else if (metric == "gene_jaccard" && "gene_jaccard" %in% colnames(signature_data)) {
     plot_data$metric_value <- signature_data$gene_jaccard
     metric_label <- "Gene Jaccard Index"
@@ -313,14 +324,39 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
     if (!requireNamespace("heatmaply", quietly = TRUE)) {
       warning("heatmaply package not available, falling back to basic plotly heatmap")
       
-      # Fallback to basic plotly heatmap (current implementation)
-      plotly_colorscale <- switch(color_scale,
-        "viridis" = "Viridis",
-        "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
-        "Reds" = "Reds", 
-        "Blues" = "Blues",
-        "Viridis"  # fallback
-      )
+      # Fallback to basic plotly heatmap with enhanced p-value visualization
+      if (is_pvalue_metric) {
+        plotly_colorscale <- switch(color_scale,
+          "viridis" = "Viridis",
+          "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+          "Reds" = list(
+            c(0, "#F7F7F7"), c(0.2, "#FDDBC7"), c(0.4, "#F4A582"),
+            c(0.6, "#D6604D"), c(0.8, "#B2182B"), c(1, "#67001F")
+          ),
+          "Blues" = list(
+            c(0, "#F7FBFF"), c(0.2, "#DEEBF7"), c(0.4, "#C6DBEF"),
+            c(0.6, "#9ECAE1"), c(0.8, "#6BAED6"), c(1, "#08519C")
+          ),
+          "Significance" = list(
+            c(0, "#F0F0F0"), c(0.2, "#CCCCCC"), c(0.4, "#FEB24C"),
+            c(0.6, "#FD8D3C"), c(0.8, "#E31A1C"), c(1, "#800026")
+          ),
+          "Viridis"  # fallback
+        )
+        
+        plot_title <- paste0("Signature ", metric_label, " Across Gene Pairs and Clusters\n",
+                            "Significance threshold: p=0.05 (-log10 = ", round(-log10(0.05), 2), ")")
+      } else {
+        plotly_colorscale <- switch(color_scale,
+          "viridis" = "Viridis",
+          "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+          "Reds" = "Reds", 
+          "Blues" = "Blues",
+          "Viridis"  # fallback
+        )
+        
+        plot_title <- paste("Signature", metric_label, "Across Gene Pairs and Clusters")
+      }
       
       return(plotly::plot_ly(
         z = heatmap_matrix,
@@ -332,11 +368,12 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
           "<b>Gene Pair:</b> %{y}<br>",
           "<b>Cluster:</b> %{x}<br>",
           "<b>", metric_label, ":</b> %{z:.2f}<br>",
+          if(is_pvalue_metric) paste0("<b>Raw p-value:</b> ", "~10^-", "%{z:.1f}<br>") else "",
           "<extra></extra>"
         )
       ) %>%
       plotly::layout(
-        title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
+        title = plot_title,
         xaxis = list(title = "Cluster"),
         yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
       ))
@@ -346,21 +383,55 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
     cluster_rows <- clustering %in% c("both", "row")
     cluster_cols <- clustering %in% c("both", "column")
     
-    # Set up colors for heatmaply
-    heatmaply_colors <- switch(color_scale,
-      "viridis" = viridis::viridis(256),
-      "RdBu" = RColorBrewer::brewer.pal(11, "RdBu"),
-      "Reds" = RColorBrewer::brewer.pal(9, "Reds"),
-      "Blues" = RColorBrewer::brewer.pal(9, "Blues"),
-      viridis::viridis(256)  # fallback
-    )
+    # Set up enhanced colors for heatmaply with p-value considerations
+    if (is_pvalue_metric) {
+      # Enhanced color scales for p-value visualization
+      significance_threshold <- -log10(0.05)  # 1.301
+      
+      heatmaply_colors <- switch(color_scale,
+        "viridis" = viridis::viridis(256),
+        "RdBu" = RColorBrewer::brewer.pal(11, "RdBu"),
+        "Reds" = {
+          # Create discrete bins for significance levels
+          c("#F7F7F7", "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F")
+        },
+        "Blues" = {
+          # Create discrete bins for significance levels  
+          c("#F7FBFF", "#DEEBF7", "#C6DBEF", "#9ECAE1", "#6BAED6", "#08519C")
+        },
+        "Significance" = {
+          # Special discrete color scale for p-values
+          c("#F0F0F0", "#CCCCCC", "#FEB24C", "#FD8D3C", "#E31A1C", "#800026")
+        },
+        viridis::viridis(256)  # fallback
+      )
+      
+      # Add subtitle with significance information
+      heatmap_subtitle <- paste0("Significance threshold: p=0.05 (-log10 = ", round(significance_threshold, 2), ")")
+    } else {
+      # Standard color scales for non-p-value metrics
+      heatmaply_colors <- switch(color_scale,
+        "viridis" = viridis::viridis(256),
+        "RdBu" = RColorBrewer::brewer.pal(11, "RdBu"),
+        "Reds" = RColorBrewer::brewer.pal(9, "Reds"),
+        "Blues" = RColorBrewer::brewer.pal(9, "Blues"),
+        viridis::viridis(256)  # fallback
+      )
+      heatmap_subtitle <- ""
+    }
     
-    # Create clustered heatmap with dendrograms
+    # Create clustered heatmap with dendrograms and enhanced p-value visualization
+    heatmap_title <- if (is_pvalue_metric) {
+      paste("Interactive Signature", metric_label, "Heatmap\n", heatmap_subtitle)
+    } else {
+      paste("Interactive Signature", metric_label, "Heatmap")
+    }
+    
     heatmaply::heatmaply(
       heatmap_matrix,
       dendrogram = if(cluster_rows && cluster_cols) "both" else if(cluster_rows) "row" else if(cluster_cols) "column" else "none",
       colors = heatmaply_colors,
-      main = paste("Interactive Signature", metric_label, "Heatmap"),
+      main = heatmap_title,
       xlab = "Cluster",
       ylab = "Gene Pair (MAST vs CRISPRi)",
       margins = c(80, 150),  # Adjust margins for labels
@@ -372,14 +443,39 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
   }, error = function(e) {
     cat("[HEATMAP ERROR] Clustered heatmap creation failed:", e$message, "\n")
     
-    # Fallback to basic plotly heatmap
-    plotly_colorscale <- switch(color_scale,
-      "viridis" = "Viridis",
-      "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
-      "Reds" = "Reds", 
-      "Blues" = "Blues",
-      "Viridis"  # fallback
-    )
+    # Fallback to basic plotly heatmap with enhanced p-value visualization
+    if (is_pvalue_metric) {
+      plotly_colorscale <- switch(color_scale,
+        "viridis" = "Viridis",
+        "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+        "Reds" = list(
+          c(0, "#F7F7F7"), c(0.2, "#FDDBC7"), c(0.4, "#F4A582"),
+          c(0.6, "#D6604D"), c(0.8, "#B2182B"), c(1, "#67001F")
+        ),
+        "Blues" = list(
+          c(0, "#F7FBFF"), c(0.2, "#DEEBF7"), c(0.4, "#C6DBEF"),
+          c(0.6, "#9ECAE1"), c(0.8, "#6BAED6"), c(1, "#08519C")
+        ),
+        "Significance" = list(
+          c(0, "#F0F0F0"), c(0.2, "#CCCCCC"), c(0.4, "#FEB24C"),
+          c(0.6, "#FD8D3C"), c(0.8, "#E31A1C"), c(1, "#800026")
+        ),
+        "Viridis"  # fallback
+      )
+      
+      plot_title <- paste0("Signature ", metric_label, " Across Gene Pairs and Clusters\n",
+                          "Significance threshold: p=0.05 (-log10 = ", round(-log10(0.05), 2), ")")
+    } else {
+      plotly_colorscale <- switch(color_scale,
+        "viridis" = "Viridis",
+        "RdBu" = list(c(0, "blue"), c(0.5, "white"), c(1, "red")),
+        "Reds" = "Reds", 
+        "Blues" = "Blues",
+        "Viridis"  # fallback
+      )
+      
+      plot_title <- paste("Signature", metric_label, "Across Gene Pairs and Clusters")
+    }
     
     plotly::plot_ly(
       z = heatmap_matrix,
@@ -391,11 +487,12 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
         "<b>Gene Pair:</b> %{y}<br>",
         "<b>Cluster:</b> %{x}<br>",
         "<b>", metric_label, ":</b> %{z:.2f}<br>",
+        if(is_pvalue_metric) paste0("<b>Raw p-value:</b> ", "~10^-", "%{z:.1f}<br>") else "",
         "<extra></extra>"
       )
     ) %>%
     plotly::layout(
-      title = paste("Signature", metric_label, "Across Gene Pairs and Clusters"),
+      title = plot_title,
       xaxis = list(title = "Cluster"),
       yaxis = list(title = "Gene Pair (MAST vs CRISPRi)")
     )

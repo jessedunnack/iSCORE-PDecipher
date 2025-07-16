@@ -604,11 +604,12 @@ calculate_pathway_overlap_by_database <- function(mast_data, crispri_data,
 #' @param include_pathways Logical, whether to include pathway analysis
 #' @param use_enhanced_analysis Logical, whether to use enhanced direction-aware analysis (default TRUE)
 #' @param progress_callback Function to call for progress updates (optional)
+#' @param direction Character, which direction to analyze ("ALL", "UP", "DOWN"). Default "ALL" prevents directionality inflation.
 #' @return List with comprehensive signature analysis results
 #' @export
 analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = NULL, clusters = NULL,
                                         include_pathways = TRUE, use_enhanced_analysis = TRUE, 
-                                        progress_callback = NULL) {
+                                        progress_callback = NULL, direction = "ALL") {
   
   if (!is.null(progress_callback)) {
     progress_callback(paste("Analyzing", gene_pair$mast_gene, "vs", gene_pair$crispri_gene))
@@ -686,8 +687,18 @@ analyze_gene_pair_signatures <- function(gene_pair, enrichment_data, de_data = N
     }
     
     # Gene overlap analysis (using significant genes from enrichment terms)
-    mast_genes <- unique(unlist(strsplit(cluster_mast$geneID, "/")))
-    crispri_genes <- unique(unlist(strsplit(cluster_crispri$geneID, "/")))
+    # Apply direction filtering to avoid counting genes multiple times across UP/DOWN/ALL tests
+    if (direction != "ALL") {
+      cluster_mast_filtered <- cluster_mast[cluster_mast$direction == direction, ]
+      cluster_crispri_filtered <- cluster_crispri[cluster_crispri$direction == direction, ]
+    } else {
+      # For "ALL" direction, deduplicate genes that appear in multiple directions
+      cluster_mast_filtered <- cluster_mast
+      cluster_crispri_filtered <- cluster_crispri
+    }
+    
+    mast_genes <- unique(unlist(strsplit(cluster_mast_filtered$geneID, "/")))
+    crispri_genes <- unique(unlist(strsplit(cluster_crispri_filtered$geneID, "/")))
     
     # Remove NA and empty strings
     mast_genes <- mast_genes[!is.na(mast_genes) & mast_genes != ""]

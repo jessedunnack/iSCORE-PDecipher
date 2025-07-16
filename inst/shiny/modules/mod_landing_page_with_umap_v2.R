@@ -888,20 +888,49 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
                margin = list(l = 20, r = 20, t = 20, b = 20))
     })
     
-    # Gene table
+    # Gene table with experiment metadata for CRISPRi results
     output$gene_table <- DT::renderDataTable({
       gene_summary <- data$consolidated_data %>%
-        group_by(gene, method) %>%
+        # Include experiment information for CRISPRi results
+        mutate(
+          method_with_experiment = ifelse(
+            grepl("MixScale", method) & !is.na(experiment) & experiment != "default",
+            paste0(method, " (", experiment, ")"),
+            method
+          )
+        ) %>%
+        group_by(gene, method_with_experiment) %>%
         summarise(
           total_terms = n(),
           enrichment_types = n_distinct(enrichment_type),
           clusters = n_distinct(cluster),
+          experiments = if(any(grepl("MixScale", method_with_experiment))) {
+            n_distinct(experiment, na.rm = TRUE)
+          } else {
+            NA
+          },
           .groups = 'drop'
         ) %>%
+        # Rename columns for clarity
+        rename(Method = method_with_experiment) %>%
         arrange(desc(total_terms))
       
       DT::datatable(gene_summary,
-                    options = list(pageLength = 15),
+                    filter = 'top',  # Add column-specific filters at the top
+                    options = list(
+                      pageLength = 15,
+                      # Disable global search and use column-specific search instead
+                      searching = TRUE,
+                      # Add column-specific search hint
+                      columnDefs = list(
+                        list(targets = 0, searchable = TRUE),   # gene column - searchable
+                        list(targets = 1, searchable = FALSE),  # Method column - not searchable in global search
+                        list(targets = 2, searchable = FALSE),  # total_terms column - not searchable in global search
+                        list(targets = 3, searchable = FALSE),  # enrichment_types column - not searchable in global search
+                        list(targets = 4, searchable = FALSE),  # clusters column - not searchable in global search
+                        list(targets = 5, searchable = FALSE)   # experiments column - not searchable in global search
+                      )
+                    ),
                     rownames = FALSE) %>%
         formatStyle('total_terms',
                    background = styleColorBar(gene_summary$total_terms, 'lightblue'),

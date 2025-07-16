@@ -794,32 +794,99 @@ server <- function(input, output, session) {
     gene %in% valid_genes
   }
   
+  # Helper function to extract base gene name from variant
+  extract_base_gene <- function(gene_name) {
+    # Check if it's a mutation variant (e.g., VPS13C_A444P, SNCA_A30P)
+    if (grepl("_[A-Z][0-9]+[A-Z]$", gene_name)) {
+      # Extract base gene name before the underscore
+      return(sub("_[A-Z][0-9]+[A-Z]$", "", gene_name))
+    }
+    return(gene_name)
+  }
+  
+  # Helper function to check if a gene matches the selected gene (handles variants)
+  gene_matches_selection <- function(data_genes, selected_gene, available_genes) {
+    # If selected gene directly exists in data, use exact match
+    if (selected_gene %in% data_genes) {
+      return(data_genes == selected_gene)
+    }
+    
+    # Check if selected gene is a base gene name that should match variants
+    if (selected_gene %in% available_genes) {
+      # Find all variants of this base gene in available genes
+      base_genes <- sapply(available_genes, extract_base_gene)
+      variants <- available_genes[base_genes == selected_gene]
+      
+      if (length(variants) > 1) {
+        # Selected gene is a base name, match all variants
+        return(data_genes %in% variants)
+      }
+    }
+    
+    # Default: exact match
+    return(data_genes == selected_gene)
+  }
+  
   # Helper function to create labeled gene choices for dropdown
-  create_labeled_gene_choices <- function(genes, method_key) {
+  create_labeled_gene_choices <- function(genes, method_key, dataset_selection = NULL) {
     if (length(genes) == 0) return(character(0))
     
-    # Create display labels with source information
-    labeled_genes <- sapply(genes, function(gene) {
-      # Check if it's a MAST mutation variant
-      if (grepl("_[A-Z][0-9]+[A-Z]$", gene)) {
-        # It's a mutation variant (e.g., SNCA_A30P, VPS13C_W395C)
-        paste0(gene, " (MAST mutation)")
-      } else if (method_key == "MAST") {
-        # Non-variant MAST gene
-        paste0(gene, " (MAST)")
-      } else if (method_key == "MixScale_CRISPRi") {
-        # CRISPRi knockdown
-        paste0(gene, " (CRISPRi knockdown)")
-      } else if (method_key == "MixScale_CRISPRa") {
-        # CRISPRa activation
-        paste0(gene, " (CRISPRa activation)")
-      } else {
-        gene
-      }
-    })
+    # Check if we should consolidate variants (for "all datasets" selection)
+    consolidate_variants <- !is.null(dataset_selection) && dataset_selection == "all"
     
-    # Return named vector where names are display labels and values are actual gene names
-    setNames(genes, labeled_genes)
+    if (consolidate_variants) {
+      # Group genes by base name and consolidate variants
+      base_genes <- sapply(genes, extract_base_gene)
+      unique_base_genes <- unique(base_genes)
+      
+      # Create consolidated choices
+      consolidated_choices <- character(0)
+      for (base_gene in unique_base_genes) {
+        # Find all variants for this base gene
+        variants <- genes[base_genes == base_gene]
+        
+        if (length(variants) == 1) {
+          # Single gene, use as-is
+          gene_label <- if (grepl("_[A-Z][0-9]+[A-Z]$", variants[1])) {
+            paste0(base_gene, " (includes variants)")
+          } else {
+            base_gene
+          }
+          consolidated_choices[gene_label] <- variants[1]
+        } else {
+          # Multiple variants, consolidate under base name
+          gene_label <- paste0(base_gene, " (includes ", length(variants), " variants)")
+          # Use base gene name as value (query logic will handle variants)
+          consolidated_choices[gene_label] <- base_gene
+        }
+      }
+      
+      return(consolidated_choices)
+    } else {
+      # Original behavior for specific dataset selection
+      # Create display labels with source information
+      labeled_genes <- sapply(genes, function(gene) {
+        # Check if it's a MAST mutation variant
+        if (grepl("_[A-Z][0-9]+[A-Z]$", gene)) {
+          # It's a mutation variant (e.g., SNCA_A30P, VPS13C_W395C)
+          paste0(gene, " (MAST mutation)")
+        } else if (method_key == "MAST") {
+          # Non-variant MAST gene
+          paste0(gene, " (MAST)")
+        } else if (method_key == "MixScale_CRISPRi") {
+          # CRISPRi knockdown
+          paste0(gene, " (CRISPRi knockdown)")
+        } else if (method_key == "MixScale_CRISPRa") {
+          # CRISPRa activation
+          paste0(gene, " (CRISPRa activation)")
+        } else {
+          gene
+        }
+      })
+      
+      # Return named vector where names are display labels and values are actual gene names
+      return(setNames(genes, labeled_genes))
+    }
   }
   
   # Initialize app with data - run once on startup
@@ -901,8 +968,16 @@ server <- function(input, output, session) {
       valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
       
       if (length(valid_genes) > 0) {
-        # Create labeled choices
-        labeled_choices <- create_labeled_gene_choices(valid_genes, input$global_analysis_type)
+        # Determine if we should consolidate variants
+        # Consolidate when multiple dataset types are available (indicates "all datasets" scenario)
+        has_multiple_datasets <- length(app_data$available_genes_by_method) > 1
+        
+        # Create labeled choices with optional variant consolidation
+        labeled_choices <- create_labeled_gene_choices(
+          valid_genes, 
+          input$global_analysis_type,
+          dataset_selection = if(has_multiple_datasets) "all" else "single"
+        )
         
         # Keep current selection if still valid, otherwise pick first
         current_gene <- input$global_gene
@@ -930,28 +1005,42 @@ server <- function(input, output, session) {
       # Get gene column name
       gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
       
-      # Filter based on method key
+      # Filter based on method key using enhanced gene matching
+      available_genes <- app_data$available_genes_by_method[[input$global_analysis_type]] %||% character(0)
+      
       if (input$global_analysis_type == "MAST") {
+        gene_matches <- gene_matches_selection(
+          app_data$consolidated_data[[gene_col]], 
+          input$global_gene, 
+          available_genes
+        )
         filtered_data <- app_data$consolidated_data[
-          app_data$consolidated_data$method == "MAST" &
-          app_data$consolidated_data[[gene_col]] == input$global_gene,
+          app_data$consolidated_data$method == "MAST" & gene_matches,
         ]
       } else if (input$global_analysis_type == "MixScale_CRISPRi") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          gene_matches <- gene_matches_selection(
+            app_data$consolidated_data[[gene_col]], 
+            input$global_gene, 
+            available_genes
+          )
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
-            app_data$consolidated_data$modality == "CRISPRi" &
-            app_data$consolidated_data[[gene_col]] == input$global_gene,
+            app_data$consolidated_data$modality == "CRISPRi" & gene_matches,
           ]
         } else {
           filtered_data <- data.frame()
         }
       } else if (input$global_analysis_type == "MixScale_CRISPRa") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          gene_matches <- gene_matches_selection(
+            app_data$consolidated_data[[gene_col]], 
+            input$global_gene, 
+            available_genes
+          )
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
-            app_data$consolidated_data$modality == "CRISPRa" &
-            app_data$consolidated_data[[gene_col]] == input$global_gene,
+            app_data$consolidated_data$modality == "CRISPRa" & gene_matches,
           ]
         } else {
           filtered_data <- data.frame()
@@ -990,19 +1079,29 @@ server <- function(input, output, session) {
       # Get gene column name
       gene_col <- if ("gene" %in% names(app_data$consolidated_data)) "gene" else "mutation_perturbation"
       
-      # Filter based on method key
+      # Filter based on method key using enhanced gene matching
+      available_genes <- app_data$available_genes_by_method[[input$global_analysis_type]] %||% character(0)
+      
       if (input$global_analysis_type == "MAST") {
+        gene_matches <- gene_matches_selection(
+          app_data$consolidated_data[[gene_col]], 
+          input$global_gene, 
+          available_genes
+        )
         filtered_data <- app_data$consolidated_data[
-          app_data$consolidated_data$method == "MAST" &
-          app_data$consolidated_data[[gene_col]] == input$global_gene &
+          app_data$consolidated_data$method == "MAST" & gene_matches &
           app_data$consolidated_data$cluster == input$global_cluster,
         ]
       } else if (input$global_analysis_type == "MixScale_CRISPRi") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          gene_matches <- gene_matches_selection(
+            app_data$consolidated_data[[gene_col]], 
+            input$global_gene, 
+            available_genes
+          )
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
-            app_data$consolidated_data$modality == "CRISPRi" &
-            app_data$consolidated_data[[gene_col]] == input$global_gene &
+            app_data$consolidated_data$modality == "CRISPRi" & gene_matches &
             app_data$consolidated_data$cluster == input$global_cluster,
           ]
         } else {
@@ -1010,10 +1109,14 @@ server <- function(input, output, session) {
         }
       } else if (input$global_analysis_type == "MixScale_CRISPRa") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          gene_matches <- gene_matches_selection(
+            app_data$consolidated_data[[gene_col]], 
+            input$global_gene, 
+            available_genes
+          )
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
-            app_data$consolidated_data$modality == "CRISPRa" &
-            app_data$consolidated_data[[gene_col]] == input$global_gene &
+            app_data$consolidated_data$modality == "CRISPRa" & gene_matches &
             app_data$consolidated_data$cluster == input$global_cluster,
           ]
         } else {
@@ -1047,10 +1150,17 @@ server <- function(input, output, session) {
     req(input$global_analysis_type, input$global_gene, input$global_cluster, input$global_experiment)
     
     if (!is.null(app_data$consolidated_data)) {
+      # Enhanced gene matching for consolidated variants
+      available_genes <- app_data$available_genes_by_method[[input$global_analysis_type]] %||% character(0)
+      gene_matches <- gene_matches_selection(
+        app_data$consolidated_data$gene, 
+        input$global_gene, 
+        available_genes
+      )
+      
       # Get available enrichment types for current selection
       available_types <- unique(app_data$consolidated_data[
-        app_data$consolidated_data$method == input$global_analysis_type &
-        app_data$consolidated_data$gene == input$global_gene &
+        app_data$consolidated_data$method == input$global_analysis_type & gene_matches &
         app_data$consolidated_data$cluster == input$global_cluster &
         app_data$consolidated_data$experiment == input$global_experiment,
         "enrichment_type"

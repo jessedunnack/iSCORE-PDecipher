@@ -39,7 +39,8 @@
       "Bash(git check-ignore:*)",
       "Bash(conda run:*)",
       "Bash(cut:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(conda activate seuratv4)"
     ],
     "deny": []
   }

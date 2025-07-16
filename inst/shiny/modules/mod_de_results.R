@@ -374,23 +374,150 @@ mod_de_results_ui <- function(id) {
       )
     ),
     
-    # Bottom panel: Summary statistics and overlapping genes
+    # Bottom panel: Summary statistics, overlapping genes, and cross-cluster analysis
     fluidRow(
       column(12,
-        wellPanel(
-          fluidRow(
-            # Left half: Compact summary statistics
-            column(6,
-              h4("Summary Statistics"),
-              div(id = ns("summary_stats"),
-                uiOutput(ns("stats_content"))
+        tabsetPanel(
+          tabPanel("Summary & Overlaps",
+            wellPanel(
+              fluidRow(
+                # Left half: Compact summary statistics
+                column(6,
+                  h4("Summary Statistics"),
+                  div(id = ns("summary_stats"),
+                    uiOutput(ns("stats_content"))
+                  )
+                ),
+                # Right half: Overlapping genes list
+                column(6,
+                  h4("Overlapping DE Genes"),
+                  div(id = ns("overlap_genes"),
+                    uiOutput(ns("overlap_content"))
+                  )
+                )
               )
-            ),
-            # Right half: Overlapping genes list
-            column(6,
-              h4("Overlapping DE Genes"),
-              div(id = ns("overlap_genes"),
-                uiOutput(ns("overlap_content"))
+            )
+          ),
+          tabPanel("Cross-Cluster Analysis",
+            wellPanel(
+              fluidRow(
+                column(12,
+                  h4("Cross-Cluster DE Gene Analysis", icon("layer-group")),
+                  p("Identify genes that are differentially expressed across multiple clusters for the selected gene/mutation.", 
+                    style = "color: #666; margin-bottom: 20px;"),
+                  
+                  # Controls for cross-cluster analysis
+                  fluidRow(
+                    column(4,
+                      selectInput(ns("cross_cluster_gene"),
+                                 "Select Gene/Mutation:",
+                                 choices = c("Choose a gene..." = ""),
+                                 selected = "")
+                    ),
+                    column(4,
+                      numericInput(ns("min_clusters"),
+                                  "Min. Clusters:",
+                                  value = 2,
+                                  min = 1,
+                                  max = 20)
+                    ),
+                    column(4,
+                      numericInput(ns("pvalue_threshold"),
+                                  "P-value Threshold:",
+                                  value = 0.05,
+                                  min = 0.001,
+                                  max = 0.1,
+                                  step = 0.01)
+                    )
+                  ),
+                  
+                  # Cross-cluster results table
+                  div(style = "margin-top: 20px;",
+                    h5("Genes DE in Multiple Clusters"),
+                    DT::dataTableOutput(ns("cross_cluster_table"))
+                  ),
+                  
+                  # Cross-cluster heatmap
+                  div(style = "margin-top: 20px;",
+                    h5("Cross-Cluster DE Status Heatmap"),
+                    shinycssloaders::withSpinner(
+                      plotOutput(ns("cross_cluster_heatmap"), height = "500px"),
+                      type = 6,
+                      color = "#3c8dbc"
+                    )
+                  )
+                )
+              )
+            )
+          ),
+          tabPanel("DE Gene Overlap Heatmap",
+            wellPanel(
+              fluidRow(
+                column(12,
+                  h4("Fisher's Test Heatmap - All DE Genes", icon("th")),
+                  p("Compare overlapping DE genes between different mutations/perturbations using Fisher's exact test.", 
+                    style = "color: #666; margin-bottom: 20px;"),
+                  
+                  # Controls for DE gene heatmap
+                  fluidRow(
+                    column(3,
+                      selectInput(ns("heatmap_cluster"),
+                                 "Select Cluster:",
+                                 choices = c("Choose a cluster..." = ""),
+                                 selected = "")
+                    ),
+                    column(3,
+                      selectInput(ns("heatmap_method"),
+                                 "Analysis Method:",
+                                 choices = c("Both MAST & MixScale" = "both",
+                                           "MAST only" = "mast",
+                                           "MixScale only" = "mixscale"),
+                                 selected = "both")
+                    ),
+                    column(3,
+                      selectInput(ns("heatmap_direction"),
+                                 "Direction Filter:",
+                                 choices = c(
+                                   "All directions (deduplicated)" = "ALL",
+                                   "Up-regulated only" = "UP",
+                                   "Down-regulated only" = "DOWN"
+                                 ),
+                                 selected = "ALL")
+                    ),
+                    column(3,
+                      numericInput(ns("min_genes_overlap"),
+                                  "Min. Genes for Test:",
+                                  value = 5,
+                                  min = 1,
+                                  max = 50)
+                    )
+                  ),
+                  
+                  # Direction explanation
+                  div(class = "alert alert-info", style = "margin-top: 10px; font-size: 0.85em;",
+                    icon("info-circle"),
+                    tags$strong(" Direction Filtering: "), 
+                    "Controls which gene expression direction to analyze. 'All directions' prevents counting genes multiple times across UP/DOWN tests, ",
+                    "ensuring accurate Fisher's exact test calculations (similar to the fix applied to gene-pair analysis)."
+                  ),
+                  
+                  # DE gene overlap heatmap
+                  div(style = "margin-top: 20px;",
+                    h5("Gene Overlap Significance Matrix"),
+                    shinycssloaders::withSpinner(
+                      plotOutput(ns("de_overlap_heatmap"), height = "600px"),
+                      type = 6,
+                      color = "#3c8dbc"
+                    )
+                  ),
+                  
+                  # Download button for heatmap data
+                  div(style = "margin-top: 15px; text-align: center;",
+                    downloadButton(ns("download_overlap_matrix"), 
+                                  "Download Overlap Matrix", 
+                                  class = "btn btn-primary")
+                  )
+                )
               )
             )
           )
@@ -2331,6 +2458,490 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             MixScale_pvalue = numeric(0)
           )
           write.csv(empty_df, file, row.names = FALSE)
+        }
+      }
+    )
+    
+    # === CROSS-CLUSTER ANALYSIS LOGIC ===
+    
+    # Populate gene choices for cross-cluster analysis
+    observe({
+      if (!is.null(values$de_data_mast) || !is.null(values$de_data_mixscale)) {
+        gene_choices <- c("Choose a gene..." = "")
+        
+        # Get available genes from MAST data
+        if (!is.null(values$de_data_mast)) {
+          mast_genes <- unique(values$de_data_mast$gene)
+          gene_choices <- c(gene_choices, setNames(mast_genes, paste0(mast_genes, " (MAST)")))
+        }
+        
+        # Get available genes from MixScale data
+        if (!is.null(values$de_data_mixscale)) {
+          mixscale_genes <- unique(values$de_data_mixscale$gene)
+          gene_choices <- c(gene_choices, setNames(mixscale_genes, paste0(mixscale_genes, " (MixScale)")))
+        }
+        
+        updateSelectInput(session, "cross_cluster_gene", choices = gene_choices)
+      }
+    })
+    
+    # Cross-cluster analysis table
+    output$cross_cluster_table <- DT::renderDataTable({
+      req(input$cross_cluster_gene)
+      req(input$cross_cluster_gene != "")
+      
+      # Determine if this is MAST or MixScale gene
+      selected_gene <- input$cross_cluster_gene
+      
+      cross_cluster_data <- NULL
+      
+      # Process MAST data
+      if (!is.null(values$de_data_mast)) {
+        mast_subset <- values$de_data_mast[values$de_data_mast$gene == selected_gene, ]
+        
+        if (nrow(mast_subset) > 0) {
+          cross_cluster_data <- mast_subset %>%
+            filter(p_val_adj < input$pvalue_threshold) %>%
+            group_by(gene_name) %>%
+            summarise(
+              clusters_affected = n(),
+              clusters_list = paste(unique(cluster), collapse = ", "),
+              mean_log2FC = round(mean(log2FC, na.rm = TRUE), 3),
+              min_pvalue = min(p_val_adj, na.rm = TRUE),
+              method = "MAST",
+              .groups = "drop"
+            ) %>%
+            filter(clusters_affected >= input$min_clusters) %>%
+            arrange(desc(clusters_affected), min_pvalue)
+        }
+      }
+      
+      # Process MixScale data
+      if (!is.null(values$de_data_mixscale) && is.null(cross_cluster_data)) {
+        mixscale_subset <- values$de_data_mixscale[values$de_data_mixscale$gene == selected_gene, ]
+        
+        if (nrow(mixscale_subset) > 0) {
+          cross_cluster_data <- mixscale_subset %>%
+            filter(p_val_adj < input$pvalue_threshold) %>%
+            group_by(gene_name) %>%
+            summarise(
+              clusters_affected = n(),
+              clusters_list = paste(unique(cluster), collapse = ", "),
+              mean_log2FC = round(mean(log2FC, na.rm = TRUE), 3),
+              min_pvalue = min(p_val_adj, na.rm = TRUE),
+              method = "MixScale",
+              .groups = "drop"
+            ) %>%
+            filter(clusters_affected >= input$min_clusters) %>%
+            arrange(desc(clusters_affected), min_pvalue)
+        }
+      }
+      
+      if (is.null(cross_cluster_data) || nrow(cross_cluster_data) == 0) {
+        return(DT::datatable(
+          data.frame(Message = "No genes found meeting the criteria"),
+          options = list(dom = 't'), rownames = FALSE
+        ))
+      }
+      
+      # Format for display
+      display_data <- cross_cluster_data %>%
+        select(gene_name, clusters_affected, mean_log2FC, min_pvalue, clusters_list, method)
+      
+      colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters", "Method")
+      
+      DT::datatable(display_data,
+                   options = list(
+                     pageLength = 15,
+                     scrollX = TRUE,
+                     order = list(list(1, 'desc'))  # Sort by # Clusters descending
+                   ),
+                   rownames = FALSE) %>%
+        DT::formatRound(c("Mean log2FC"), digits = 3) %>%
+        DT::formatSignif(c("Min p-value"), digits = 3)
+    })
+    
+    # Cross-cluster heatmap
+    output$cross_cluster_heatmap <- renderPlot({
+      req(input$cross_cluster_gene)
+      req(input$cross_cluster_gene != "")
+      
+      selected_gene <- input$cross_cluster_gene
+      
+      # Get data for selected gene
+      plot_data <- NULL
+      
+      # Process MAST data
+      if (!is.null(values$de_data_mast)) {
+        mast_subset <- values$de_data_mast[values$de_data_mast$gene == selected_gene, ]
+        
+        if (nrow(mast_subset) > 0) {
+          plot_data <- mast_subset %>%
+            filter(p_val_adj < input$pvalue_threshold) %>%
+            select(gene_name, cluster, log2FC, p_val_adj) %>%
+            mutate(
+              significant = p_val_adj < input$pvalue_threshold,
+              log_p = -log10(p_val_adj)
+            )
+        }
+      }
+      
+      # Process MixScale data
+      if (!is.null(values$de_data_mixscale) && is.null(plot_data)) {
+        mixscale_subset <- values$de_data_mixscale[values$de_data_mixscale$gene == selected_gene, ]
+        
+        if (nrow(mixscale_subset) > 0) {
+          plot_data <- mixscale_subset %>%
+            filter(p_val_adj < input$pvalue_threshold) %>%
+            select(gene_name, cluster, log2FC, p_val_adj) %>%
+            mutate(
+              significant = p_val_adj < input$pvalue_threshold,
+              log_p = -log10(p_val_adj)
+            )
+        }
+      }
+      
+      if (is.null(plot_data) || nrow(plot_data) == 0) {
+        # Create empty plot with message
+        ggplot() +
+          annotate("text", x = 0.5, y = 0.5, label = "No significant genes found", size = 6) +
+          theme_void() +
+          xlim(0, 1) + ylim(0, 1)
+      } else {
+        # Filter to genes that appear in multiple clusters
+        genes_multi_cluster <- plot_data %>%
+          group_by(gene_name) %>%
+          summarise(n_clusters = n_distinct(cluster), .groups = "drop") %>%
+          filter(n_clusters >= input$min_clusters) %>%
+          pull(gene_name)
+        
+        plot_data_filtered <- plot_data %>%
+          filter(gene_name %in% genes_multi_cluster)
+        
+        if (nrow(plot_data_filtered) == 0) {
+          ggplot() +
+            annotate("text", x = 0.5, y = 0.5, label = "No genes meet minimum cluster criteria", size = 6) +
+            theme_void() +
+            xlim(0, 1) + ylim(0, 1)
+        } else {
+          # Create heatmap
+          ggplot(plot_data_filtered, aes(x = cluster, y = gene_name, fill = log2FC)) +
+            geom_tile(color = "white", size = 0.5) +
+            scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                               name = "log2FC") +
+            theme_minimal() +
+            theme(
+              axis.text.x = element_text(angle = 45, hjust = 1),
+              axis.text.y = element_text(size = 8),
+              panel.grid = element_blank()
+            ) +
+            labs(
+              title = paste("Cross-Cluster DE Status:", selected_gene),
+              x = "Cluster",
+              y = "Gene",
+              subtitle = paste("Genes significant in ≥", input$min_clusters, "clusters")
+            )
+        }
+      }
+    })
+    
+    # === DE GENE OVERLAP HEATMAP LOGIC ===
+    
+    # Populate cluster choices for heatmap
+    observe({
+      if (!is.null(values$de_data_mast) || !is.null(values$de_data_mixscale)) {
+        cluster_choices <- c("Choose a cluster..." = "")
+        
+        # Get available clusters
+        if (!is.null(values$de_data_mast)) {
+          mast_clusters <- unique(values$de_data_mast$cluster)
+          cluster_choices <- c(cluster_choices, mast_clusters)
+        }
+        
+        if (!is.null(values$de_data_mixscale)) {
+          mixscale_clusters <- unique(values$de_data_mixscale$cluster)
+          cluster_choices <- c(cluster_choices, unique(c(cluster_choices, mixscale_clusters)))
+        }
+        
+        updateSelectInput(session, "heatmap_cluster", choices = cluster_choices)
+      }
+    })
+    
+    # DE gene overlap heatmap
+    output$de_overlap_heatmap <- renderPlot({
+      req(input$heatmap_cluster)
+      req(input$heatmap_cluster != "")
+      
+      selected_cluster <- input$heatmap_cluster
+      selected_method <- input$heatmap_method
+      selected_direction <- input$heatmap_direction
+      min_genes <- input$min_genes_overlap
+      
+      # Get data for selected cluster and method with direction filtering
+      gene_lists <- list()
+      
+      if (selected_method %in% c("both", "mast") && !is.null(values$de_data_mast)) {
+        mast_cluster_data <- values$de_data_mast[values$de_data_mast$cluster == selected_cluster, ]
+        
+        if (nrow(mast_cluster_data) > 0) {
+          for (gene in unique(mast_cluster_data$gene)) {
+            gene_subset <- mast_cluster_data[mast_cluster_data$gene == gene, ]
+            
+            # Apply direction filtering to prevent inflation
+            if (selected_direction == "UP") {
+              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+            } else if (selected_direction == "DOWN") {
+              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+            } else {  # ALL - deduplicated
+              significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+            }
+            
+            if (length(significant_genes) >= min_genes) {
+              gene_lists[[paste0(gene, " (MAST)")]] <- significant_genes
+            }
+          }
+        }
+      }
+      
+      if (selected_method %in% c("both", "mixscale") && !is.null(values$de_data_mixscale)) {
+        mixscale_cluster_data <- values$de_data_mixscale[values$de_data_mixscale$cluster == selected_cluster, ]
+        
+        if (nrow(mixscale_cluster_data) > 0) {
+          for (gene in unique(mixscale_cluster_data$gene)) {
+            gene_subset <- mixscale_cluster_data[mixscale_cluster_data$gene == gene, ]
+            
+            # Apply direction filtering to prevent inflation
+            if (selected_direction == "UP") {
+              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+            } else if (selected_direction == "DOWN") {
+              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+            } else {  # ALL - deduplicated
+              significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+            }
+            
+            if (length(significant_genes) >= min_genes) {
+              gene_lists[[paste0(gene, " (MixScale)")]] <- significant_genes
+            }
+          }
+        }
+      }
+      
+      if (length(gene_lists) < 2) {
+        ggplot() +
+          annotate("text", x = 0.5, y = 0.5, 
+                  label = "Need at least 2 gene sets with sufficient DE genes", size = 6) +
+          theme_void() +
+          xlim(0, 1) + ylim(0, 1)
+      } else {
+        # Calculate Fisher's exact test matrix
+        gene_names <- names(gene_lists)
+        n_genes <- length(gene_names)
+        
+        # Get all unique genes for background
+        all_genes <- unique(unlist(gene_lists))
+        background_size <- length(all_genes)
+        
+        # Initialize matrices
+        p_matrix <- matrix(1, nrow = n_genes, ncol = n_genes)
+        overlap_matrix <- matrix(0, nrow = n_genes, ncol = n_genes)
+        
+        rownames(p_matrix) <- colnames(p_matrix) <- gene_names
+        rownames(overlap_matrix) <- colnames(overlap_matrix) <- gene_names
+        
+        # Calculate pairwise Fisher's tests
+        for (i in 1:n_genes) {
+          for (j in 1:n_genes) {
+            if (i != j) {
+              genes1 <- gene_lists[[i]]
+              genes2 <- gene_lists[[j]]
+              
+              overlap <- intersect(genes1, genes2)
+              overlap_count <- length(overlap)
+              
+              overlap_matrix[i, j] <- overlap_count
+              
+              if (overlap_count > 0) {
+                # Fisher's exact test
+                genes1_only <- length(genes1) - overlap_count
+                genes2_only <- length(genes2) - overlap_count
+                neither <- background_size - length(genes1) - length(genes2) + overlap_count
+                
+                if (genes1_only >= 0 && genes2_only >= 0 && neither >= 0) {
+                  contingency_matrix <- matrix(c(overlap_count, genes1_only, genes2_only, neither), 
+                                             nrow = 2, byrow = TRUE)
+                  
+                  tryCatch({
+                    fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
+                    p_matrix[i, j] <- fisher_result$p.value
+                  }, error = function(e) {
+                    p_matrix[i, j] <- 1
+                  })
+                }
+              }
+            } else {
+              overlap_matrix[i, j] <- length(gene_lists[[i]])
+            }
+          }
+        }
+        
+        # Convert to data frame for ggplot
+        p_matrix_long <- expand.grid(Gene1 = gene_names, Gene2 = gene_names)
+        p_matrix_long$p_value <- as.vector(p_matrix)
+        p_matrix_long$overlap <- as.vector(overlap_matrix)
+        p_matrix_long$neg_log_p <- -log10(p_matrix_long$p_value)
+        
+        # Cap extremely high values for visualization
+        p_matrix_long$neg_log_p[p_matrix_long$neg_log_p > 10] <- 10
+        
+        # Create enhanced heatmap with significance threshold visualization
+        significance_threshold <- -log10(0.05)  # 1.301
+        
+        ggplot(p_matrix_long, aes(x = Gene1, y = Gene2, fill = neg_log_p)) +
+          geom_tile(color = "white", size = 0.5) +
+          geom_text(aes(label = overlap), color = "black", size = 3) +
+          # Enhanced color scale with discrete bins for significance
+          scale_fill_gradientn(
+            colors = c("#F7F7F7", "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F"),
+            values = c(0, 0.13, 0.3, 0.5, 0.7, 1),  # Custom breaks emphasizing significance threshold
+            name = "-log10(p)", 
+            limits = c(0, 10),
+            breaks = c(0, round(significance_threshold, 1), 2, 5, 10),
+            labels = c("0 (p=1)", paste0(round(significance_threshold, 1), " (p=0.05)"), "2", "5", "10+")
+          ) +
+          theme_minimal() +
+          theme(
+            axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+            axis.text.y = element_text(size = 10),
+            axis.title = element_blank(),
+            panel.grid = element_blank(),
+            legend.position = "right"
+          ) +
+          labs(
+            title = paste("DE Gene Overlap Significance -", selected_cluster, "-", selected_direction),
+            subtitle = paste0("Fisher's exact test p-values (numbers show overlap counts) - Direction-filtered to prevent inflation\n",
+                             "Significance threshold: p=0.05 (-log10 = ", round(significance_threshold, 2), ")")
+          ) +
+          coord_equal()
+      }
+    })
+    
+    # Download handler for overlap matrix
+    output$download_overlap_matrix <- downloadHandler(
+      filename = function() {
+        paste0("de_overlap_matrix_", input$heatmap_cluster, "_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        req(input$heatmap_cluster)
+        req(input$heatmap_cluster != "")
+        
+        # Generate the same matrix data as in the plot
+        selected_cluster <- input$heatmap_cluster
+        selected_method <- input$heatmap_method
+        selected_direction <- input$heatmap_direction
+        min_genes <- input$min_genes_overlap
+        
+        # Recreate gene lists (same logic as plot with direction filtering)
+        gene_lists <- list()
+        
+        if (selected_method %in% c("both", "mast") && !is.null(values$de_data_mast)) {
+          mast_cluster_data <- values$de_data_mast[values$de_data_mast$cluster == selected_cluster, ]
+          
+          if (nrow(mast_cluster_data) > 0) {
+            for (gene in unique(mast_cluster_data$gene)) {
+              gene_subset <- mast_cluster_data[mast_cluster_data$gene == gene, ]
+              
+              # Apply direction filtering to prevent inflation
+              if (selected_direction == "UP") {
+                significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+              } else if (selected_direction == "DOWN") {
+                significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+              } else {  # ALL - deduplicated
+                significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+              }
+              
+              if (length(significant_genes) >= min_genes) {
+                gene_lists[[paste0(gene, " (MAST)")]] <- significant_genes
+              }
+            }
+          }
+        }
+        
+        if (selected_method %in% c("both", "mixscale") && !is.null(values$de_data_mixscale)) {
+          mixscale_cluster_data <- values$de_data_mixscale[values$de_data_mixscale$cluster == selected_cluster, ]
+          
+          if (nrow(mixscale_cluster_data) > 0) {
+            for (gene in unique(mixscale_cluster_data$gene)) {
+              gene_subset <- mixscale_cluster_data[mixscale_cluster_data$gene == gene, ]
+              
+              # Apply direction filtering to prevent inflation
+              if (selected_direction == "UP") {
+                significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+              } else if (selected_direction == "DOWN") {
+                significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+              } else {  # ALL - deduplicated
+                significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+              }
+              
+              if (length(significant_genes) >= min_genes) {
+                gene_lists[[paste0(gene, " (MixScale)")]] <- significant_genes
+              }
+            }
+          }
+        }
+        
+        if (length(gene_lists) >= 2) {
+          # Create the overlap matrix
+          gene_names <- names(gene_lists)
+          n_genes <- length(gene_names)
+          all_genes <- unique(unlist(gene_lists))
+          background_size <- length(all_genes)
+          
+          overlap_data <- data.frame()
+          
+          for (i in 1:n_genes) {
+            for (j in 1:n_genes) {
+              genes1 <- gene_lists[[i]]
+              genes2 <- gene_lists[[j]]
+              overlap <- intersect(genes1, genes2)
+              overlap_count <- length(overlap)
+              
+              # Calculate Fisher's test if different genes
+              p_value <- 1
+              if (i != j && overlap_count > 0) {
+                genes1_only <- length(genes1) - overlap_count
+                genes2_only <- length(genes2) - overlap_count
+                neither <- background_size - length(genes1) - length(genes2) + overlap_count
+                
+                if (genes1_only >= 0 && genes2_only >= 0 && neither >= 0) {
+                  contingency_matrix <- matrix(c(overlap_count, genes1_only, genes2_only, neither), 
+                                             nrow = 2, byrow = TRUE)
+                  
+                  tryCatch({
+                    fisher_result <- fisher.test(contingency_matrix, alternative = "greater")
+                    p_value <- fisher_result$p.value
+                  }, error = function(e) {
+                    p_value <- 1
+                  })
+                }
+              } else if (i == j) {
+                p_value <- NA  # Self-comparison
+              }
+              
+              overlap_data <- rbind(overlap_data, data.frame(
+                Gene1 = gene_names[i],
+                Gene2 = gene_names[j],
+                Overlap_Count = overlap_count,
+                P_Value = p_value,
+                Gene1_Total = length(genes1),
+                Gene2_Total = length(genes2)
+              ))
+            }
+          }
+          
+          write.csv(overlap_data, file, row.names = FALSE)
+        } else {
+          # Write empty file with message
+          write.csv(data.frame(Message = "Insufficient data for analysis"), file, row.names = FALSE)
         }
       }
     )

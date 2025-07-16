@@ -201,7 +201,12 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       
       data <- gene_data()
       
-      # Create composite key to match
+      # Debug logging for troubleshooting
+      cat("[GENE LOOKUP DEBUG] Looking up term_id:", term_id, "\n")
+      cat("[GENE LOOKUP DEBUG] Current selection:", 
+          paste(names(current_selection), current_selection, sep = "=", collapse = ", "), "\n")
+      
+      # Create composite key to match (exact match)
       composite_key <- paste(
         current_selection$analysis_type,
         current_selection$gene,
@@ -213,21 +218,79 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         sep = "|"
       )
       
-      # Try exact match
+      cat("[GENE LOOKUP DEBUG] Composite key:", composite_key, "\n")
+      
+      # Try exact match first
       match_idx <- which(data$composite_key == composite_key)
       
       if (length(match_idx) > 0) {
+        cat("[GENE LOOKUP DEBUG] Exact match found\n")
         genes <- unlist(strsplit(data$associated_genes[match_idx[1]], "/"))
         return(list(genes = genes, error = NULL))
       }
       
-      # Fallback: find any match for this term
-      term_matches <- data[data$term_id == term_id, ]
+      cat("[GENE LOOKUP DEBUG] Exact match failed, trying enhanced fallbacks\n")
+      
+      # ENHANCED FALLBACK STRATEGY for PerturbSeq data
+      # 1. Try partial match without "default" field (common PerturbSeq issue)
+      partial_key_1 <- paste(
+        current_selection$analysis_type,
+        current_selection$gene,
+        current_selection$cluster,
+        current_selection$enrichment_type,
+        current_selection$direction,
+        term_id,
+        sep = "|"
+      )
+      
+      # Look for keys that contain the essential components
+      partial_matches <- data[grepl(paste(
+        current_selection$analysis_type,
+        current_selection$gene,
+        current_selection$cluster,
+        current_selection$enrichment_type,
+        current_selection$direction,
+        sep = "\\|"), data$composite_key, fixed = FALSE), ]
+      
+      # Filter by term_id
+      partial_matches <- partial_matches[partial_matches$term_id == term_id, ]
+      
+      if (nrow(partial_matches) > 0) {
+        cat("[GENE LOOKUP DEBUG] Partial match (without default) found\n")
+        genes <- unlist(strsplit(partial_matches$associated_genes[1], "/"))
+        return(list(genes = genes, error = NULL))
+      }
+      
+      # 2. Try match by term_id + enrichment_type + gene (ignore cluster/direction)
+      flexible_matches <- data[
+        data$term_id == term_id & 
+        grepl(current_selection$enrichment_type, data$composite_key, fixed = TRUE) &
+        grepl(current_selection$gene, data$composite_key, fixed = TRUE),
+      ]
+      
+      if (nrow(flexible_matches) > 0) {
+        cat("[GENE LOOKUP DEBUG] Flexible match (term_id + enrichment_type + gene) found\n")
+        genes <- unlist(strsplit(flexible_matches$associated_genes[1], "/"))
+        return(list(genes = genes, error = NULL))
+      }
+      
+      # 3. Try case-insensitive match for term_id only
+      term_matches <- data[tolower(data$term_id) == tolower(term_id), ]
       if (nrow(term_matches) > 0) {
+        cat("[GENE LOOKUP DEBUG] Case-insensitive term_id match found\n")
         genes <- unlist(strsplit(term_matches$associated_genes[1], "/"))
         return(list(genes = genes, error = NULL))
       }
       
+      # 4. Final fallback: any match for this term ID (original fallback)
+      term_matches <- data[data$term_id == term_id, ]
+      if (nrow(term_matches) > 0) {
+        cat("[GENE LOOKUP DEBUG] Final fallback match found\n")
+        genes <- unlist(strsplit(term_matches$associated_genes[1], "/"))
+        return(list(genes = genes, error = NULL))
+      }
+      
+      cat("[GENE LOOKUP DEBUG] No matches found for term_id:", term_id, "\n")
       return(list(genes = NULL, error = "No genes found"))
     }
     
