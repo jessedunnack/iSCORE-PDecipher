@@ -3029,6 +3029,45 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         crispri_genes <- unique(unlist(strsplit(as.character(shared_crispri_terms$geneID), "/")))
         crispri_genes <- crispri_genes[crispri_genes != "" & !is.na(crispri_genes)]
         
+        # Convert Entrez IDs to gene symbols if needed
+        # Check if we have numeric IDs that need conversion
+        all_genes <- union(mast_genes, crispri_genes)
+        numeric_ids <- all_genes[grepl("^[0-9]+$", all_genes)]
+        
+        if (length(numeric_ids) > 0) {
+          cat("[DETAILS DEBUG] Converting", length(numeric_ids), "Entrez IDs to gene symbols\n")
+          
+          # Use clusterProfiler's bitr function for conversion
+          if (requireNamespace("clusterProfiler", quietly = TRUE) && 
+              requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+            tryCatch({
+              conversion <- clusterProfiler::bitr(
+                numeric_ids, 
+                fromType = "ENTREZID", 
+                toType = "SYMBOL", 
+                OrgDb = org.Hs.eg.db::org.Hs.eg.db
+              )
+              
+              # Create mapping
+              id_to_symbol <- setNames(conversion$SYMBOL, conversion$ENTREZID)
+              
+              # Convert in both gene lists
+              mast_genes <- ifelse(mast_genes %in% names(id_to_symbol), 
+                                  id_to_symbol[mast_genes], 
+                                  mast_genes)
+              crispri_genes <- ifelse(crispri_genes %in% names(id_to_symbol), 
+                                      id_to_symbol[crispri_genes], 
+                                      crispri_genes)
+              
+              cat("[DETAILS DEBUG] Successfully converted IDs\n")
+            }, error = function(e) {
+              cat("[DETAILS DEBUG] Warning: Could not convert Entrez IDs:", e$message, "\n")
+            })
+          } else {
+            cat("[DETAILS DEBUG] Warning: clusterProfiler not available for ID conversion\n")
+          }
+        }
+        
         # Get genes that appear in shared terms from BOTH methods
         shared_genes <- intersect(mast_genes, crispri_genes)
         
@@ -3135,6 +3174,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
             `Database` = unique_pathways$enrichment_type,
             stringsAsFactors = FALSE
           )
+          
+          # Add note about the count
+          attr(display_df, "note") <- paste0(
+            "Note: ", length(shared_descriptions), " unique pathway descriptions found. ",
+            "Some pathways appear in multiple databases, resulting in ", 
+            nrow(unique_pathways), " total entries."
+          )
+          
           return(display_df)
         } else {
           return(data.frame(Message = "Unable to format pathway data"))
