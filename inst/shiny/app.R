@@ -68,8 +68,8 @@ if (!exists("get_significant_terms_from_consolidated")) {
       filtered_data <- filtered_data[filtered_data$enrichment_type == enrichment_type, ]
     }
     
-    # Filter by direction (FIXED: only filter when not "ALL")
-    if (!is.null(direction) && direction != "ALL") {
+    # Filter by direction (FIXED: always filter to prevent inflation)
+    if (!is.null(direction)) {
       filtered_data <- filtered_data[filtered_data$direction == direction, ]
     }
     
