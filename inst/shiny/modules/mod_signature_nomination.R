@@ -1710,7 +1710,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Add a Details button column
         display_data$Details <- paste0(
           '<button class="btn btn-primary btn-sm" onclick="Shiny.setInputValue(\'', 
-          ns('show_details'), "', {cluster: ', 1:nrow(display_data), 
+          ns('show_details'), '\', {cluster: ', 1:nrow(display_data), 
           ', random: Math.random()}); event.stopPropagation();">',
           '<i class="fa fa-info-circle"></i> Details</button>'
         )
