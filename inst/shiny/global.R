@@ -206,11 +206,26 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
       filtered_data <- filtered_data[filtered_data$modality == modality, ]
     } else {
       # Fallback: filter by analysis_type or method patterns for CRISPRi/CRISPRa
+      # FIX Bug #5: Handle datasets without modality column more robustly
       if (modality == "CRISPRi") {
         if ("analysis_type" %in% names(filtered_data)) {
-          filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$analysis_type, ignore.case = TRUE), ]
+          # Try pattern matching first
+          crispri_pattern_match <- grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$analysis_type, ignore.case = TRUE)
+          if (any(crispri_pattern_match)) {
+            filtered_data <- filtered_data[crispri_pattern_match, ]
+          } else {
+            # Fallback: If no CRISPRi pattern found, assume all MixScale is CRISPRi (legacy datasets)
+            filtered_data <- filtered_data[grepl("MixScale", filtered_data$analysis_type, ignore.case = TRUE), ]
+          }
         } else if ("method" %in% names(filtered_data)) {
-          filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$method, ignore.case = TRUE), ]
+          # Try pattern matching first
+          crispri_pattern_match <- grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$method, ignore.case = TRUE)
+          if (any(crispri_pattern_match)) {
+            filtered_data <- filtered_data[crispri_pattern_match, ]
+          } else {
+            # Fallback: If no CRISPRi pattern found, assume all MixScale is CRISPRi (legacy datasets)
+            filtered_data <- filtered_data[grepl("MixScale", filtered_data$method, ignore.case = TRUE), ]
+          }
         }
       } else if (modality == "CRISPRa") {
         if ("analysis_type" %in% names(filtered_data)) {
@@ -218,6 +233,7 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
         } else if ("method" %in% names(filtered_data)) {
           filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$method, ignore.case = TRUE), ]
         }
+        # Note: CRISPRa requires explicit labeling - no fallback to all MixScale
       }
     }
   }

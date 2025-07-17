@@ -1422,7 +1422,7 @@ server <- function(input, output, session) {
   signature_trends_results <- mod_signature_trends_server(
     "signature_trends_module",
     analysis_results = reactive({ signature_results }),
-    enrichment_data = reactive({ app_data$consolidated_data })
+    enrichment_data = filtered_data
   )
   
   pathview_results <- mod_pathview_server(

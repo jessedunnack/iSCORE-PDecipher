@@ -499,6 +499,7 @@ mod_de_analysis_server <- function(id, app_data) {
           Gene = gene_name,
           Target = gene,
           Source = source,
+          Experiment = experiment,
           Cluster = cluster,
           `log2FC` = log2FC,
           `P-value` = pvalue
@@ -519,15 +520,16 @@ mod_de_analysis_server <- function(id, app_data) {
           dom = 'ftp',      # f=filter, t=table, p=pagination
           columnDefs = list(
             list(className = 'dt-center', targets = '_all'),
-            list(width = '15%', targets = 0),  # Gene column
-            list(width = '15%', targets = 1),  # Target column
-            list(width = '12%', targets = 2),  # Source column
-            list(width = '12%', targets = 3),  # Cluster column
-            list(width = '12%', targets = 4),  # log2FC column
-            list(width = '15%', targets = 5),  # P-value column
-            list(width = '12%', targets = 6)   # Direction column
+            list(width = '13%', targets = 0),  # Gene column
+            list(width = '13%', targets = 1),  # Target column
+            list(width = '11%', targets = 2),  # Source column
+            list(width = '11%', targets = 3),  # Experiment column
+            list(width = '11%', targets = 4),  # Cluster column
+            list(width = '11%', targets = 5),  # log2FC column
+            list(width = '15%', targets = 6),  # P-value column
+            list(width = '11%', targets = 7)   # Direction column
           ),
-          order = list(list(5, 'asc')),  # Sort by P-value (ascending = most significant first)
+          order = list(list(6, 'asc')),  # Sort by P-value (ascending = most significant first)
           searching = TRUE,
           language = list(
             search = "Search genes:",
@@ -563,6 +565,7 @@ mod_de_analysis_server <- function(id, app_data) {
               Gene = gene_name,
               Target = gene,
               Source = source,
+              Experiment = experiment,
               Cluster = cluster,
               log2FC = log2FC,
               P_value = pvalue

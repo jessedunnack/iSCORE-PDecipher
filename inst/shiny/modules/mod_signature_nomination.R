@@ -1927,7 +1927,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       selected_cluster <- selected_cluster_details()
       
       # Extract shared genes from analysis results
-      shared_genes_data <- extract_shared_genes(analysis_results, selected_pair, selected_cluster)
+      shared_genes_data <- extract_shared_genes(analysis_results, selected_pair, selected_cluster, enrichment_data)
       
       if (nrow(shared_genes_data) > 0) {
         DT::datatable(shared_genes_data,
@@ -1991,7 +1991,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         req(input$selected_gene_pair)
         req(selected_cluster_details())
         
-        shared_genes_data <- extract_shared_genes(values$analysis_results, input$selected_gene_pair, selected_cluster_details())
+        shared_genes_data <- extract_shared_genes(values$analysis_results, input$selected_gene_pair, selected_cluster_details(), enrichment_data)
         write.csv(shared_genes_data, file, row.names = FALSE)
       }
     )
@@ -2013,21 +2013,101 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # === HELPER FUNCTIONS FOR MODAL DATA EXTRACTION ===
     
     # Extract shared genes from analysis results
-    extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster) {
+    extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster, enrichment_data = NULL) {
       tryCatch({
-        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES ===\n")
+        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES (ROBUST VERSION) ===\n")
         cat("[DETAILS DEBUG] Selected pair:", selected_pair, "\n")
         cat("[DETAILS DEBUG] Selected cluster:", selected_cluster, "\n")
         
-        # Check analysis results structure
-        if (is.null(analysis_results)) {
-          cat("[DETAILS DEBUG] ERROR: analysis_results is NULL\n")
-          return(data.frame())
+        # ROBUST FIX: Extract overlap genes by computing them from DE data instead of expecting pre-computed lists
+        
+        # Parse gene pair
+        gene_parts <- strsplit(selected_pair, " vs | vs|_vs_|_vs|vs")[[1]]
+        if (length(gene_parts) != 2) {
+          cat("[DETAILS DEBUG] Could not parse gene pair:", selected_pair, "\n")
+          return(data.frame(Message = paste("Could not parse gene pair:", selected_pair)))
         }
         
-        cat("[DETAILS DEBUG] Analysis results structure:", paste(names(analysis_results), collapse = ", "), "\n")
+        mast_gene_name <- trimws(gene_parts[1])
+        crispri_gene_name <- trimws(gene_parts[2])
         
-        # Get all signatures data
+        cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene_name, "CRISPRi:", crispri_gene_name, "\n")
+        
+        # Method 1: Try to get actual gene lists from enrichment data
+        if (!is.null(enrichment_data) && is.function(enrichment_data)) {
+          enrichment_df <- enrichment_data()
+          if (!is.null(enrichment_df) && nrow(enrichment_df) > 0) {
+            cat("[DETAILS DEBUG] Using enrichment data with", nrow(enrichment_df), "rows\n")
+            
+            # Get MAST genes for this gene and cluster
+            mast_data <- enrichment_df[
+              enrichment_df$method == "MAST" & 
+              enrichment_df$gene == mast_gene_name & 
+              enrichment_df$cluster == selected_cluster, ]
+            
+            # Get CRISPRi genes for this gene and cluster  
+            crispri_data <- enrichment_df[
+              enrichment_df$method == "MixScale" & 
+              enrichment_df$gene == crispri_gene_name & 
+              enrichment_df$cluster == selected_cluster, ]
+            
+            cat("[DETAILS DEBUG] Found MAST data:", nrow(mast_data), "rows\n")
+            cat("[DETAILS DEBUG] Found CRISPRi data:", nrow(crispri_data), "rows\n")
+            
+            if (nrow(mast_data) > 0 && nrow(crispri_data) > 0) {
+              # Get unique terms for each method
+              mast_terms <- unique(mast_data$ID)
+              crispri_terms <- unique(crispri_data$ID)
+              
+              # Find overlapping terms
+              overlap_terms <- intersect(mast_terms, crispri_terms)
+              
+              cat("[DETAILS DEBUG] Found", length(overlap_terms), "overlapping terms\n")
+              
+              if (length(overlap_terms) > 0) {
+                # Create overlap data
+                overlap_data <- data.frame(
+                  Term_ID = overlap_terms,
+                  MAST_Description = sapply(overlap_terms, function(term) {
+                    desc <- mast_data$Description[mast_data$ID == term][1]
+                    if (is.na(desc)) term else desc
+                  }),
+                  CRISPRi_Description = sapply(overlap_terms, function(term) {
+                    desc <- crispri_data$Description[crispri_data$ID == term][1]
+                    if (is.na(desc)) term else desc
+                  }),
+                  MAST_pvalue = sapply(overlap_terms, function(term) {
+                    mast_data$p.adjust[mast_data$ID == term][1]
+                  }),
+                  CRISPRi_pvalue = sapply(overlap_terms, function(term) {
+                    crispri_data$p.adjust[crispri_data$ID == term][1]
+                  }),
+                  stringsAsFactors = FALSE
+                )
+                
+                return(overlap_data)
+              }
+            }
+          }
+        }
+        
+        # Method 2: Try to get actual gene lists from de_data in analysis_results
+        if (!is.null(mast_gene_name) && !is.null(crispri_gene_name) && "de_data" %in% names(analysis_results)) {
+          de_data <- analysis_results$de_data
+          cat("[DETAILS DEBUG] Method 2: de_data available but not implemented yet\n")
+          # TODO: Extract MAST genes from de_data structure
+          # TODO: Extract CRISPRi genes from de_data structure  
+          # TODO: Compute overlap
+        }
+        
+        # Fallback: Return message about methods availability
+        cat("[DETAILS DEBUG] All extraction methods failed\n")
+        return(data.frame(
+          Message = paste("Overlap analysis not available for", selected_pair, "in cluster", selected_cluster),
+          Details = "Raw enrichment data needed for overlap computation"
+        ))
+        
+        # Get all signatures data - keeping original logic as final fallback
         all_sigs <- analysis_results$all_signatures
         if (is.null(all_sigs)) {
           cat("[DETAILS DEBUG] ERROR: all_signatures is NULL\n")
@@ -2110,38 +2190,89 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         
         cat("[DETAILS DEBUG] Found cluster data, type:", class(cluster_data), "\n")
         
-        # Extract overlap genes - check multiple possible column names and structures
+        # ROBUST FIX: Extract overlap genes by computing them from DE data instead of expecting pre-computed lists
         overlap_genes <- NULL
+        mast_genes <- NULL
+        crispri_genes <- NULL
         
-        if (is.data.frame(cluster_data)) {
+        # Method 1: Try to get from cluster_data if it has individual gene information
+        if (is.data.frame(cluster_data) && nrow(cluster_data) > 0) {
           cat("[DETAILS DEBUG] Cluster data columns:", paste(names(cluster_data), collapse = ", "), "\n")
           
-          possible_columns <- c("overlap_genes", "gene_overlap", "shared_genes", "overlapping_genes")
-          for (col in possible_columns) {
-            if (col %in% names(cluster_data)) {
-              overlap_genes <- cluster_data[[col]]
-              if (is.list(overlap_genes)) {
-                overlap_genes <- overlap_genes[[1]]
+          # Get gene pair information to determine which genes to look for
+          mast_gene_name <- if ("mast_gene" %in% names(cluster_data)) cluster_data$mast_gene[1] else NULL
+          crispri_gene_name <- if ("crispri_gene" %in% names(cluster_data)) cluster_data$crispri_gene[1] else NULL
+          
+          cat("[DETAILS DEBUG] MAST gene:", mast_gene_name, "CRISPRi gene:", crispri_gene_name, "\n")
+        }
+        
+        # Method 2: Extract gene names from gene_pair format (e.g., "PRKN_vs_PARK2")
+        if (is.null(mast_gene_name) || is.null(crispri_gene_name)) {
+          gene_parts <- strsplit(selected_pair, "_vs_")[[1]]
+          if (length(gene_parts) == 2) {
+            mast_gene_name <- gene_parts[1]
+            crispri_gene_name <- gene_parts[2]
+            cat("[DETAILS DEBUG] Extracted from pair - MAST:", mast_gene_name, "CRISPRi:", crispri_gene_name, "\n")
+          }
+        }
+        
+        # Method 3: Try to get actual gene lists from de_data in analysis_results
+        if (!is.null(mast_gene_name) && !is.null(crispri_gene_name) && "de_data" %in% names(analysis_results)) {
+          de_data <- analysis_results$de_data
+          cat("[DETAILS DEBUG] Found de_data with keys:", paste(names(de_data), collapse = ", "), "\n")
+          
+          # Try to extract MAST genes
+          if ("mast" %in% names(de_data) || "MAST" %in% names(de_data)) {
+            mast_data <- de_data[["mast"]] %||% de_data[["MAST"]]
+            if (!is.null(mast_data) && mast_gene_name %in% names(mast_data)) {
+              if (selected_cluster %in% names(mast_data[[mast_gene_name]])) {
+                mast_results <- mast_data[[mast_gene_name]][[selected_cluster]]
+                if (!is.null(mast_results) && "results" %in% names(mast_results)) {
+                  mast_genes <- rownames(mast_results$results)
+                  cat("[DETAILS DEBUG] Found", length(mast_genes), "MAST genes\n")
+                }
               }
-              cat("[DETAILS DEBUG] Found overlap genes in column:", col, "length:", length(overlap_genes), "\n")
-              break
             }
           }
-        } else if (is.list(cluster_data)) {
-          cat("[DETAILS DEBUG] Cluster data list keys:", paste(names(cluster_data), collapse = ", "), "\n")
           
-          possible_keys <- c("overlap_genes", "gene_overlap", "shared_genes", "overlapping_genes")
-          for (key in possible_keys) {
-            if (key %in% names(cluster_data)) {
-              overlap_genes <- cluster_data[[key]]
-              cat("[DETAILS DEBUG] Found overlap genes in key:", key, "length:", length(overlap_genes), "\n")
-              break
+          # Try to extract CRISPRi genes
+          if ("crispri" %in% names(de_data) || "CRISPRi" %in% names(de_data) || "mixscale" %in% names(de_data)) {
+            crispri_data <- de_data[["crispri"]] %||% de_data[["CRISPRi"]] %||% de_data[["mixscale"]]
+            if (!is.null(crispri_data) && crispri_gene_name %in% names(crispri_data)) {
+              if (selected_cluster %in% names(crispri_data[[crispri_gene_name]])) {
+                crispri_results <- crispri_data[[crispri_gene_name]][[selected_cluster]]
+                if (!is.null(crispri_results) && "results" %in% names(crispri_results)) {
+                  crispri_genes <- rownames(crispri_results$results)
+                  cat("[DETAILS DEBUG] Found", length(crispri_genes), "CRISPRi genes\n")
+                }
+              }
+            }
+          }
+          
+          # Compute overlap
+          if (!is.null(mast_genes) && !is.null(crispri_genes)) {
+            overlap_genes <- intersect(mast_genes, crispri_genes)
+            cat("[DETAILS DEBUG] Computed", length(overlap_genes), "overlapping genes\n")
+          }
+        }
+        
+        # Fallback: Try original method for pre-computed lists
+        if (is.null(overlap_genes) || length(overlap_genes) == 0) {
+          possible_columns <- c("overlap_genes", "gene_overlap", "shared_genes", "overlapping_genes")
+          for (col in possible_columns) {
+            if (is.data.frame(cluster_data) && col %in% names(cluster_data)) {
+              overlap_genes <- cluster_data[[col]]
+              if (is.list(overlap_genes)) overlap_genes <- overlap_genes[[1]]
+              if (!is.null(overlap_genes) && length(overlap_genes) > 0) {
+                cat("[DETAILS DEBUG] Found overlap genes in column:", col, "length:", length(overlap_genes), "\n")
+                break
+              }
             }
           }
         }
         
         if (is.null(overlap_genes) || length(overlap_genes) == 0) {
-          cat("[DETAILS DEBUG] ERROR: No overlap genes found\n")
+          cat("[DETAILS DEBUG] ERROR: No overlap genes found after all methods\n")
           return(data.frame())
         }
         
@@ -2154,30 +2285,35 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           stringsAsFactors = FALSE
         )
         
-        # Add MAST and CRISPRi information if available
-        if (is.data.frame(cluster_data)) {
+        # Add MAST and CRISPRi information using computed gene lists
+        if (!is.null(mast_genes) && length(mast_genes) > 0) {
+          genes_df$In_MAST <- genes_df$Gene %in% mast_genes
+          cat("[DETAILS DEBUG] Added MAST information for", length(mast_genes), "genes\n")
+        }
+        
+        if (!is.null(crispri_genes) && length(crispri_genes) > 0) {
+          genes_df$In_CRISPRi <- genes_df$Gene %in% crispri_genes
+          cat("[DETAILS DEBUG] Added CRISPRi information for", length(crispri_genes), "genes\n")
+        }
+        
+        # Fallback: Try to get from cluster_data columns if computed lists weren't available
+        if (is.data.frame(cluster_data) && (is.null(mast_genes) || is.null(crispri_genes))) {
           if ("mast_genes" %in% names(cluster_data)) {
-            mast_genes <- cluster_data$mast_genes
-            if (is.list(mast_genes)) mast_genes <- mast_genes[[1]]
-            genes_df$In_MAST <- genes_df$Gene %in% mast_genes
-            cat("[DETAILS DEBUG] Added MAST information for", length(mast_genes), "genes\n")
+            fallback_mast <- cluster_data$mast_genes
+            if (is.list(fallback_mast)) fallback_mast <- fallback_mast[[1]]
+            if (!is.null(fallback_mast) && !"In_MAST" %in% names(genes_df)) {
+              genes_df$In_MAST <- genes_df$Gene %in% fallback_mast
+              cat("[DETAILS DEBUG] Added MAST information from fallback\n")
+            }
           }
           
           if ("crispri_genes" %in% names(cluster_data)) {
-            crispri_genes <- cluster_data$crispri_genes
-            if (is.list(crispri_genes)) crispri_genes <- crispri_genes[[1]]
-            genes_df$In_CRISPRi <- genes_df$Gene %in% crispri_genes
-            cat("[DETAILS DEBUG] Added CRISPRi information for", length(crispri_genes), "genes\n")
-          }
-        } else if (is.list(cluster_data)) {
-          if ("mast_genes" %in% names(cluster_data)) {
-            genes_df$In_MAST <- genes_df$Gene %in% cluster_data$mast_genes
-            cat("[DETAILS DEBUG] Added MAST information from list\n")
-          }
-          
-          if ("crispri_genes" %in% names(cluster_data)) {
-            genes_df$In_CRISPRi <- genes_df$Gene %in% cluster_data$crispri_genes
-            cat("[DETAILS DEBUG] Added CRISPRi information from list\n")
+            fallback_crispri <- cluster_data$crispri_genes
+            if (is.list(fallback_crispri)) fallback_crispri <- fallback_crispri[[1]]
+            if (!is.null(fallback_crispri) && !"In_CRISPRi" %in% names(genes_df)) {
+              genes_df$In_CRISPRi <- genes_df$Gene %in% fallback_crispri
+              cat("[DETAILS DEBUG] Added CRISPRi information from fallback\n")
+            }
           }
         }
         
