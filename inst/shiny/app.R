@@ -73,9 +73,27 @@ if (!exists("get_significant_terms_from_consolidated")) {
       filtered_data <- filtered_data[filtered_data$direction == direction, ]
     }
     
-    # Filter by modality if specified
-    if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
-      filtered_data <- filtered_data[filtered_data$modality == modality, ]
+    # Filter by modality if specified (FIXED: handle CRISPRi/CRISPRa properly)
+    if (!is.null(modality) && modality != "All") {
+      if ("modality" %in% names(filtered_data)) {
+        # Use modality column if it exists
+        filtered_data <- filtered_data[filtered_data$modality == modality, ]
+      } else {
+        # Fallback: filter by analysis_type or method patterns for CRISPRi/CRISPRa
+        if (modality == "CRISPRi") {
+          if ("analysis_type" %in% names(filtered_data)) {
+            filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$analysis_type, ignore.case = TRUE), ]
+          } else if ("method" %in% names(filtered_data)) {
+            filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$method, ignore.case = TRUE), ]
+          }
+        } else if (modality == "CRISPRa") {
+          if ("analysis_type" %in% names(filtered_data)) {
+            filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$analysis_type, ignore.case = TRUE), ]
+          } else if ("method" %in% names(filtered_data)) {
+            filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$method, ignore.case = TRUE), ]
+          }
+        }
+      }
     }
     
     # Filter by analysis type (method) if specified
@@ -796,6 +814,11 @@ server <- function(input, output, session) {
   
   # Helper function to extract base gene name from variant
   extract_base_gene <- function(gene_name) {
+    # Special case: PARK2 and PRKN are the same gene
+    if (gene_name == "PARK2") {
+      return("PRKN")
+    }
+    
     # Check if it's a mutation variant (e.g., VPS13C_A444P, SNCA_A30P)
     if (grepl("_[A-Z][0-9]+[A-Z]$", gene_name)) {
       # Extract base gene name before the underscore
@@ -969,14 +992,15 @@ server <- function(input, output, session) {
       
       if (length(valid_genes) > 0) {
         # Determine if we should consolidate variants
-        # Consolidate when multiple dataset types are available (indicates "all datasets" scenario)
+        # FIXED: Always consolidate when multiple methods/datasets available or when variants detected
         has_multiple_datasets <- length(app_data$available_genes_by_method) > 1
+        has_variants <- any(grepl("_[A-Z][0-9]+[A-Z]$", valid_genes)) || "PARK2" %in% valid_genes
         
         # Create labeled choices with optional variant consolidation
         labeled_choices <- create_labeled_gene_choices(
           valid_genes, 
           input$global_analysis_type,
-          dataset_selection = if(has_multiple_datasets) "all" else "single"
+          dataset_selection = if(has_multiple_datasets || has_variants) "all" else "single"
         )
         
         # Keep current selection if still valid, otherwise pick first

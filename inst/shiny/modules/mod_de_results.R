@@ -2544,11 +2544,21 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         ))
       }
       
-      # Format for display
-      display_data <- cross_cluster_data %>%
-        select(gene_name, clusters_affected, mean_log2FC, min_pvalue, clusters_list, method)
+      # Format for display (with safe column selection)
+      available_cols <- c("gene_name", "clusters_affected", "mean_log2FC", "min_pvalue", "clusters_list")
+      if ("method" %in% colnames(cross_cluster_data)) {
+        available_cols <- c(available_cols, "method")
+      }
       
-      colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters", "Method")
+      display_data <- cross_cluster_data %>%
+        select(all_of(available_cols))
+      
+      # Set appropriate column names
+      if ("method" %in% colnames(display_data)) {
+        colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters", "Method")
+      } else {
+        colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters")
+      }
       
       DT::datatable(display_data,
                    options = list(
@@ -2727,9 +2737,19 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
       
       if (length(gene_lists) < 2) {
+        # Provide better user feedback about available data
+        feedback_text <- paste0(
+          "Need at least 2 gene sets with ≥", min_genes, " DE genes\n",
+          "Found: ", length(gene_lists), " gene set(s)\n\n",
+          "Try:\n• Lower minimum genes threshold\n",
+          "• Change direction filter\n",
+          "• Select 'both' methods\n",
+          "• Choose a different cluster"
+        )
+        
         ggplot() +
           annotate("text", x = 0.5, y = 0.5, 
-                  label = "Need at least 2 gene sets with sufficient DE genes", size = 6) +
+                  label = feedback_text, size = 4, hjust = 0.5, vjust = 0.5) +
           theme_void() +
           xlim(0, 1) + ylim(0, 1)
       } else {

@@ -199,9 +199,27 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
     filtered_data <- filtered_data[filtered_data$direction == direction, ]
   }
   
-  # Filter by modality if specified
-  if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
-    filtered_data <- filtered_data[filtered_data$modality == modality, ]
+  # Filter by modality if specified (FIXED: handle CRISPRi/CRISPRa properly)
+  if (!is.null(modality) && modality != "All") {
+    if ("modality" %in% names(filtered_data)) {
+      # Use modality column if it exists
+      filtered_data <- filtered_data[filtered_data$modality == modality, ]
+    } else {
+      # Fallback: filter by analysis_type or method patterns for CRISPRi/CRISPRa
+      if (modality == "CRISPRi") {
+        if ("analysis_type" %in% names(filtered_data)) {
+          filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$analysis_type, ignore.case = TRUE), ]
+        } else if ("method" %in% names(filtered_data)) {
+          filtered_data <- filtered_data[grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$method, ignore.case = TRUE), ]
+        }
+      } else if (modality == "CRISPRa") {
+        if ("analysis_type" %in% names(filtered_data)) {
+          filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$analysis_type, ignore.case = TRUE), ]
+        } else if ("method" %in% names(filtered_data)) {
+          filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$method, ignore.case = TRUE), ]
+        }
+      }
+    }
   }
   
   # Filter by analysis type (method) if specified

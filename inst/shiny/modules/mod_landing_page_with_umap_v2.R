@@ -904,15 +904,15 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           total_terms = n(),
           enrichment_types = n_distinct(enrichment_type),
           clusters = n_distinct(cluster),
-          experiments = if(any(grepl("MixScale", method_with_experiment))) {
-            n_distinct(experiment, na.rm = TRUE)
+          experiment_details = if(any(grepl("MixScale", method_with_experiment))) {
+            paste(unique(experiment[!is.na(experiment) & experiment != "default"]), collapse = ", ")
           } else {
-            NA
+            "N/A"
           },
           .groups = 'drop'
         ) %>%
         # Rename columns for clarity
-        rename(Method = method_with_experiment) %>%
+        rename(Method = method_with_experiment, `Experiment ID` = experiment_details) %>%
         arrange(desc(total_terms))
       
       DT::datatable(gene_summary,
@@ -928,7 +928,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
                         list(targets = 2, searchable = FALSE),  # total_terms column - not searchable in global search
                         list(targets = 3, searchable = FALSE),  # enrichment_types column - not searchable in global search
                         list(targets = 4, searchable = FALSE),  # clusters column - not searchable in global search
-                        list(targets = 5, searchable = FALSE)   # experiments column - not searchable in global search
+                        list(targets = 5, searchable = FALSE)   # experiment_details column - not searchable in global search
                       )
                     ),
                     rownames = FALSE) %>%

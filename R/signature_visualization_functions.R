@@ -256,21 +256,29 @@ create_interactive_signature_heatmap_enhanced <- function(signature_data,
   if (metric == "intersection_fisher_p_fdr_enhanced_hierarchical" && "intersection_fisher_p_fdr_enhanced_hierarchical" %in% colnames(signature_data)) {
     raw_pvalues <- signature_data$intersection_fisher_p_fdr_enhanced_hierarchical
     plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
+    # FIXED: Set non-significant values to NA for blank display
+    plot_data$metric_value[raw_pvalues >= 0.05] <- NA
     metric_label <- "FDR p-value (-log10)"
     is_pvalue_metric <- TRUE
   } else if (metric == "intersection_fisher_p_fdr_hierarchical" && "intersection_fisher_p_fdr_hierarchical" %in% colnames(signature_data)) {
     raw_pvalues <- signature_data$intersection_fisher_p_fdr_hierarchical
     plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
+    # FIXED: Set non-significant values to NA for blank display
+    plot_data$metric_value[raw_pvalues >= 0.05] <- NA
     metric_label <- "FDR p-value (-log10)"
     is_pvalue_metric <- TRUE
   } else if (metric == "gene_fisher_p" && "gene_fisher_p" %in% colnames(signature_data)) {
     raw_pvalues <- signature_data$gene_fisher_p
     plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
+    # FIXED: Set non-significant values to NA for blank display
+    plot_data$metric_value[raw_pvalues >= 0.05] <- NA
     metric_label <- "Gene Overlap -log10(p-value)"
     is_pvalue_metric <- TRUE
   } else if (metric == "pathway_fisher_p" && "pathway_fisher_p" %in% colnames(signature_data)) {
     raw_pvalues <- signature_data$pathway_fisher_p
     plot_data$metric_value <- -log10(pmax(raw_pvalues, 1e-10))
+    # FIXED: Set non-significant values to NA for blank display
+    plot_data$metric_value[raw_pvalues >= 0.05] <- NA
     metric_label <- "Pathway Overlap -log10(p-value)"
     is_pvalue_metric <- TRUE
   } else if (metric == "gene_jaccard" && "gene_jaccard" %in% colnames(signature_data)) {

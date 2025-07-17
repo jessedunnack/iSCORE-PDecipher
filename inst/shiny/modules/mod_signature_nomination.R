@@ -2034,7 +2034,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         }
         
         if (is.null(overlap_genes) || length(overlap_genes) == 0) {
-          return(data.frame(Message = "No shared genes found"))
+          return(data.frame())
         }
         
         # Create a data frame with gene information
@@ -2081,7 +2081,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         }
         
         if (is.null(pathway_data) || length(pathway_data) == 0) {
-          return(data.frame(Message = "No shared pathways found"))
+          return(data.frame())
         }
         
         # If pathway_data is a character vector, create a simple data frame
