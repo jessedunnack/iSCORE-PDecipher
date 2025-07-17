@@ -1,3 +1,49 @@
+# iSCORE.PDecipher 0.2.8
+
+## Critical Bug Fixes for Shiny App Stability (2025-01-17)
+
+### 🐛 **Major Bug Fixes**
+
+#### Bug #1: Gene Pair Details Modal
+- **Issue**: Details modal showed "Detailed gene lists are computed during enrichment analysis" instead of actual genes
+- **Fix**: Removed early returns in `extract_shared_genes()` function that prevented gene extraction
+- **Result**: Modal now properly displays all DE genes and enrichment terms
+
+#### Bug #3: [object Object] Error in Cross-Cluster DE Gene Analysis
+- **Issue**: JavaScript object displayed as "[object Object]" in data tables
+- **Fix**: Corrected column name mismatch when 'experiment' column is included
+- **Result**: Proper display of gene and cluster information
+
+#### Bug #5: CRISPRi Dotplots Not Rendering
+- **Issue**: CRISPRi functional enrichment dotplots showed blank screen
+- **Enhancements**:
+  - Added comprehensive debug logging to track filtering steps
+  - Fixed experiment filter to skip 'default' for MixScale data
+  - Shows unique methods/modalities and row counts at each filtering step
+- **Note**: Modality column may be missing from enrichment data - requires investigation
+
+#### Bug #6: DE Gene Overlap Heatmap Interactivity
+- **Issue**: Static heatmap in DE Genes page lacked interactivity
+- **Fix**: Converted from `renderPlot` to `renderPlotly` with heatmaply implementation
+- **Features**:
+  - Interactive hover with overlap counts and p-values
+  - Hierarchical clustering with dendrograms
+  - Maintains same color scheme as static version
+
+#### Bug #8: CRISPRa Data Exclusion
+- **Status**: ✅ Confirmed fixed - CRISPRa experiments no longer appear in tables
+
+#### Bug #9: Gene Dropdown Formatting
+- **Issue**: Genes showed as "PRKN (2 variants)" in dropdown
+- **Fix**: Removed variant count text - now shows clean gene names
+- **Enhancement**: Added debug logging to verify VPS13C selection behavior
+
+### 🔧 **Technical Improvements**
+- Enhanced error handling with detailed logging
+- Improved data filtering logic consistency
+- Better handling of missing columns in data frames
+- Cross-method compatibility checks
+
 # iSCORE.PDecipher 0.2.7
 
 ## Major Correlation Plot Visualization Improvements (2025-01-15)

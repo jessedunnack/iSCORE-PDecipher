@@ -1,0 +1,306 @@
+Dataset selector module loaded successfully
+Global configuration loaded successfully
+Environment variables configured
+Ready for data loading
+[DE Results] Module server starting...
+[Signature Nomination] Module server starting...
+Loading enrichment data from: E:\ASAP\scRNASeq\PerturbSeq\final/iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds 
+Excluded 36593 A15_FPD-24 (CRISPRa) enrichment terms
+Successfully cached 626687 enrichment terms
+Successfully initialized app with 626687 enrichment results
+[BUG #5 DEBUG] Detecting available methods in data...
+[BUG #5 DEBUG] Data dimensions: 626687 rows x 35 columns
+[BUG #5 DEBUG] Column names: method, mutation_perturbation, cluster, experiment, enrichment_type, direction, ID, Description, ONTOLOGY, GeneRatio, BgRatio, RichFactor, FoldEnrichment, zScore, pvalue, p.adjust, qvalue, geneID, Count, source_file, pval, log2err, ES, NES, size, leadingEdge, category, subcategory, number_of_genes, number_of_genes_in_background, ncbiTaxonId, inputGenes, preferredNames, p_value, gene 
+[BUG #5 DEBUG] Available methods: MAST, MixScale 
+[BUG #5 DEBUG] Modality column exists: FALSE 
+[BUG #5 DEBUG] Detection without modality column (fallback) - MAST: TRUE CRISPRi: TRUE CRISPRa: FALSE 
+Available methods detected:
+  MAST: TRUE 
+  CRISPRi: TRUE 
+  CRISPRa: FALSE 
+[DATASET DETECTION] MAST: TRUE CRISPRi: TRUE CRISPRa: FALSE 
+[DATASET DETECTION] Row counts - Total: 626687 MAST: 233536 MixScale: 393151 CRISPRa: 0 
+[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (MAST + CRISPRi)
+  [UMAP DEBUG] Attempting to load from: C:/Program Files/R/R-4.4.1/library/iSCORE.PDecipher/extdata/umap_data/iSCORE_PD_CRISPRi_umap_data_30pc.rds 
+  [UMAP DEBUG] Attempting to load from: C:/Program Files/R/R-4.4.1/library/iSCORE.PDecipher/extdata/umap_data/iSCORE_PD_CRISPRi_umap_data_30pc.rds 
+[APP FILTER DEBUG] ========== filtered_data reactive START ==========
+[APP FILTER DEBUG] Selection received:
+[APP FILTER DEBUG]   analysis_type:  
+[APP FILTER DEBUG]   analysis_type_raw:  
+[APP FILTER DEBUG]   gene:  
+[APP FILTER DEBUG]   cluster:  
+[APP FILTER DEBUG]   enrichment_type: GO_BP 
+[APP FILTER DEBUG]   direction: ALL 
+[APP FILTER DEBUG] Computed modality: 
+[APP FILTER DEBUG] Data size before filtering: 626687 
+[FILTER DEBUG] Starting with 626687 rows
+[FILTER DEBUG] Unique methods: MAST, MixScale 
+[APP FILTER DEBUG] Data size after filtering: 0 
+[APP FILTER DEBUG] WARNING: No data returned after filtering!
+[APP FILTER DEBUG] Check if data exists for:
+[APP FILTER DEBUG]   analysis_type =  
+[APP FILTER DEBUG]   modality = 
+[APP FILTER DEBUG]   gene =  
+[APP FILTER DEBUG]   cluster =  
+[VIZ DEBUG] ========== processed_data reactive START ==========
+[VIZ DEBUG] Global selection:
+[VIZ DEBUG]   Analysis type:  
+[VIZ DEBUG]   Gene:  
+[VIZ DEBUG]   Cluster:  
+[VIZ DEBUG]   Enrichment type: GO_BP 
+[VIZ DEBUG]   Direction: ALL 
+[VIZ DEBUG] Enrichment data received: 0 rows 
+[VIZ DEBUG] No data to process, returning NULL
+[DE Results] UMAP data observe block triggered
+[DE Results] app_data$data_loaded = TRUE 
+[DE Results] app_data is loaded, attempting to load UMAP data...
+[DE Results] MAST: TRUE CRISPRi: TRUE CRISPRa: FALSE 
+[DE Results] Determined dataset to load: iSCORE_PD_CRISPRi 
+[DE Results] Successfully loaded UMAP ( 30  PCs) from: C:/Program Files/R/R-4.4.1/library/iSCORE.PDecipher/extdata/umap_data/iSCORE_PD_CRISPRi_umap_data_30pc.rds 
+[DE Results] UMAP data extracted: 219109 cells
+[DE Results] UMAP data population complete. values$umap_data is populated 
+[DE Results] Successfully loaded UMAP ( 30  PCs) from: C:/Program Files/R/R-4.4.1/library/iSCORE.PDecipher/extdata/umap_data/iSCORE_PD_CRISPRi_umap_data_30pc.rds 
+[DE Results] UMAP data extracted: 219109 cells
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[BUG 9 DEBUG] VPS13C variants found: VPS13C_A444P, VPS13C_W395C, VPS13C 
+[BUG 9 DEBUG] VPS13C is in consolidated choices
+[Signature Nomination] Initializing with loaded data...
+[DATASET DETECTION] MAST: TRUE CRISPRi: TRUE CRISPRa: FALSE 
+[DATASET DETECTION] Row counts - Total: 626687 MAST: 233536 MixScale: 393151 CRISPRa: 0 
+[DATASET DETECTION] Loading iSCORE_PD_CRISPRi (MAST + CRISPRi)
+  [UMAP DEBUG] Attempting to load from: C:/Program Files/R/R-4.4.1/library/iSCORE.PDecipher/extdata/umap_data/iSCORE_PD_CRISPRi_umap_data_30pc.rds 
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[APP FILTER DEBUG] ========== filtered_data reactive START ==========
+[APP FILTER DEBUG] Selection received:
+[APP FILTER DEBUG]   analysis_type: MAST 
+[APP FILTER DEBUG]   analysis_type_raw: MAST 
+[APP FILTER DEBUG]   gene:  
+[APP FILTER DEBUG]   cluster:  
+[APP FILTER DEBUG]   enrichment_type: GO_BP 
+[APP FILTER DEBUG]   direction: ALL 
+[APP FILTER DEBUG] Computed modality: 
+[APP FILTER DEBUG] Data size before filtering: 626687 
+[FILTER DEBUG] Starting with 626687 rows
+[FILTER DEBUG] Unique methods: MAST, MixScale 
+[FILTER DEBUG] Filtered by method: 0 -> 0 rows
+[APP FILTER DEBUG] Data size after filtering: 0 
+[APP FILTER DEBUG] WARNING: No data returned after filtering!
+[APP FILTER DEBUG] Check if data exists for:
+[APP FILTER DEBUG]   analysis_type = MAST 
+[APP FILTER DEBUG]   modality = 
+[APP FILTER DEBUG]   gene =  
+[APP FILTER DEBUG]   cluster =  
+[VIZ DEBUG] ========== processed_data reactive START ==========
+[VIZ DEBUG] Global selection:
+[VIZ DEBUG]   Analysis type: MAST 
+[VIZ DEBUG]   Gene:  
+[VIZ DEBUG]   Cluster:  
+[VIZ DEBUG]   Enrichment type: GO_BP 
+[VIZ DEBUG]   Direction: ALL 
+[VIZ DEBUG] Enrichment data received: 0 rows 
+[VIZ DEBUG] No data to process, returning NULL
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[APP FILTER DEBUG] ========== filtered_data reactive START ==========
+[APP FILTER DEBUG] Selection received:
+[APP FILTER DEBUG]   analysis_type: MAST 
+[APP FILTER DEBUG]   analysis_type_raw: MAST 
+[APP FILTER DEBUG]   gene: LRRK2 
+[APP FILTER DEBUG]   cluster:  
+[APP FILTER DEBUG]   enrichment_type: GO_BP 
+[APP FILTER DEBUG]   direction: ALL 
+[APP FILTER DEBUG] Computed modality: 
+[APP FILTER DEBUG] Data size before filtering: 626687 
+[FILTER DEBUG] Starting with 626687 rows
+[FILTER DEBUG] Unique methods: MAST, MixScale 
+[FILTER DEBUG] After gene filter ( LRRK2 ): 626687 -> 54213 rows
+[FILTER DEBUG] Filtered by method: 0 -> 0 rows
+[APP FILTER DEBUG] Data size after filtering: 0 
+[APP FILTER DEBUG] WARNING: No data returned after filtering!
+[APP FILTER DEBUG] Check if data exists for:
+[APP FILTER DEBUG]   analysis_type = MAST 
+[APP FILTER DEBUG]   modality = 
+[APP FILTER DEBUG]   gene = LRRK2 
+[APP FILTER DEBUG]   cluster =  
+[VIZ DEBUG] ========== processed_data reactive START ==========
+[VIZ DEBUG] Global selection:
+[VIZ DEBUG]   Analysis type: MAST 
+[VIZ DEBUG]   Gene: LRRK2 
+[VIZ DEBUG]   Cluster:  
+[VIZ DEBUG]   Enrichment type: GO_BP 
+[VIZ DEBUG]   Direction: ALL 
+[VIZ DEBUG] Enrichment data received: 0 rows 
+[VIZ DEBUG] No data to process, returning NULL
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[APP FILTER DEBUG] ========== filtered_data reactive START ==========
+[APP FILTER DEBUG] Selection received:
+[APP FILTER DEBUG]   analysis_type: MAST 
+[APP FILTER DEBUG]   analysis_type_raw: MAST 
+[APP FILTER DEBUG]   gene: LRRK2 
+[APP FILTER DEBUG]   cluster: cluster_0 
+[APP FILTER DEBUG]   enrichment_type: GO_BP 
+[APP FILTER DEBUG]   direction: ALL 
+[APP FILTER DEBUG] Computed modality: 
+[APP FILTER DEBUG] Data size before filtering: 626687 
+[FILTER DEBUG] Starting with 626687 rows
+[FILTER DEBUG] Unique methods: MAST, MixScale 
+[FILTER DEBUG] After gene filter ( LRRK2 ): 626687 -> 54213 rows
+[FILTER DEBUG] Filtered by method: 19 -> 19 rows
+[APP FILTER DEBUG] Data size after filtering: 19 
+[VIZ DEBUG] ========== processed_data reactive START ==========
+[VIZ DEBUG] Global selection:
+[VIZ DEBUG]   Analysis type: MAST 
+[VIZ DEBUG]   Gene: LRRK2 
+[VIZ DEBUG]   Cluster: cluster_0 
+[VIZ DEBUG]   Enrichment type: GO_BP 
+[VIZ DEBUG]   Direction: ALL 
+[VIZ DEBUG] Enrichment data received: 19 rows 
+[VIZ DEBUG] Processing data...
+[DOTPLOT DEBUG] ========== prepare_dotplot_data START ==========
+[DOTPLOT DEBUG] Input data has 19 rows
+[DOTPLOT DEBUG] Column names: method, mutation_perturbation, cluster, experiment, enrichment_type, direction, ID, Description, ONTOLOGY, GeneRatio, BgRatio, RichFactor, FoldEnrichment, zScore, pvalue, p.adjust, qvalue, geneID, Count, source_file, pval, log2err, ES, NES, size, leadingEdge, category, subcategory, number_of_genes, number_of_genes_in_background, ncbiTaxonId, inputGenes, preferredNames, p_value, gene 
+[DOTPLOT DEBUG] First row sample:
+                   method mutation_perturbation   cluster experiment enrichment_type direction         ID
+GO:0006123...68247   MAST                 LRRK2 cluster_0    default           GO_BP       ALL GO:0006123
+                                                                Description ONTOLOGY GeneRatio BgRatio RichFactor
+GO:0006123...68247 mitochondrial electron transport, cytochrome c to oxygen     <NA>     8/448 14/8946  0.5714286
+                   FoldEnrichment  zScore       pvalue     p.adjust       qvalue
+GO:0006123...68247       11.41071 8.95037 8.557768e-08 0.0003149259 0.0002972698
+                                                                geneID Count
+GO:0006123...68247 COX4I1/NDUFA4/COX6C/COX5A/COX7B/COX7A2/COX5B/COX6A1     8
+                                                        source_file pval log2err ES NES size leadingEdge category
+GO:0006123...68247 MAST/LRRK2/cluster_0/default/GO_BP/GO_BP_ALL.rds   NA      NA NA  NA   NA                 <NA>
+                   subcategory number_of_genes number_of_genes_in_background ncbiTaxonId inputGenes preferredNames
+GO:0006123...68247        <NA>              NA                            NA          NA       <NA>           <NA>
+                   p_value  gene
+GO:0006123...68247      NA LRRK2
+[DOTPLOT DEBUG] After cleaning p.adjust: 19 rows
+[VIZ DEBUG] prepare_dotplot_data returned: 19 rows 
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[DE Results] Sent cluster update to global: cluster_0 
+[APP FILTER DEBUG] ========== filtered_data reactive START ==========
+[APP FILTER DEBUG] Selection received:
+[APP FILTER DEBUG]   analysis_type: MAST 
+[APP FILTER DEBUG]   analysis_type_raw: MAST 
+[APP FILTER DEBUG]   gene: LRRK2 
+[APP FILTER DEBUG]   cluster: cluster_0 
+[APP FILTER DEBUG]   enrichment_type: GO_BP 
+[APP FILTER DEBUG]   direction: ALL 
+[APP FILTER DEBUG] Computed modality: 
+[APP FILTER DEBUG] Data size before filtering: 626687 
+[FILTER DEBUG] Starting with 626687 rows
+[FILTER DEBUG] Unique methods: MAST, MixScale 
+[FILTER DEBUG] After gene filter ( LRRK2 ): 626687 -> 54213 rows
+[FILTER DEBUG] Filtered by method: 19 -> 19 rows
+[FILTER DEBUG] Filtered by experiment: default : 19 -> 19 rows
+[APP FILTER DEBUG] Data size after filtering: 19 
+[VIZ DEBUG] ========== processed_data reactive START ==========
+[VIZ DEBUG] Global selection:
+[VIZ DEBUG]   Analysis type: MAST 
+[VIZ DEBUG]   Gene: LRRK2 
+[VIZ DEBUG]   Cluster: cluster_0 
+[VIZ DEBUG]   Enrichment type: GO_BP 
+[VIZ DEBUG]   Direction: ALL 
+[VIZ DEBUG] Enrichment data received: 19 rows 
+[VIZ DEBUG] Processing data...
+[DOTPLOT DEBUG] ========== prepare_dotplot_data START ==========
+[DOTPLOT DEBUG] Input data has 19 rows
+[DOTPLOT DEBUG] Column names: method, mutation_perturbation, cluster, experiment, enrichment_type, direction, ID, Description, ONTOLOGY, GeneRatio, BgRatio, RichFactor, FoldEnrichment, zScore, pvalue, p.adjust, qvalue, geneID, Count, source_file, pval, log2err, ES, NES, size, leadingEdge, category, subcategory, number_of_genes, number_of_genes_in_background, ncbiTaxonId, inputGenes, preferredNames, p_value, gene 
+[DOTPLOT DEBUG] First row sample:
+                   method mutation_perturbation   cluster experiment enrichment_type direction         ID
+GO:0006123...68247   MAST                 LRRK2 cluster_0    default           GO_BP       ALL GO:0006123
+                                                                Description ONTOLOGY GeneRatio BgRatio RichFactor
+GO:0006123...68247 mitochondrial electron transport, cytochrome c to oxygen     <NA>     8/448 14/8946  0.5714286
+                   FoldEnrichment  zScore       pvalue     p.adjust       qvalue
+GO:0006123...68247       11.41071 8.95037 8.557768e-08 0.0003149259 0.0002972698
+                                                                geneID Count
+GO:0006123...68247 COX4I1/NDUFA4/COX6C/COX5A/COX7B/COX7A2/COX5B/COX6A1     8
+                                                        source_file pval log2err ES NES size leadingEdge category
+GO:0006123...68247 MAST/LRRK2/cluster_0/default/GO_BP/GO_BP_ALL.rds   NA      NA NA  NA   NA                 <NA>
+                   subcategory number_of_genes number_of_genes_in_background ncbiTaxonId inputGenes preferredNames
+GO:0006123...68247        <NA>              NA                            NA          NA       <NA>           <NA>
+                   p_value  gene
+GO:0006123...68247      NA LRRK2
+[DOTPLOT DEBUG] After cleaning p.adjust: 19 rows
+[VIZ DEBUG] prepare_dotplot_data returned: 19 rows 
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: FALSE 
+  MixScale DE data loaded: FALSE 
+  Current overlap conditions: MAST sig >0: FALSE , MixScale sig >0: FALSE , overlap >=0: TRUE 
+[DE Results] Final Fisher's test results:
+  Intersection p-value: NA 
+  Union p-value: NA 
+  Will show dual Fisher's test?: FALSE 
+[STATIC PLOT] Starting MAST volcano plot generation
+[DE Results] Loading DE data on demand...
+[DE Results] Checking DE path: E:\ASAP\scRNASeq\PerturbSeq\final\iSCORE-PD_plus_CRISPRi/full_DE_results.rds 
+[DE Results] Successfully loaded DE results from: E:\ASAP\scRNASeq\PerturbSeq\final\iSCORE-PD_plus_CRISPRi/full_DE_results.rds 
+[DE Results] DE results structure: iSCORE_PD_MAST, CRISPRi_Mixscale 
+[DE Results] Processed MAST data: 2461504 rows
+[DE Results] Available MAST genes: ATP13A2, DNAJC6, FBXO7, GBA, LRRK2, PARK7, PINK1, PRKN, SNCA_A30P, SNCA_A53T, SYNJ1, VPS13C_A444P, VPS13C_W395C 
+[DE Results] Processed MixScale data: 1110363 rows
+[DE Results] Available MixScale genes: ATP13A2, DNAJC6, FBXO7, LRRK2, PARK2, PARK7, PINK1, SNCA, SYNJ1, VPS13C 
+[STATIC PLOT] Current gene: LRRK2 | Cluster: cluster_0 
+[STATIC PLOT] Filtered data rows: 204591 
+[STATIC PLOT] Generated static plot, class: gg ggplot 
+[DE Results] DEBUG - DE data status:
+  MAST DE data loaded: TRUE 
+  MAST DE data rows: 2461504 
+  MixScale DE data loaded: TRUE 
+  MixScale DE data rows: 1110363 
+  Current overlap conditions: MAST sig >0: TRUE , MixScale sig >0: TRUE , overlap >=0: TRUE 
+[DE Results] Gene harmonization applied - MAST: LRRK2 , MixScale: LRRK2 
+[DE Results] Filtered background data - MAST rows: 11814 , MixScale rows: 12782 
+[DE Results] Background genes - Intersection: 8853 , Union: 15743 
+[DE Results] Attempting Fisher's exact test calculations...
+[DE Results] Final Fisher's test results:
+  Intersection p-value: 0.08554811 
+  Union p-value: 0.01708055 
+  Will show dual Fisher's test?: TRUE 
+[STATIC PLOT] Starting MAST volcano plot generation
+[STATIC PLOT] Current gene: LRRK2 | Cluster: cluster_0 
+[STATIC PLOT] Filtered data rows: 204591 
+[STATIC PLOT] Generated static plot, class: gg ggplot 
+[MixScale Volcano] Gene harmonization applied - MAST: LRRK2 → MixScale: LRRK2 

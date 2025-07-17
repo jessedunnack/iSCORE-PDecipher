@@ -38,7 +38,15 @@
   - Correlation plot improvements (vertical layout)
   - Heatmap module status (interactive heatmaply)
   - UMAP layout optimization (950×700px)
+  - **v0.2.8 Critical Fixes**:
+    - Gene pair details modal working (Bug #1)
+    - [object Object] errors resolved (Bug #3)
+    - CRISPRi dotplot debugging enhanced (Bug #5)
+    - DE Gene Overlap Heatmap interactive (Bug #6)
+    - CRISPRa properly excluded (Bug #8)
+    - Gene dropdown formatting cleaned (Bug #9)
 - [ ] **Review Common Tasks & Solutions** - Use existing patterns
+- [ ] **Check for modality column** - Required for CRISPRi filtering
 
 #### For Cross-Platform Tasks:
 - [ ] **Check config_manager.R** functionality

@@ -2,11 +2,21 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.2.7-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.2.8-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
 iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). The package provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and interactive visualizations.
+
+## Latest Updates (v0.2.8)
+
+**Critical bug fixes for improved Shiny app stability:**
+- ✅ Gene pair details modal now displays actual DE genes and enrichment terms
+- ✅ Fixed [object Object] errors in Cross-Cluster DE Gene Analysis
+- ✅ Enhanced debugging for CRISPRi dotplot rendering issues
+- ✅ DE Gene Overlap Heatmap now interactive with heatmaply
+- ✅ CRISPRa data properly excluded from all analyses
+- ✅ Gene dropdown formatting cleaned (removed "X variants" text)
 
 ## Enhanced Interactive Correlation Plots (v0.2.7)
 
