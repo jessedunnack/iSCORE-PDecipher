@@ -202,13 +202,15 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       data <- gene_data()
       
       # Create composite key to match
+      # CRITICAL FIX: Use actual experiment ID instead of hardcoded "default"
+      experiment_id <- current_selection$experiment %||% "default"
       composite_key <- paste(
         current_selection$analysis_type,
         current_selection$gene,
         current_selection$cluster,
         current_selection$enrichment_type,
         current_selection$direction,
-        "default",
+        experiment_id,
         term_id,
         sep = "|"
       )
@@ -221,12 +223,35 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         return(list(genes = genes, error = NULL))
       }
       
-      # Fallback: find any match for this term
-      term_matches <- data[data$term_id == term_id, ]
-      if (nrow(term_matches) > 0) {
-        genes <- unlist(strsplit(term_matches$associated_genes[1], "/"))
-        return(list(genes = genes, error = NULL))
+      # CONSERVATIVE FALLBACK for missing data
+      # Only try alternate experiment IDs within the SAME analysis type and gene
+      if (experiment_id != "default" && current_selection$analysis_type == "MixScale") {
+        # Try with different experiment IDs but SAME gene, cluster, and method
+        alt_matches <- data[
+          grepl(paste0("MixScale\\|", current_selection$gene, "\\|", 
+                      current_selection$cluster, "\\|", current_selection$enrichment_type, 
+                      "\\|", current_selection$direction), data$composite_key) &
+          grepl(paste0("\\|", term_id, "$"), data$composite_key),
+        ]
+        
+        if (nrow(alt_matches) > 0) {
+          # Log which experiment we're using as fallback
+          fallback_key <- alt_matches$composite_key[1]
+          fallback_parts <- strsplit(fallback_key, "\\|")[[1]]
+          fallback_exp <- fallback_parts[6]
+          
+          genes <- unlist(strsplit(alt_matches$associated_genes[1], "/"))
+          # Return with warning about different experiment
+          return(list(
+            genes = genes, 
+            error = NULL,
+            warning = paste0("Data from experiment: ", fallback_exp)
+          ))
+        }
       }
+      
+      # NO RISKY FALLBACKS - if we can't find exact or very similar match, 
+      # it's better to show "No genes found" than wrong genes
       
       return(list(genes = NULL, error = "No genes found"))
     }
@@ -412,7 +437,12 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
         top_data$hover_genes <- sapply(top_data$ID, function(term_id) {
           gene_result <- get_genes_for_term_enhanced(term_id, current_selection)
           if (!is.null(gene_result$genes)) {
-            return(format_gene_list_hover(gene_result$genes))
+            formatted_genes <- format_gene_list_hover(gene_result$genes)
+            # Add warning if we used a fallback
+            if (!is.null(gene_result$warning)) {
+              formatted_genes <- paste0(formatted_genes, "<br><em>", gene_result$warning, "</em>")
+            }
+            return(formatted_genes)
           } else {
             return("No genes found")
           }

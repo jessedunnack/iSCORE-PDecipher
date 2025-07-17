@@ -74,8 +74,16 @@ if (!exists("get_significant_terms_from_consolidated")) {
     }
     
     # Filter by modality if specified
-    if (!is.null(modality) && modality != "All" && "modality" %in% names(filtered_data)) {
-      filtered_data <- filtered_data[filtered_data$modality == modality, ]
+    if (!is.null(modality) && modality != "All") {
+      if ("modality" %in% names(filtered_data)) {
+        cat("[FILTER DEBUG] Filtering by modality column:", modality, "\n")
+        filtered_data <- filtered_data[filtered_data$modality == modality, ]
+      } else if (modality == "CRISPRi" && "method" %in% names(filtered_data)) {
+        # CRITICAL FIX: If modality column missing, infer CRISPRi from MixScale method
+        cat("[FILTER DEBUG] Modality column missing, inferring CRISPRi from method\n")
+        filtered_data <- filtered_data[filtered_data$method == "MixScale", ]
+      }
+      cat("[FILTER DEBUG] After modality filter: ", nrow(filtered_data), " rows\n")
     }
     
     # Filter by analysis type (method) if specified
@@ -84,8 +92,19 @@ if (!exists("get_significant_terms_from_consolidated")) {
     }
     
     # Filter by experiment if specified
-    if (!is.null(experiment) && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
-      filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+    if (!is.null(experiment) && experiment != "All" && "experiment" %in% names(filtered_data)) {
+      # CRITICAL FIX: Skip "default" filter for MixScale data
+      if (experiment == "default" && "method" %in% names(filtered_data)) {
+        # Check if this is MixScale data
+        if (any(filtered_data$method == "MixScale")) {
+          cat("[FILTER DEBUG] Skipping 'default' experiment filter for MixScale data\n")
+        } else {
+          filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+        }
+      } else {
+        filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+      }
+      cat("[FILTER DEBUG] After experiment filter: ", nrow(filtered_data), " rows\n")
     }
     
     # Filter by p-value threshold
