@@ -270,9 +270,13 @@ mod_de_results_ui <- function(id) {
   ns <- NS(id)
   
   tagList(
-    fluidRow(
-      # Left panel: UMAP with cluster selection
-      column(6,
+    tabsetPanel(
+      # Main analysis tab
+      tabPanel("Cluster Analysis",
+        br(),
+        fluidRow(
+          # Left panel: UMAP with cluster selection
+          column(6,
         wellPanel(
           # Header with PC selector
           fluidRow(
@@ -391,6 +395,55 @@ mod_de_results_ui <- function(id) {
               h4("Overlapping DE Genes"),
               div(id = ns("overlap_genes"),
                 uiOutput(ns("overlap_content"))
+              )
+            )
+          )
+        )
+      )
+    )
+  ),
+      # Cross-Cluster Analysis tab
+      tabPanel("Cross-Cluster Analysis",
+        wellPanel(
+          fluidRow(
+            column(12,
+              h4("Cross-Cluster DE Gene Analysis", icon("layer-group")),
+              p("Identify genes that are differentially expressed across multiple clusters for the selected gene/mutation.", 
+                style = "color: #666; margin-bottom: 20px;"),
+              
+              # Controls for cross-cluster analysis
+              fluidRow(
+                column(4,
+                  numericInput(ns("min_clusters"), 
+                               "Minimum clusters with DE:",
+                               value = 2, min = 2, max = 14, step = 1)
+                ),
+                column(4,
+                  numericInput(ns("pval_threshold"), 
+                               "P-value threshold:",
+                               value = 0.05, min = 0.001, max = 0.1, step = 0.01)
+                ),
+                column(4,
+                  radioButtons(ns("de_direction"),
+                               "Direction:",
+                               choices = list("All" = "all",
+                                            "Up-regulated" = "up",
+                                            "Down-regulated" = "down"),
+                               selected = "all",
+                               inline = TRUE)
+                )
+              ),
+              
+              hr(),
+              
+              # Results table
+              h5("Genes Differentially Expressed Across Multiple Clusters"),
+              DT::dataTableOutput(ns("cross_cluster_table")),
+              
+              # Cross-cluster heatmap
+              div(style = "margin-top: 20px;",
+                h5("Expression Heatmap"),
+                plotOutput(ns("cross_cluster_heatmap"), height = "400px")
               )
             )
           )
@@ -2334,6 +2387,149 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         }
       }
     )
+    
+    # === CROSS-CLUSTER ANALYSIS OUTPUTS ===
+    
+    # Cross-cluster analysis table
+    output$cross_cluster_table <- DT::renderDataTable({
+      req(app_data$full_de)
+      req(global_selection()$gene)
+      
+      # Get current gene selection
+      selected_gene <- global_selection()$gene
+      if (selected_gene == "All") return(NULL)
+      
+      # Get parameters
+      min_clusters <- input$min_clusters %||% 2
+      pval_threshold <- input$pval_threshold %||% 0.05
+      direction <- input$de_direction %||% "all"
+      
+      # Initialize results data frame
+      cross_cluster_results <- data.frame()
+      
+      # Get DE data for current gene
+      de_data <- app_data$full_de
+      
+      # Process MAST data
+      if (!is.null(de_data$iSCORE_PD_MAST[[selected_gene]])) {
+        mast_data <- de_data$iSCORE_PD_MAST[[selected_gene]]
+        
+        # Collect genes that appear in multiple clusters
+        gene_cluster_count <- list()
+        gene_info <- list()
+        
+        for (cluster in names(mast_data)) {
+          if (!is.null(mast_data[[cluster]]$results)) {
+            de_results <- mast_data[[cluster]]$results
+            
+            # Filter by p-value and direction
+            sig_genes <- de_results[de_results$p_val_adj < pval_threshold, ]
+            
+            if (direction == "up") {
+              sig_genes <- sig_genes[sig_genes$avg_log2FC > 0, ]
+            } else if (direction == "down") {
+              sig_genes <- sig_genes[sig_genes$avg_log2FC < 0, ]
+            }
+            
+            # Track genes and their info
+            for (gene_name in rownames(sig_genes)) {
+              if (!gene_name %in% names(gene_cluster_count)) {
+                gene_cluster_count[[gene_name]] <- 0
+                gene_info[[gene_name]] <- list(
+                  clusters = character(),
+                  log2FC_values = numeric(),
+                  pval_values = numeric()
+                )
+              }
+              
+              gene_cluster_count[[gene_name]] <- gene_cluster_count[[gene_name]] + 1
+              gene_info[[gene_name]]$clusters <- c(gene_info[[gene_name]]$clusters, cluster)
+              gene_info[[gene_name]]$log2FC_values <- c(gene_info[[gene_name]]$log2FC_values, 
+                                                        sig_genes[gene_name, "avg_log2FC"])
+              gene_info[[gene_name]]$pval_values <- c(gene_info[[gene_name]]$pval_values,
+                                                      sig_genes[gene_name, "p_val_adj"])
+            }
+          }
+        }
+        
+        # Build results for genes in multiple clusters
+        for (gene_name in names(gene_cluster_count)) {
+          if (gene_cluster_count[[gene_name]] >= min_clusters) {
+            cross_cluster_results <- rbind(cross_cluster_results,
+              data.frame(
+                Gene = gene_name,
+                `# Clusters` = gene_cluster_count[[gene_name]],
+                `Mean log2FC` = round(mean(gene_info[[gene_name]]$log2FC_values), 3),
+                `Min p-value` = formatC(min(gene_info[[gene_name]]$pval_values), 
+                                       format = "e", digits = 2),
+                Clusters = paste(gene_info[[gene_name]]$clusters, collapse = ", "),
+                stringsAsFactors = FALSE
+              )
+            )
+          }
+        }
+      }
+      
+      # Process MixScale data if available
+      if (!is.null(de_data$CRISPRi_Mixscale[[selected_gene]])) {
+        # Similar processing for MixScale data
+        # Add experiment column if MixScale data is being shown
+        if (nrow(cross_cluster_results) > 0) {
+          cross_cluster_results$Method <- "MAST"
+        }
+      }
+      
+      # CRITICAL FIX: Ensure column names match exactly
+      if (nrow(cross_cluster_results) > 0) {
+        # Set column names explicitly to avoid [object Object] error
+        col_names <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters")
+        if ("Method" %in% colnames(cross_cluster_results)) {
+          col_names <- c(col_names, "Method")
+        }
+        if ("experiment" %in% colnames(cross_cluster_results)) {
+          col_names <- c(col_names, "Experiment")
+        }
+        
+        # Ensure we only use columns that exist
+        display_cols <- intersect(colnames(cross_cluster_results), 
+                                 c("Gene", "# Clusters", "Mean log2FC", "Min p-value", 
+                                   "Clusters", "Method", "experiment"))
+        cross_cluster_results <- cross_cluster_results[, display_cols]
+        
+        # Set final column names
+        colnames(cross_cluster_results) <- col_names[1:length(display_cols)]
+        
+        # Sort by number of clusters (descending)
+        cross_cluster_results <- cross_cluster_results[
+          order(cross_cluster_results$`# Clusters`, decreasing = TRUE), 
+        ]
+        
+        DT::datatable(cross_cluster_results,
+                     options = list(
+                       pageLength = 25,
+                       scrollX = TRUE,
+                       order = list(list(1, 'desc'))  # Sort by # Clusters column
+                     ),
+                     rownames = FALSE) %>%
+          DT::formatRound(columns = "Mean log2FC", digits = 3)
+      } else {
+        DT::datatable(
+          data.frame(Message = "No genes found meeting the criteria"),
+          options = list(dom = 't'),
+          rownames = FALSE
+        )
+      }
+    })
+    
+    # Cross-cluster heatmap
+    output$cross_cluster_heatmap <- renderPlot({
+      req(input$cross_cluster_table_rows_selected)
+      
+      # Placeholder for heatmap
+      plot(1, type = "n", xlab = "", ylab = "", 
+           main = "Cross-Cluster Expression Heatmap")
+      text(1, 1, "Heatmap visualization will be implemented here", cex = 1.5)
+    })
     
     # Return values for potential use by other modules
     return(list(
