@@ -760,7 +760,7 @@ server <- function(input, output, session) {
       list(
         MAST = "MAST" %in% methods,
         CRISPRi = "MixScale" %in% methods && "CRISPRi" %in% modalities,
-        CRISPRa = "MixScale" %in% methods && "CRISPRa" %in% modalities
+        CRISPRa = FALSE  # ALWAYS exclude CRISPRa per user requirement (Bug #8)
       )
     } else {
       # Fallback: If no modality column, assume MixScale is CRISPRi
