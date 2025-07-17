@@ -300,7 +300,9 @@ mod_de_analysis_server <- function(id, app_data) {
           gene %in% input$gene_selection,
           cluster %in% input$cluster_selection,
           abs(log2FC) >= input$log2fc_threshold,
-          pvalue <= input$pvalue_threshold
+          pvalue <= input$pvalue_threshold,
+          # EXCLUDE CRISPRa results (A15_FPD-24)
+          experiment != "A15_FPD-24"
         )
       
       # Dataset filter
@@ -326,6 +328,7 @@ mod_de_analysis_server <- function(id, app_data) {
       cat("Unique genes:", length(unique(data$gene_name)), "\n")
       cat("Conditions:", length(unique(paste(data$gene, data$cluster, data$source))), "\n")
       cat("Sources:", paste(unique(data$source), collapse = ", "), "\n")
+      cat("Experiments:", paste(unique(data$experiment), collapse = ", "), "\n")
       cat("Clusters:", paste(unique(data$cluster), collapse = ", "), "\n")
       cat("\nTop significant genes:\n")
       
@@ -499,6 +502,7 @@ mod_de_analysis_server <- function(id, app_data) {
           Gene = gene_name,
           Target = gene,
           Source = source,
+          Experiment = experiment,
           Cluster = cluster,
           `log2FC` = log2FC,
           `P-value` = pvalue
@@ -519,16 +523,20 @@ mod_de_analysis_server <- function(id, app_data) {
           dom = 'ftp',      # f=filter, t=table, p=pagination
           columnDefs = list(
             list(className = 'dt-center', targets = '_all'),
-            list(width = '15%', targets = 0),  # Gene column
-            list(width = '15%', targets = 1),  # Target column
-            list(width = '12%', targets = 2),  # Source column
-            list(width = '12%', targets = 3),  # Cluster column
-            list(width = '12%', targets = 4),  # log2FC column
-            list(width = '15%', targets = 5),  # P-value column
-            list(width = '12%', targets = 6)   # Direction column
+            list(width = '13%', targets = 0),  # Gene column
+            list(width = '13%', targets = 1),  # Target column
+            list(width = '11%', targets = 2),  # Source column
+            list(width = '11%', targets = 3),  # Experiment column
+            list(width = '11%', targets = 4),  # Cluster column
+            list(width = '11%', targets = 5),  # log2FC column
+            list(width = '15%', targets = 6),  # P-value column
+            list(width = '11%', targets = 7),  # Direction column
+            # Make only the Gene column searchable
+            list(searchable = FALSE, targets = 1:7)  # Disable search for all columns except Gene (0)
           ),
-          order = list(list(5, 'asc')),  # Sort by P-value (ascending = most significant first)
+          order = list(list(6, 'asc')),  # Sort by P-value (ascending = most significant first)
           searching = TRUE,
+          search = list(regex = FALSE, caseInsensitive = TRUE),
           language = list(
             search = "Search genes:",
             paginate = list(
@@ -563,6 +571,7 @@ mod_de_analysis_server <- function(id, app_data) {
               Gene = gene_name,
               Target = gene,
               Source = source,
+              Experiment = experiment,
               Cluster = cluster,
               log2FC = log2FC,
               P_value = pvalue

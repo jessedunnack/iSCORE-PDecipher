@@ -107,45 +107,10 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
     }
   }
   
-  # Process CRISPRa MixScale results
-  if ("CRISPRa_Mixscale" %in% names(de_results)) {
-    crispa_data <- de_results$CRISPRa_Mixscale
-    
-    for (gene in names(crispa_data)) {
-      for (cluster in names(crispa_data[[gene]])) {
-        # Skip clusters not in filter (if specified)
-        if (!is.null(cluster_filter) && !cluster %in% cluster_filter) {
-          next
-        }
-        
-        if (!is.null(crispa_data[[gene]][[cluster]]$results)) {
-          results <- crispa_data[[gene]][[cluster]]$results
-          
-          log2fc_cols <- grep("^log2FC_", names(results), value = TRUE)
-          
-          for (log2fc_col in log2fc_cols) {
-            exp <- gsub("^log2FC_", "", log2fc_col)
-            pval_col <- paste0("p_cell_type", exp, ":weight")
-            
-            if (pval_col %in% names(results) && nrow(results) > 0) {
-              cluster_data <- data.frame(
-                gene = gene,
-                cluster = cluster,
-                gene_name = rownames(results),
-                log2FC = results[[log2fc_col]],
-                pvalue = results[[pval_col]],
-                method = "MixScale",
-                source = "CRISPRa",
-                experiment = exp,
-                stringsAsFactors = FALSE
-              )
-              processed_data <- rbind(processed_data, cluster_data)
-            }
-          }
-        }
-      }
-    }
-  }
+  # Skip CRISPRa MixScale results entirely - they should not be shown
+  # if ("CRISPRa_Mixscale" %in% names(de_results)) {
+  #   # CRISPRa data is excluded from analysis
+  # }
   
   # Clean up data
   processed_data <- processed_data[!is.na(processed_data$log2FC) & !is.na(processed_data$pvalue), ]
