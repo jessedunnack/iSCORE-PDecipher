@@ -559,6 +559,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     
     cat("[Signature Nomination] Module server starting...\n")
     
+    # Capture namespace function for use in reactive contexts
+    ns <- session$ns
+    
     # Reactive values for storing analysis results
     values <- reactiveValues(
       analysis_results = NULL,
