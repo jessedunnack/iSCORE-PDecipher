@@ -396,7 +396,7 @@ mod_signature_nomination_ui <- function(id) {
                              "Intersection (Conservative)" = "intersection",
                              "Union (Liberal)" = "union"
                            ),
-                           selected = "intersection",
+                           selected = "union",
                            inline = TRUE),
                 div(class = "help-text", style = "font-size: 0.85em; color: #666; margin-top: 5px;",
                   HTML("<strong>Intersection:</strong> Tests overlap among genes both methods can detect (more stringent)<br>",
@@ -1517,7 +1517,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                                      "same_direction_count", "opposite_direction_count") %in% colnames(pair_data))
         
         # Get user's selected approach (intersection vs union)
-        selected_approach <- input$analysis_approach %||% "intersection"
+        selected_approach <- input$analysis_approach %||% "union"
         
         if (has_intersection_union) {
           # PRIORITIZE SIGNIFICANCE COLUMNS FIRST (after cluster)
@@ -1872,7 +1872,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       
       if (has_intersection_union) {
         # Determine which approach to use based on user selection
-        approach <- input$analysis_approach %||% "intersection"
+        approach <- input$analysis_approach %||% "union"
         
         # Select appropriate p-value column based on approach
         if (approach == "intersection") {
