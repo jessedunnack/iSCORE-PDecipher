@@ -2929,69 +2929,114 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # Extract shared genes from analysis results
     extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster) {
       tryCatch({
+        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES (ROBUST VERSION) ===\n")
+        cat("[DETAILS DEBUG] Selected pair:", selected_pair, "\n")
+        cat("[DETAILS DEBUG] Selected cluster:", selected_cluster, "\n")
+        
+        # Parse gene names from the pair
+        genes <- strsplit(selected_pair, "_vs_")[[1]]
+        mast_gene <- genes[1]
+        crispri_gene <- genes[2]
+        cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
+        
         # Get all signatures data
         all_sigs <- analysis_results$all_signatures
-        if (is.null(all_sigs)) return(data.frame())
+        if (is.null(all_sigs)) {
+          cat("[DETAILS DEBUG] No all_signatures data\n")
+          return(data.frame(Message = "No signature data available"))
+        }
         
         # Find the specific cluster data
-        cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
-                                all_sigs$cluster == selected_cluster, ]
+        sig_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
+                            all_sigs$cluster == selected_cluster, ]
         
-        if (nrow(cluster_data) == 0) return(data.frame())
+        if (nrow(sig_data) == 0) {
+          cat("[DETAILS DEBUG] No signature data for this pair/cluster\n")
+          return(data.frame(Message = "No data for this gene pair and cluster"))
+        }
         
-        # Extract overlap count to check if we should continue
-        overlap_count <- cluster_data$gene_overlap_count[1]
+        cat("[DETAILS DEBUG] Checking analysis_results structure\n")
+        cat("[DETAILS DEBUG] Found signature data for this pair/cluster\n")
         
-        # CRITICAL FIX: Do NOT return early if overlap_count > 0
-        # Continue to extract actual gene lists
+        # Extract overlap count
+        overlap_count <- sig_data$gene_overlap_count[1]
         if (!is.na(overlap_count) && overlap_count > 0) {
-          cat("[DETAILS DEBUG] Found overlap count:", overlap_count, "- continuing to extract genes\n")
+          cat("[DETAILS DEBUG] Found overlap count:", overlap_count, "but continuing to extract actual genes\n")
         }
         
-        # Get the raw signature data to extract gene lists
-        raw_signatures <- analysis_results$raw_signatures
-        if (is.null(raw_signatures)) {
-          cat("[DETAILS DEBUG] No raw_signatures available\n")
-          return(data.frame())
+        # Check for pre-computed overlap data
+        if (!is.null(analysis_results$gene_overlaps)) {
+          cat("[DETAILS DEBUG] Found pre-computed gene overlaps\n")
+          overlap_data <- analysis_results$gene_overlaps[
+            analysis_results$gene_overlaps$gene_pair == selected_pair & 
+            analysis_results$gene_overlaps$cluster == selected_cluster, 
+          ]
+          
+          if (nrow(overlap_data) > 0 && "overlap_genes" %in% names(overlap_data)) {
+            shared_genes <- overlap_data$overlap_genes[[1]]
+            if (!is.null(shared_genes) && length(shared_genes) > 0) {
+              return(data.frame(
+                Gene = shared_genes,
+                stringsAsFactors = FALSE
+              ))
+            }
+          }
         }
         
-        # Find matching signature in raw data
-        sig_match <- raw_signatures[raw_signatures$gene_pair == selected_pair & 
-                                   raw_signatures$cluster == selected_cluster, ]
+        # If no pre-computed data, extract from DE results
+        cat("[DETAILS DEBUG] No pre-computed overlap data found, will extract from DE results\n")
         
-        if (nrow(sig_match) == 0) {
-          cat("[DETAILS DEBUG] No matching signature in raw data\n")
-          return(data.frame())
+        # Get DE results from app data
+        de_results <- analysis_results$de_results
+        if (is.null(de_results)) {
+          cat("[DETAILS DEBUG] No DE results in analysis_results\n")
+          return(data.frame(Message = "DE results not available"))
         }
         
-        # Extract MAST and CRISPRi gene lists
-        mast_genes <- sig_match$mast_sig_genes[[1]]
-        crispri_genes <- sig_match$crispri_sig_genes[[1]]
+        # Extract MAST genes
+        mast_de_genes <- character(0)
+        if (!is.null(de_results$iSCORE_PD_MAST[[mast_gene]][[selected_cluster]]$results)) {
+          mast_results <- de_results$iSCORE_PD_MAST[[mast_gene]][[selected_cluster]]$results
+          # Get significant genes (p.adjust < 0.05)
+          sig_mast <- mast_results[mast_results$p_val_adj < 0.05, ]
+          mast_de_genes <- rownames(sig_mast)
+          cat("[DETAILS DEBUG] Found", length(mast_de_genes), "MAST DE genes\n")
+        }
         
-        if (is.null(mast_genes) || is.null(crispri_genes)) {
-          cat("[DETAILS DEBUG] Gene lists are NULL\n")
-          return(data.frame())
+        # Extract CRISPRi genes
+        crispri_de_genes <- character(0)
+        if (!is.null(de_results$CRISPRi_Mixscale[[crispri_gene]][[selected_cluster]]$results)) {
+          crispri_results <- de_results$CRISPRi_Mixscale[[crispri_gene]][[selected_cluster]]$results
+          # Check for different p-value column names
+          if ("pvalue" %in% colnames(crispri_results)) {
+            sig_crispri <- crispri_results[crispri_results$pvalue < 0.05, ]
+          } else if ("p_val_adj" %in% colnames(crispri_results)) {
+            sig_crispri <- crispri_results[crispri_results$p_val_adj < 0.05, ]
+          } else {
+            sig_crispri <- data.frame()
+          }
+          crispri_de_genes <- rownames(sig_crispri)
+          cat("[DETAILS DEBUG] Found", length(crispri_de_genes), "CRISPRi DE genes\n")
         }
         
         # Get shared genes
-        shared_genes <- intersect(mast_genes, crispri_genes)
+        shared_genes <- intersect(mast_de_genes, crispri_de_genes)
+        cat("[DETAILS DEBUG] Found", length(shared_genes), "shared genes\n")
         
         if (length(shared_genes) == 0) {
-          return(data.frame(Message = "No overlapping genes found"))
+          return(data.frame(Message = "No overlapping DE genes found"))
         }
         
         # Create data frame with gene details
         genes_df <- data.frame(
           Gene = shared_genes,
-          `In MAST` = "Yes",
-          `In CRISPRi` = "Yes",
           stringsAsFactors = FALSE
         )
         
         return(genes_df)
         
       }, error = function(e) {
-        cat("[DETAILS ERROR] extract_shared_genes:", e$message, "\n")
+        cat("[DETAILS DEBUG] ERROR in extract_shared_genes:", e$message, "\n")
         return(data.frame(Error = paste("Failed to extract genes:", e$message)))
       })
     }
