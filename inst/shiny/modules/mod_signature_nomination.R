@@ -2929,7 +2929,7 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # Extract shared genes from analysis results
     extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster) {
       tryCatch({
-        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES (ROBUST VERSION) ===\n")
+        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES FROM ENRICHMENT TERMS ===\n")
         cat("[DETAILS DEBUG] Selected pair:", selected_pair, "\n")
         cat("[DETAILS DEBUG] Selected cluster:", selected_cluster, "\n")
         
@@ -2939,102 +2939,72 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         crispri_gene <- genes[2]
         cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
-        # Get all signatures data
-        all_sigs <- analysis_results$all_signatures
-        if (is.null(all_sigs)) {
-          cat("[DETAILS DEBUG] No all_signatures data\n")
-          return(data.frame(Message = "No signature data available"))
+        # Get the enrichment data
+        enrichment_data <- app_data$consolidated_data
+        if (is.null(enrichment_data)) {
+          cat("[DETAILS DEBUG] No enrichment data available\n")
+          return(data.frame(Message = "Enrichment data not available"))
         }
         
-        # Find the specific cluster data
-        sig_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
-                            all_sigs$cluster == selected_cluster, ]
+        # Get enrichment terms for MAST
+        mast_terms <- enrichment_data[
+          enrichment_data$mutation_perturbation == mast_gene & 
+          enrichment_data$cluster == selected_cluster &
+          enrichment_data$method == "iSCORE_PD_MAST", 
+        ]
         
-        if (nrow(sig_data) == 0) {
-          cat("[DETAILS DEBUG] No signature data for this pair/cluster\n")
-          return(data.frame(Message = "No data for this gene pair and cluster"))
+        # Get enrichment terms for CRISPRi
+        crispri_terms <- enrichment_data[
+          enrichment_data$mutation_perturbation == crispri_gene & 
+          enrichment_data$cluster == selected_cluster &
+          enrichment_data$method == "CRISPRi_Mixscale", 
+        ]
+        
+        cat("[DETAILS DEBUG] Found", nrow(mast_terms), "MAST enrichment terms\n")
+        cat("[DETAILS DEBUG] Found", nrow(crispri_terms), "CRISPRi enrichment terms\n")
+        
+        if (nrow(mast_terms) == 0 || nrow(crispri_terms) == 0) {
+          return(data.frame(Message = "No enrichment data found for one or both methods"))
         }
         
-        cat("[DETAILS DEBUG] Checking analysis_results structure\n")
-        cat("[DETAILS DEBUG] Found signature data for this pair/cluster\n")
+        # Find shared enrichment terms (same Description)
+        shared_terms <- intersect(mast_terms$Description, crispri_terms$Description)
+        cat("[DETAILS DEBUG] Found", length(shared_terms), "shared enrichment terms\n")
         
-        # Extract overlap count
-        overlap_count <- sig_data$gene_overlap_count[1]
-        if (!is.na(overlap_count) && overlap_count > 0) {
-          cat("[DETAILS DEBUG] Found overlap count:", overlap_count, "but continuing to extract actual genes\n")
+        if (length(shared_terms) == 0) {
+          return(data.frame(Message = "No shared enrichment terms found between methods"))
         }
         
-        # Check for pre-computed overlap data
-        if (!is.null(analysis_results$gene_overlaps)) {
-          cat("[DETAILS DEBUG] Found pre-computed gene overlaps\n")
-          overlap_data <- analysis_results$gene_overlaps[
-            analysis_results$gene_overlaps$gene_pair == selected_pair & 
-            analysis_results$gene_overlaps$cluster == selected_cluster, 
-          ]
-          
-          if (nrow(overlap_data) > 0 && "overlap_genes" %in% names(overlap_data)) {
-            shared_genes <- overlap_data$overlap_genes[[1]]
-            if (!is.null(shared_genes) && length(shared_genes) > 0) {
-              return(data.frame(
-                Gene = shared_genes,
-                stringsAsFactors = FALSE
-              ))
-            }
-          }
-        }
+        # Get genes associated with these shared terms
+        shared_mast_terms <- mast_terms[mast_terms$Description %in% shared_terms, ]
+        shared_crispri_terms <- crispri_terms[crispri_terms$Description %in% shared_terms, ]
         
-        # If no pre-computed data, extract from DE results
-        cat("[DETAILS DEBUG] No pre-computed overlap data found, will extract from DE results\n")
+        # Extract genes from geneID column for shared terms
+        mast_genes <- unique(unlist(strsplit(as.character(shared_mast_terms$geneID), "/")))
+        mast_genes <- mast_genes[mast_genes != "" & !is.na(mast_genes)]
         
-        # Get DE results from app data
-        de_results <- analysis_results$de_results
-        if (is.null(de_results)) {
-          cat("[DETAILS DEBUG] No DE results in analysis_results\n")
-          return(data.frame(Message = "DE results not available"))
-        }
+        crispri_genes <- unique(unlist(strsplit(as.character(shared_crispri_terms$geneID), "/")))
+        crispri_genes <- crispri_genes[crispri_genes != "" & !is.na(crispri_genes)]
         
-        # Extract MAST genes
-        mast_de_genes <- character(0)
-        if (!is.null(de_results$iSCORE_PD_MAST[[mast_gene]][[selected_cluster]]$results)) {
-          mast_results <- de_results$iSCORE_PD_MAST[[mast_gene]][[selected_cluster]]$results
-          # Get significant genes (p.adjust < 0.05)
-          sig_mast <- mast_results[mast_results$p_val_adj < 0.05, ]
-          mast_de_genes <- rownames(sig_mast)
-          cat("[DETAILS DEBUG] Found", length(mast_de_genes), "MAST DE genes\n")
-        }
+        # Get genes that appear in shared terms from BOTH methods
+        shared_genes <- intersect(mast_genes, crispri_genes)
         
-        # Extract CRISPRi genes
-        crispri_de_genes <- character(0)
-        if (!is.null(de_results$CRISPRi_Mixscale[[crispri_gene]][[selected_cluster]]$results)) {
-          crispri_results <- de_results$CRISPRi_Mixscale[[crispri_gene]][[selected_cluster]]$results
-          # Check for different p-value column names
-          if ("pvalue" %in% colnames(crispri_results)) {
-            sig_crispri <- crispri_results[crispri_results$pvalue < 0.05, ]
-          } else if ("p_val_adj" %in% colnames(crispri_results)) {
-            sig_crispri <- crispri_results[crispri_results$p_val_adj < 0.05, ]
-          } else {
-            sig_crispri <- data.frame()
-          }
-          crispri_de_genes <- rownames(sig_crispri)
-          cat("[DETAILS DEBUG] Found", length(crispri_de_genes), "CRISPRi DE genes\n")
-        }
-        
-        # Get shared genes
-        shared_genes <- intersect(mast_de_genes, crispri_de_genes)
-        cat("[DETAILS DEBUG] Found", length(shared_genes), "shared genes\n")
+        cat("[DETAILS DEBUG] Genes from MAST shared terms:", length(mast_genes), "\n")
+        cat("[DETAILS DEBUG] Genes from CRISPRi shared terms:", length(crispri_genes), "\n")
+        cat("[DETAILS DEBUG] Overlapping genes:", length(shared_genes), "\n")
         
         if (length(shared_genes) == 0) {
-          return(data.frame(Message = "No overlapping DE genes found"))
+          return(data.frame(
+            Message = paste0("Found ", length(shared_terms), " shared enrichment terms, ",
+                           "but no overlapping genes between the methods")
+          ))
         }
         
-        # Create data frame with gene details
-        genes_df <- data.frame(
-          Gene = shared_genes,
+        # Return the shared genes
+        return(data.frame(
+          Gene = sort(shared_genes),
           stringsAsFactors = FALSE
-        )
-        
-        return(genes_df)
-        
+        ))
       }, error = function(e) {
         cat("[DETAILS DEBUG] ERROR in extract_shared_genes:", e$message, "\n")
         return(data.frame(Error = paste("Failed to extract genes:", e$message)))
@@ -3044,27 +3014,70 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # Extract shared pathways from analysis results
     extract_shared_pathways <- function(analysis_results, selected_pair, selected_cluster) {
       tryCatch({
-        # Get enrichment data
-        enrichment_data <- analysis_results$enrichment_overlap
-        if (is.null(enrichment_data)) return(data.frame())
+        cat("[PATHWAYS DEBUG] === EXTRACTING SHARED PATHWAYS ===\n")
+        cat("[PATHWAYS DEBUG] Selected pair:", selected_pair, "\n")
+        cat("[PATHWAYS DEBUG] Selected cluster:", selected_cluster, "\n")
         
-        # Filter for specific gene pair and cluster
-        pathway_data <- enrichment_data[enrichment_data$gene_pair == selected_pair & 
-                                       enrichment_data$cluster == selected_cluster, ]
+        # Parse gene names from the pair
+        genes <- strsplit(selected_pair, "_vs_")[[1]]
+        mast_gene <- genes[1]
+        crispri_gene <- genes[2]
         
-        if (nrow(pathway_data) == 0) {
-          return(data.frame(Message = "No pathway data available"))
+        # Get the enrichment data
+        enrichment_data <- app_data$consolidated_data
+        if (is.null(enrichment_data)) {
+          cat("[PATHWAYS DEBUG] No enrichment data available\n")
+          return(data.frame(Message = "Enrichment data not available"))
         }
         
-        # Select relevant columns
-        display_cols <- c("pathway_id", "pathway_name", "enrichment_type", "overlap_type")
-        if (all(display_cols %in% names(pathway_data))) {
-          pathway_df <- pathway_data[, display_cols]
-          names(pathway_df) <- c("Pathway ID", "Pathway Name", "Database", "Overlap Type")
-          return(pathway_df)
+        # Get enrichment terms for MAST
+        mast_terms <- enrichment_data[
+          enrichment_data$mutation_perturbation == mast_gene & 
+          enrichment_data$cluster == selected_cluster &
+          enrichment_data$method == "iSCORE_PD_MAST", 
+        ]
+        
+        # Get enrichment terms for CRISPRi
+        crispri_terms <- enrichment_data[
+          enrichment_data$mutation_perturbation == crispri_gene & 
+          enrichment_data$cluster == selected_cluster &
+          enrichment_data$method == "CRISPRi_Mixscale", 
+        ]
+        
+        cat("[PATHWAYS DEBUG] Found", nrow(mast_terms), "MAST terms,", nrow(crispri_terms), "CRISPRi terms\n")
+        
+        if (nrow(mast_terms) == 0 || nrow(crispri_terms) == 0) {
+          return(data.frame(Message = "No enrichment data found for one or both methods"))
+        }
+        
+        # Find shared enrichment terms (same Description)
+        shared_descriptions <- intersect(mast_terms$Description, crispri_terms$Description)
+        cat("[PATHWAYS DEBUG] Found", length(shared_descriptions), "shared pathway descriptions\n")
+        
+        if (length(shared_descriptions) == 0) {
+          return(data.frame(Message = "No shared pathways found between methods"))
+        }
+        
+        # Get the shared terms with their details
+        shared_pathways <- enrichment_data[
+          enrichment_data$Description %in% shared_descriptions &
+          enrichment_data$mutation_perturbation %in% c(mast_gene, crispri_gene) &
+          enrichment_data$cluster == selected_cluster,
+        ]
+        
+        # Create display dataframe with unique pathways
+        unique_pathways <- unique(shared_pathways[, c("ID", "Description", "enrichment_type")])
+        
+        if (nrow(unique_pathways) > 0) {
+          display_df <- data.frame(
+            `Pathway ID` = unique_pathways$ID,
+            `Pathway Name` = unique_pathways$Description,
+            `Database` = unique_pathways$enrichment_type,
+            stringsAsFactors = FALSE
+          )
+          return(display_df)
         } else {
-          # Fallback if columns are different
-          return(pathway_data[, 1:min(4, ncol(pathway_data))])
+          return(data.frame(Message = "Unable to format pathway data"))
         }
         
       }, error = function(e) {
