@@ -5,6 +5,12 @@
 **First Bug Fix Attempt**: 4b10a6b (2025-07-16 13:05) - "feat: Comprehensive bug fixes...9 bugs resolved"
 **Current Progress**: v0.2.9-fixes branch - Implementing fixes from baseline
 
+## 🚨 HIGH PRIORITY: OUTSTANDING BUGS TO VERIFY/FIX
+1. **Bug #3** - [object Object] error in Cross-Cluster DE Gene Analysis - NEEDS VERIFICATION
+2. **Bug #5** - CRISPRi dotplots not rendering - NEEDS FIX (modality column issue)
+3. **Bug #6** - Interactive heatmap (heatmaply) - NEEDS VERIFICATION
+4. **Bug #9** - Gene dropdown "X variants" text - NEEDS VERIFICATION
+
 ## Executive Summary
 
 This document provides a comprehensive analysis of bug fix attempts in the iSCORE-PDecipher Shiny app. The original attempt to fix 9 bugs on 2025-07-16 introduced numerous tangential issues due to incomplete implementations, wrong assumptions about data structures, and fixes applied in incorrect locations. This analysis identifies the core fixes needed and recommends a minimal intervention approach.
