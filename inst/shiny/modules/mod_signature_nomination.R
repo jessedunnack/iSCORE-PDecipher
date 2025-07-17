@@ -2942,6 +2942,12 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         crispri_gene <- genes[2]
         cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
+        # Gene name harmonization (PRKN = PARK2)
+        # Apply the same harmonization used in the Fisher's exact test
+        if (mast_gene == "PRKN") mast_gene <- "PARK2"
+        if (crispri_gene == "PRKN") crispri_gene <- "PARK2"
+        cat("[DETAILS DEBUG] After harmonization - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
+        
         # Get the enrichment data using the data manager
         enrichment_data <- NULL
         
@@ -2972,20 +2978,31 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           cat("[DETAILS DEBUG] First few cluster values:", paste(head(enrichment_data$cluster, 10), collapse=", "), "\n")
           cat("[DETAILS DEBUG] Looking for MAST:", mast_gene, "cluster:", selected_cluster, "\n")
           cat("[DETAILS DEBUG] Looking for CRISPRi:", crispri_gene, "cluster:", selected_cluster, "\n")
+          
+          # Check what mutations are available for PRKN/PARK2
+          prkn_variants <- unique(enrichment_data$mutation_perturbation[grep("PRKN|PARK", enrichment_data$mutation_perturbation)])
+          cat("[DETAILS DEBUG] Available PRKN/PARK variants in data:", paste(prkn_variants, collapse=", "), "\n")
+          
+          # Check what's available for this cluster
+          cluster_mutations <- unique(enrichment_data$mutation_perturbation[enrichment_data$cluster == selected_cluster])
+          cat("[DETAILS DEBUG] Mutations available in", selected_cluster, ":", paste(head(cluster_mutations, 10), collapse=", "), "\n")
+          
+          # Check methods available
+          cat("[DETAILS DEBUG] Available methods:", paste(unique(enrichment_data$method), collapse=", "), "\n")
         }
         
         # Get enrichment terms for MAST
         mast_terms <- enrichment_data[
           enrichment_data$mutation_perturbation == mast_gene & 
           enrichment_data$cluster == selected_cluster &
-          enrichment_data$method == "iSCORE_PD_MAST", 
+          enrichment_data$method == "MAST", 
         ]
         
         # Get enrichment terms for CRISPRi
         crispri_terms <- enrichment_data[
           enrichment_data$mutation_perturbation == crispri_gene & 
           enrichment_data$cluster == selected_cluster &
-          enrichment_data$method == "CRISPRi_Mixscale", 
+          enrichment_data$method == "MixScale", 
         ]
         
         cat("[DETAILS DEBUG] Found", nrow(mast_terms), "MAST enrichment terms\n")
@@ -3079,14 +3096,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         mast_terms <- enrichment_data[
           enrichment_data$mutation_perturbation == mast_gene & 
           enrichment_data$cluster == selected_cluster &
-          enrichment_data$method == "iSCORE_PD_MAST", 
+          enrichment_data$method == "MAST", 
         ]
         
         # Get enrichment terms for CRISPRi
         crispri_terms <- enrichment_data[
           enrichment_data$mutation_perturbation == crispri_gene & 
           enrichment_data$cluster == selected_cluster &
-          enrichment_data$method == "CRISPRi_Mixscale", 
+          enrichment_data$method == "MixScale", 
         ]
         
         cat("[PATHWAYS DEBUG] Found", nrow(mast_terms), "MAST terms,", nrow(crispri_terms), "CRISPRi terms\n")
