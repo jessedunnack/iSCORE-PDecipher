@@ -2734,6 +2734,11 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           dplyr::summarise(sig_strength = mean(strength_safe, na.rm = TRUE), .groups = "drop") %>%
           dplyr::arrange(gene_pair, cluster)
         
+        # Ensure values are properly typed to avoid [object Object] errors
+        cluster_counts$sig_strength <- as.numeric(cluster_counts$sig_strength)
+        cluster_counts$cluster <- as.character(cluster_counts$cluster)
+        cluster_counts$gene_pair <- as.character(cluster_counts$gene_pair)
+        
         # Create stacked bar chart
         plot_ly(cluster_counts, 
                 x = ~gene_pair, 
@@ -2754,17 +2759,22 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Fallback: Simple bar chart of average strengths
         pan_cluster_data <- pan_cluster_data[order(pan_cluster_data$mean_signature_strength, decreasing = TRUE), ]
         
+        # Ensure all values are properly converted to avoid [object Object] errors
+        pan_cluster_data$cluster_count_safe <- as.numeric(pan_cluster_data$cluster_count)
+        pan_cluster_data$mean_strength_safe <- as.numeric(pan_cluster_data$mean_signature_strength)
+        pan_cluster_data$gene_overlaps_safe <- as.numeric(pan_cluster_data$total_gene_overlaps)
+        
         plot_ly(pan_cluster_data,
                 x = ~gene_pair,
-                y = ~mean_signature_strength,
+                y = ~mean_strength_safe,
                 type = 'bar',
-                marker = list(color = ~cluster_count, 
+                marker = list(color = ~cluster_count_safe, 
                             colorscale = 'Blues',
                             showscale = TRUE,
                             colorbar = list(title = "Shared<br>Clusters")),
-                text = ~paste("Shared Clusters:", cluster_count,
-                            "<br>Avg Strength:", round(mean_signature_strength, 2),
-                            "<br>DE Genes:", total_gene_overlaps),
+                text = ~paste("Shared Clusters:", cluster_count_safe,
+                            "<br>Avg Strength:", round(mean_strength_safe, 2),
+                            "<br>DE Genes:", gene_overlaps_safe),
                 hovertemplate = "%{text}<extra></extra>") %>%
           layout(
             title = "Pan-Cluster Signatures Ranked by Average Strength",

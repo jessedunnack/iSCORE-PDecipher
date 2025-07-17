@@ -21,6 +21,48 @@ if (upset_available) {
 source("modules/shared/de_processing.R")
 source("modules/shared/source_labeling.R")
 
+# Helper function to extract base gene name
+extract_base_gene <- function(gene_name) {
+  # Handle PARK2/PRKN special case
+  if (gene_name == "PARK2") return("PRKN")
+  
+  # Remove mutation suffixes (e.g., _A30P, _A53T)
+  base_name <- gsub("_[A-Z][0-9]+[A-Z]$", "", gene_name)
+  
+  # Return PRKN for any PARK2 variant
+  if (base_name == "PARK2") return("PRKN")
+  
+  return(base_name)
+}
+
+# Helper function to create consolidated gene choices
+create_consolidated_gene_choices <- function(genes) {
+  if (length(genes) == 0) return(character(0))
+  
+  # Group genes by base name
+  base_genes <- sapply(genes, extract_base_gene)
+  unique_base_genes <- unique(base_genes)
+  
+  # Create consolidated choices
+  consolidated_choices <- character(0)
+  for (base_gene in unique_base_genes) {
+    # Find all variants for this base gene
+    variants <- genes[base_genes == base_gene]
+    
+    if (length(variants) == 1 && !grepl("_[A-Z][0-9]+[A-Z]$", variants[1])) {
+      # Single gene without variants
+      consolidated_choices[base_gene] <- base_gene
+    } else {
+      # Multiple variants or single variant
+      label <- paste0(base_gene, " (", length(variants), " variant", 
+                     ifelse(length(variants) > 1, "s", ""), ")")
+      consolidated_choices[label] <- base_gene
+    }
+  }
+  
+  return(consolidated_choices)
+}
+
 mod_de_analysis_ui <- function(id) {
   ns <- NS(id)
   
@@ -286,6 +328,50 @@ mod_de_analysis_server <- function(id, app_data) {
       })
     })
     
+    # Update gene choices when dataset filter changes
+    observeEvent(input$dataset_filter, {
+      req(analysis_data$de_data)
+      
+      all_genes <- unique(analysis_data$de_data$gene)
+      
+      if (input$dataset_filter == "all") {
+        # Consolidate gene names when "All Datasets" is selected
+        consolidated_choices <- create_consolidated_gene_choices(all_genes)
+        
+        # Get currently selected genes and map to base names
+        current_selection <- input$gene_selection
+        if (!is.null(current_selection)) {
+          # Map current selection to base genes
+          base_selection <- unique(sapply(current_selection, extract_base_gene))
+          # Find which consolidated values match
+          new_selection <- consolidated_choices[consolidated_choices %in% base_selection]
+          if (length(new_selection) == 0) {
+            new_selection <- consolidated_choices  # Select all if no match
+          }
+        } else {
+          new_selection <- consolidated_choices  # Select all by default
+        }
+        
+        updateSelectizeInput(session, "gene_selection",
+                            choices = consolidated_choices,
+                            selected = new_selection)
+      } else {
+        # Filter genes by dataset
+        if (input$dataset_filter == "iSCORE-PD") {
+          filtered_data <- analysis_data$de_data[analysis_data$de_data$source == "iSCORE-PD", ]
+        } else if (input$dataset_filter == "PerturbSeq") {
+          filtered_data <- analysis_data$de_data[analysis_data$de_data$source == "PerturbSeq", ]
+        }
+        
+        dataset_genes <- unique(filtered_data$gene)
+        
+        # Show full gene names for specific datasets
+        updateSelectizeInput(session, "gene_selection",
+                            choices = dataset_genes,
+                            selected = dataset_genes)
+      }
+    })
+    
     # Process data based on user selections
     processed_data <- reactive({
       req(analysis_data$de_data)
@@ -294,14 +380,29 @@ mod_de_analysis_server <- function(id, app_data) {
       
       data <- analysis_data$de_data
       
-      # Apply filters
-      filtered_data <- data %>%
-        dplyr::filter(
-          gene %in% input$gene_selection,
-          cluster %in% input$cluster_selection,
-          abs(log2FC) >= input$log2fc_threshold,
-          pvalue <= input$pvalue_threshold
-        )
+      # Apply filters with consolidation support
+      if (input$dataset_filter == "all") {
+        # When "All Datasets" is selected, match by base gene names
+        selected_base_genes <- unique(sapply(input$gene_selection, extract_base_gene))
+        data_base_genes <- sapply(data$gene, extract_base_gene)
+        
+        filtered_data <- data %>%
+          dplyr::filter(
+            data_base_genes %in% selected_base_genes,
+            cluster %in% input$cluster_selection,
+            abs(log2FC) >= input$log2fc_threshold,
+            pvalue <= input$pvalue_threshold
+          )
+      } else {
+        # Standard filtering for specific datasets
+        filtered_data <- data %>%
+          dplyr::filter(
+            gene %in% input$gene_selection,
+            cluster %in% input$cluster_selection,
+            abs(log2FC) >= input$log2fc_threshold,
+            pvalue <= input$pvalue_threshold
+          )
+      }
       
       # Dataset filter
       if (input$dataset_filter != "all") {
