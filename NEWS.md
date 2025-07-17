@@ -1,3 +1,46 @@
+# iSCORE.PDecipher 0.2.9
+
+## Minimal Bug Fixes from Clean Baseline (2025-07-17)
+
+This release applies minimal, targeted fixes to address 9 bugs while avoiding the introduction of new issues. Started from baseline commit d6c08c0 and applied only necessary changes.
+
+### 🐛 **Bug Fixes Applied**
+
+#### Bug #1: Gene Details Modal
+- Added Details button to gene pair analysis table
+- Implemented modal showing actual DE genes and enrichment terms
+- Fixed early returns that prevented gene list extraction
+
+#### Bug #3: Cross-Cluster DE Gene Analysis 
+- Added new Cross-Cluster Analysis tab
+- Implemented proper column handling to prevent [object Object] errors
+- Shows genes DE across multiple clusters with statistics
+
+#### Bug #5: CRISPRi Dotplot Hover Tooltips
+- Fixed gene lookup for CRISPRi data - now uses actual experiment ID
+- Added conservative fallback for missing data with transparency
+- Hover tooltips now show actual DE genes instead of "No genes found"
+
+#### Bug #6: Interactive DE Gene Overlap Heatmap
+- Added DE Gene Overlap Heatmap tab with interactive visualization
+- Implemented using plotly/heatmaply for full interactivity
+- Shows Fisher's exact test p-values for gene overlap significance
+
+#### Bug #8: CRISPRa Exclusion
+- Ensured CRISPRa data is always excluded from analyses
+- Modified detect_available_methods to always return FALSE for CRISPRa
+
+#### Bug #9: Gene Dropdown Cleanup
+- Clean gene names without "(X variants)" text (avoided by using baseline)
+
+### 🔧 **Technical Notes**
+- Based on clean baseline (d6c08c0) to avoid tangential issues
+- Each fix applied independently and minimally
+- Conservative approach to prevent introduction of new bugs
+- See BUG_FIX_COMPREHENSIVE_ANALYSIS.md for detailed documentation
+
+---
+
 # iSCORE.PDecipher 0.2.7
 
 ## Major Correlation Plot Visualization Improvements (2025-01-15)
