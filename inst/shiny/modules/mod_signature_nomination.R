@@ -1707,6 +1707,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Force display_data to be a proper data.frame
         display_data <- as.data.frame(display_data, stringsAsFactors = FALSE)
         
+        # Add a Details button column
+        display_data$Details <- paste0(
+          '<button class="btn btn-primary btn-sm" onclick="Shiny.setInputValue(\'', 
+          ns('show_details'), "', {cluster: ', 1:nrow(display_data), 
+          ', random: Math.random()}); event.stopPropagation();">',
+          '<i class="fa fa-info-circle"></i> Details</button>'
+        )
+        
         cat("[GENE PAIR DEBUG] AFTER as.data.frame - class:", class(display_data), "\n")
         
         # SIMPLIFIED DT call to isolate the issue
@@ -1717,10 +1725,15 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
           dt_result <- DT::datatable(display_data,
                            options = list(
                              pageLength = 15, 
-                             scrollX = TRUE
+                             scrollX = TRUE,
+                             columnDefs = list(
+                               list(targets = which(names(display_data) == "Details") - 1,
+                                    orderable = FALSE)
+                             )
                            ),
                            rownames = FALSE,
-                           caption = simple_caption)
+                           caption = simple_caption,
+                           escape = FALSE)
           
           cat("[GENE PAIR DEBUG] DT::datatable created successfully\n")
           
@@ -2824,6 +2837,196 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
                yaxis = list(showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
              ))
     })
+    
+    # === MODAL HANDLER FOR GENE DETAILS ===
+    observeEvent(input$show_details, {
+      req(input$show_details)
+      req(values$analysis_results)
+      req(input$selected_gene_pair)
+      
+      # Extract cluster index from the button click
+      cluster_idx <- input$show_details$cluster
+      
+      # Get the cluster name from the current table data
+      all_sigs <- values$analysis_results$all_signatures
+      selected_pair <- input$selected_gene_pair
+      pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      
+      if (nrow(pair_data) >= cluster_idx) {
+        selected_cluster <- pair_data$cluster[cluster_idx]
+        
+        # Extract shared genes and pathways
+        shared_genes_data <- extract_shared_genes(values$analysis_results, selected_pair, selected_cluster)
+        shared_pathways_data <- extract_shared_pathways(values$analysis_results, selected_pair, selected_cluster)
+        
+        # Show modal with details
+        showModal(modalDialog(
+          title = paste("Details for", selected_pair, "- Cluster", selected_cluster),
+          size = "l",
+          easyClose = TRUE,
+          footer = modalButton("Close"),
+          
+          tabsetPanel(
+            tabPanel("Shared DE Genes",
+              br(),
+              if (nrow(shared_genes_data) > 0) {
+                DT::dataTableOutput(ns("modal_genes_table"))
+              } else {
+                p("No shared DE genes found for this cluster.")
+              }
+            ),
+            tabPanel("Enriched Pathways",
+              br(),
+              if (nrow(shared_pathways_data) > 0) {
+                DT::dataTableOutput(ns("modal_pathways_table"))
+              } else {
+                p("No enriched pathways found for this cluster.")
+              }
+            )
+          )
+        ))
+      }
+    })
+    
+    # Modal output for genes table
+    output$modal_genes_table <- DT::renderDataTable({
+      req(input$show_details)
+      cluster_idx <- input$show_details$cluster
+      all_sigs <- values$analysis_results$all_signatures
+      selected_pair <- input$selected_gene_pair
+      pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      
+      if (nrow(pair_data) >= cluster_idx) {
+        selected_cluster <- pair_data$cluster[cluster_idx]
+        shared_genes_data <- extract_shared_genes(values$analysis_results, selected_pair, selected_cluster)
+        
+        DT::datatable(shared_genes_data,
+                     options = list(pageLength = 10, scrollX = TRUE),
+                     rownames = FALSE)
+      }
+    })
+    
+    # Modal output for pathways table
+    output$modal_pathways_table <- DT::renderDataTable({
+      req(input$show_details)
+      cluster_idx <- input$show_details$cluster
+      all_sigs <- values$analysis_results$all_signatures
+      selected_pair <- input$selected_gene_pair
+      pair_data <- all_sigs[all_sigs$gene_pair == selected_pair, ]
+      
+      if (nrow(pair_data) >= cluster_idx) {
+        selected_cluster <- pair_data$cluster[cluster_idx]
+        shared_pathways_data <- extract_shared_pathways(values$analysis_results, selected_pair, selected_cluster)
+        
+        DT::datatable(shared_pathways_data,
+                     options = list(pageLength = 10, scrollX = TRUE),
+                     rownames = FALSE)
+      }
+    })
+    
+    # === HELPER FUNCTIONS FOR MODAL DATA EXTRACTION ===
+    
+    # Extract shared genes from analysis results
+    extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster) {
+      tryCatch({
+        # Get all signatures data
+        all_sigs <- analysis_results$all_signatures
+        if (is.null(all_sigs)) return(data.frame())
+        
+        # Find the specific cluster data
+        cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
+                                all_sigs$cluster == selected_cluster, ]
+        
+        if (nrow(cluster_data) == 0) return(data.frame())
+        
+        # Extract overlap count to check if we should continue
+        overlap_count <- cluster_data$gene_overlap_count[1]
+        
+        # CRITICAL FIX: Do NOT return early if overlap_count > 0
+        # Continue to extract actual gene lists
+        if (!is.na(overlap_count) && overlap_count > 0) {
+          cat("[DETAILS DEBUG] Found overlap count:", overlap_count, "- continuing to extract genes\n")
+        }
+        
+        # Get the raw signature data to extract gene lists
+        raw_signatures <- analysis_results$raw_signatures
+        if (is.null(raw_signatures)) {
+          cat("[DETAILS DEBUG] No raw_signatures available\n")
+          return(data.frame())
+        }
+        
+        # Find matching signature in raw data
+        sig_match <- raw_signatures[raw_signatures$gene_pair == selected_pair & 
+                                   raw_signatures$cluster == selected_cluster, ]
+        
+        if (nrow(sig_match) == 0) {
+          cat("[DETAILS DEBUG] No matching signature in raw data\n")
+          return(data.frame())
+        }
+        
+        # Extract MAST and CRISPRi gene lists
+        mast_genes <- sig_match$mast_sig_genes[[1]]
+        crispri_genes <- sig_match$crispri_sig_genes[[1]]
+        
+        if (is.null(mast_genes) || is.null(crispri_genes)) {
+          cat("[DETAILS DEBUG] Gene lists are NULL\n")
+          return(data.frame())
+        }
+        
+        # Get shared genes
+        shared_genes <- intersect(mast_genes, crispri_genes)
+        
+        if (length(shared_genes) == 0) {
+          return(data.frame(Message = "No overlapping genes found"))
+        }
+        
+        # Create data frame with gene details
+        genes_df <- data.frame(
+          Gene = shared_genes,
+          `In MAST` = "Yes",
+          `In CRISPRi` = "Yes",
+          stringsAsFactors = FALSE
+        )
+        
+        return(genes_df)
+        
+      }, error = function(e) {
+        cat("[DETAILS ERROR] extract_shared_genes:", e$message, "\n")
+        return(data.frame(Error = paste("Failed to extract genes:", e$message)))
+      })
+    }
+    
+    # Extract shared pathways from analysis results
+    extract_shared_pathways <- function(analysis_results, selected_pair, selected_cluster) {
+      tryCatch({
+        # Get enrichment data
+        enrichment_data <- analysis_results$enrichment_overlap
+        if (is.null(enrichment_data)) return(data.frame())
+        
+        # Filter for specific gene pair and cluster
+        pathway_data <- enrichment_data[enrichment_data$gene_pair == selected_pair & 
+                                       enrichment_data$cluster == selected_cluster, ]
+        
+        if (nrow(pathway_data) == 0) {
+          return(data.frame(Message = "No pathway data available"))
+        }
+        
+        # Select relevant columns
+        display_cols <- c("pathway_id", "pathway_name", "enrichment_type", "overlap_type")
+        if (all(display_cols %in% names(pathway_data))) {
+          pathway_df <- pathway_data[, display_cols]
+          names(pathway_df) <- c("Pathway ID", "Pathway Name", "Database", "Overlap Type")
+          return(pathway_df)
+        } else {
+          # Fallback if columns are different
+          return(pathway_data[, 1:min(4, ncol(pathway_data))])
+        }
+        
+      }, error = function(e) {
+        cat("[DETAILS ERROR] extract_shared_pathways:", e$message, "\n")
+        return(data.frame(Error = paste("Failed to extract pathways:", e$message)))
+      })
+    }
     
     # Helper function for null coalescing
     `%||%` <- function(a, b) if (is.null(a)) b else a
