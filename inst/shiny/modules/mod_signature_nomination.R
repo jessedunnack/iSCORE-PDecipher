@@ -2942,28 +2942,28 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         crispri_gene <- genes[2]
         cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
-        # Get the enrichment data
-        cat("[DETAILS DEBUG] Checking app_data structure\n")
-        cat("[DETAILS DEBUG] app_data class:", class(app_data), "\n")
-        if (!is.null(app_data)) {
-          cat("[DETAILS DEBUG] app_data names:", paste(names(app_data), collapse=", "), "\n")
-        }
-        
+        # Get the enrichment data using the data manager
         enrichment_data <- NULL
-        if (!is.null(app_data$consolidated_data)) {
+        
+        # First try the app_data if available
+        if (!is.null(app_data) && !is.null(app_data$consolidated_data)) {
           enrichment_data <- app_data$consolidated_data
           cat("[DETAILS DEBUG] Got enrichment data from app_data$consolidated_data\n")
         } else {
-          cat("[DETAILS DEBUG] app_data$consolidated_data is NULL\n")
-          
-          # Alternative: Try to get the enrichment data from global environment or parent data
-          if (exists("consolidated_enrichment_data", envir = .GlobalEnv)) {
-            enrichment_data <- get("consolidated_enrichment_data", envir = .GlobalEnv)
-            cat("[DETAILS DEBUG] Found enrichment data in global environment\n")
+          # Use the data manager directly
+          cat("[DETAILS DEBUG] app_data not available, using data manager\n")
+          if (exists("get_enrichment_data", mode = "function")) {
+            enrichment_data <- get_enrichment_data()
+            cat("[DETAILS DEBUG] Got enrichment data from data manager\n")
           } else {
-            cat("[DETAILS DEBUG] No enrichment data found anywhere\n")
-            return(data.frame(Message = "Enrichment data not loaded. Please ensure the enrichment data file is loaded in the app."))
+            cat("[DETAILS DEBUG] Data manager function not available\n")
+            return(data.frame(Message = "Enrichment data not loaded. Please ensure the enrichment data file is loaded."))
           }
+        }
+        
+        if (is.null(enrichment_data)) {
+          cat("[DETAILS DEBUG] Enrichment data is NULL\n")
+          return(data.frame(Message = "Enrichment data not available"))
         }
         
         cat("[DETAILS DEBUG] Enrichment data available with", nrow(enrichment_data), "rows\n")
@@ -3051,17 +3051,28 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         mast_gene <- genes[1]
         crispri_gene <- genes[2]
         
-        # Get the enrichment data
-        enrichment_data <- app_data$consolidated_data
-        if (is.null(enrichment_data)) {
-          cat("[PATHWAYS DEBUG] No enrichment data available in app_data$consolidated_data\n")
-          # Try reactive version
-          if (!is.null(app_data) && is.reactive(app_data$consolidated_data)) {
-            enrichment_data <- app_data$consolidated_data()
-            cat("[PATHWAYS DEBUG] Found enrichment data in reactive version\n")
+        # Get the enrichment data using the data manager
+        enrichment_data <- NULL
+        
+        # First try the app_data if available
+        if (!is.null(app_data) && !is.null(app_data$consolidated_data)) {
+          enrichment_data <- app_data$consolidated_data
+          cat("[PATHWAYS DEBUG] Got enrichment data from app_data$consolidated_data\n")
+        } else {
+          # Use the data manager directly
+          cat("[PATHWAYS DEBUG] app_data not available, using data manager\n")
+          if (exists("get_enrichment_data", mode = "function")) {
+            enrichment_data <- get_enrichment_data()
+            cat("[PATHWAYS DEBUG] Got enrichment data from data manager\n")
           } else {
-            return(data.frame(Message = "Enrichment data not available"))
+            cat("[PATHWAYS DEBUG] Data manager function not available\n")
+            return(data.frame(Message = "Enrichment data not loaded."))
           }
+        }
+        
+        if (is.null(enrichment_data)) {
+          cat("[PATHWAYS DEBUG] Enrichment data is NULL\n")
+          return(data.frame(Message = "Enrichment data not available"))
         }
         
         # Get enrichment terms for MAST
