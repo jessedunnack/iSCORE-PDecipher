@@ -39,7 +39,13 @@
       "Bash(git check-ignore:*)",
       "Bash(conda run:*)",
       "Bash(cut:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(for file in \"iSCORE-PDecipher/TASK_CONTEXT_CHECKLIST.md\" \"COMPREHENSIVE_PD_GENE_ANALYSIS_2025.md\" \"ENHANCED_METHODOLOGY_AND_MIGRATION_GUIDE.md\" \"README_ENRICHMENT_PROCESSING.md\" \"MAC_COMPATIBILITY_GUIDE.md\" \"MULTI_DATASET_GUIDE.md\" \"SHINY_APP_CRISPA_IMPLEMENTATION.md\" \"FISHER_EXACT_TEST_IMPROVEMENTS.md\")",
+      "Bash(do if [ -f \"$file\" ])",
+      "Bash(then echo \"EXISTS: $file\")",
+      "Bash(else echo \"MISSING: $file\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": []
   }

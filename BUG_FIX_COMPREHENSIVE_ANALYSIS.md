@@ -265,12 +265,16 @@ Based on this analysis and user feedback, here are the minimal fixes needed for 
    - Status: WORKING - User confirmed this is properly fixed
    - Keep the existing implementation
 
-5. **Bug #6 (Tangential) - Interactive Heatmap**:
-   - Status: WORKING - Successfully converted to interactive
-   - Keep the renderPlotly implementation
+### STILL NEED TO VERIFY:
 
-6. **Bug #9 (Tangential) - Gene Dropdown**:
-   - Status: WORKING - Variant count removed correctly
+5. **Bug #6 (Tangential) - Interactive Heatmap**: ⚠️ NOT YET CONFIRMED
+   - Status: NEEDS VERIFICATION - User hasn't confirmed if working
+   - Need to convert from static to interactive heatmap
+   - Keep the renderPlotly implementation attempt
+
+6. **Bug #9 (Tangential) - Gene Dropdown**: ⚠️ NOT YET CONFIRMED
+   - Status: NEEDS VERIFICATION - User hasn't confirmed if working
+   - Should remove "X variants" text from dropdown
    - Keep the fix in `mod_de_analysis.R`
 
 ### ADDITIONAL FIXES IMPLEMENTED IN v0.2.9:
