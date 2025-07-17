@@ -2942,11 +2942,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         crispri_gene <- genes[2]
         cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
-        # Gene name harmonization (PRKN = PARK2)
-        # Apply the same harmonization used in the Fisher's exact test
-        if (mast_gene == "PRKN") mast_gene <- "PARK2"
-        if (crispri_gene == "PRKN") crispri_gene <- "PARK2"
-        cat("[DETAILS DEBUG] After harmonization - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
+        # NOTE: Do NOT harmonize gene names here - use the actual names in the data
+        # MAST has "PRKN", MixScale has "PARK2" - they are the same gene but stored differently
+        cat("[DETAILS DEBUG] Using genes as-is from data - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
         # Get the enrichment data using the data manager
         enrichment_data <- NULL
