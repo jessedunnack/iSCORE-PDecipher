@@ -505,7 +505,7 @@ mod_de_results_ui <- function(id) {
                   div(style = "margin-top: 20px;",
                     h5("Gene Overlap Significance Matrix"),
                     shinycssloaders::withSpinner(
-                      plotOutput(ns("de_overlap_heatmap"), height = "600px"),
+                      plotlyOutput(ns("de_overlap_heatmap"), height = "600px"),
                       type = 6,
                       color = "#3c8dbc"
                     )
@@ -2556,12 +2556,15 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       display_data <- cross_cluster_data %>%
         select(all_of(available_cols))
       
-      # Set appropriate column names
-      if ("method" %in% colnames(display_data)) {
-        colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters", "Method")
-      } else {
-        colnames(display_data) <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters")
+      # Set appropriate column names - FIX Bug #3: Include experiment column
+      col_names <- c("Gene", "# Clusters", "Mean log2FC", "Min p-value", "Clusters")
+      if ("experiment" %in% colnames(display_data)) {
+        col_names <- c(col_names, "Experiment")
       }
+      if ("method" %in% colnames(display_data)) {
+        col_names <- c(col_names, "Method")
+      }
+      colnames(display_data) <- col_names
       
       DT::datatable(display_data,
                    options = list(
@@ -2680,8 +2683,8 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # DE gene overlap heatmap
-    output$de_overlap_heatmap <- renderPlot({
+    # DE gene overlap heatmap - FIX Bug #6: Make interactive using heatmaply
+    output$de_overlap_heatmap <- renderPlotly({
       req(input$heatmap_cluster)
       req(input$heatmap_cluster != "")
       
@@ -2742,21 +2745,27 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
       
       if (length(gene_lists) < 2) {
-        # Provide better user feedback about available data
-        feedback_text <- paste0(
-          "Need at least 2 gene sets with ≥", min_genes, " DE genes\n",
-          "Found: ", length(gene_lists), " gene set(s)\n\n",
-          "Try:\n• Lower minimum genes threshold\n",
-          "• Change direction filter\n",
-          "• Select 'both' methods\n",
-          "• Choose a different cluster"
-        )
-        
-        ggplot() +
-          annotate("text", x = 0.5, y = 0.5, 
-                  label = feedback_text, size = 4, hjust = 0.5, vjust = 0.5) +
-          theme_void() +
-          xlim(0, 1) + ylim(0, 1)
+        # Return empty plotly with message
+        plot_ly() %>%
+          add_annotations(
+            text = paste0(
+              "Need at least 2 gene sets with ≥", min_genes, " DE genes<br>",
+              "Found: ", length(gene_lists), " gene set(s)<br><br>",
+              "Try:<br>• Lower minimum genes threshold<br>",
+              "• Change direction filter<br>",
+              "• Select 'both' methods<br>",
+              "• Choose a different cluster"
+            ),
+            x = 0.5, y = 0.5,
+            xref = "paper", yref = "paper",
+            showarrow = FALSE,
+            font = list(size = 14)
+          ) %>%
+          layout(
+            xaxis = list(visible = FALSE),
+            yaxis = list(visible = FALSE),
+            margin = list(t = 50, b = 50, l = 50, r = 50)
+          )
       } else {
         # Calculate Fisher's exact test matrix
         gene_names <- names(gene_lists)
@@ -2809,44 +2818,69 @@ mod_de_results_server <- function(id, global_selection, app_data) {
           }
         }
         
-        # Convert to data frame for ggplot
-        p_matrix_long <- expand.grid(Gene1 = gene_names, Gene2 = gene_names)
-        p_matrix_long$p_value <- as.vector(p_matrix)
-        p_matrix_long$overlap <- as.vector(overlap_matrix)
-        p_matrix_long$neg_log_p <- -log10(p_matrix_long$p_value)
+        # Transform to -log10(p-value) and cap for visualization
+        neg_log_p_matrix <- -log10(p_matrix)
+        neg_log_p_matrix[neg_log_p_matrix > 10] <- 10
+        neg_log_p_matrix[is.infinite(neg_log_p_matrix)] <- 10
         
-        # Cap extremely high values for visualization
-        p_matrix_long$neg_log_p[p_matrix_long$neg_log_p > 10] <- 10
+        # Create custom hover text with overlap counts and p-values
+        hover_matrix <- matrix(NA, nrow = n_genes, ncol = n_genes)
+        for (i in 1:n_genes) {
+          for (j in 1:n_genes) {
+            if (i == j) {
+              hover_matrix[i, j] <- paste0(gene_names[i], "<br>",
+                                         "Total genes: ", overlap_matrix[i, j])
+            } else {
+              hover_matrix[i, j] <- paste0(gene_names[i], " vs ", gene_names[j], "<br>",
+                                         "Overlap: ", overlap_matrix[i, j], " genes<br>",
+                                         "p-value: ", format(p_matrix[i, j], scientific = TRUE, digits = 3), "<br>",
+                                         "-log10(p): ", round(neg_log_p_matrix[i, j], 2))
+            }
+          }
+        }
         
-        # Create enhanced heatmap with significance threshold visualization
-        significance_threshold <- -log10(0.05)  # 1.301
-        
-        ggplot(p_matrix_long, aes(x = Gene1, y = Gene2, fill = neg_log_p)) +
-          geom_tile(color = "white", size = 0.5) +
-          geom_text(aes(label = overlap), color = "black", size = 3) +
-          # Enhanced color scale with discrete bins for significance
-          scale_fill_gradientn(
+        # Create interactive heatmap using heatmaply if available
+        if (requireNamespace("heatmaply", quietly = TRUE)) {
+          # Use heatmaply for interactive clustered heatmap
+          heatmaply::heatmaply(
+            neg_log_p_matrix,
+            custom_hovertext = hover_matrix,
             colors = c("#F7F7F7", "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F"),
-            values = c(0, 0.13, 0.3, 0.5, 0.7, 1),  # Custom breaks emphasizing significance threshold
-            name = "-log10(p)", 
-            limits = c(0, 10),
-            breaks = c(0, round(significance_threshold, 1), 2, 5, 10),
-            labels = c("0 (p=1)", paste0(round(significance_threshold, 1), " (p=0.05)"), "2", "5", "10+")
-          ) +
-          theme_minimal() +
-          theme(
-            axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-            axis.text.y = element_text(size = 10),
-            axis.title = element_blank(),
-            panel.grid = element_blank(),
-            legend.position = "right"
-          ) +
-          labs(
-            title = paste("DE Gene Overlap Significance -", selected_cluster, "-", selected_direction),
-            subtitle = paste0("Fisher's exact test p-values (numbers show overlap counts) - Direction-filtered to prevent inflation\n",
-                             "Significance threshold: p=0.05 (-log10 = ", round(significance_threshold, 2), ")")
-          ) +
-          coord_equal()
+            dendrogram = "both",
+            xlab = "",
+            ylab = "",
+            main = paste("DE Gene Overlap Significance -", selected_cluster, "-", selected_direction),
+            key.title = "-log10(p)",
+            plot_method = "plotly",
+            showticklabels = c(TRUE, TRUE),
+            label_names = c("Row", "Column", "Value")
+          )
+        } else {
+          # Fallback to plotly without dendrograms
+          plot_ly(
+            x = gene_names,
+            y = gene_names,
+            z = neg_log_p_matrix,
+            type = "heatmap",
+            text = hover_matrix,
+            hovertemplate = "%{text}<extra></extra>",
+            colorscale = list(
+              list(0, "#F7F7F7"),
+              list(0.13, "#FDDBC7"),
+              list(0.3, "#F4A582"),
+              list(0.5, "#D6604D"),
+              list(0.7, "#B2182B"),
+              list(1, "#67001F")
+            ),
+            colorbar = list(title = "-log10(p)")
+          ) %>%
+            layout(
+              title = paste("DE Gene Overlap Significance -", selected_cluster, "-", selected_direction),
+              xaxis = list(title = "", tickangle = -45),
+              yaxis = list(title = "", autorange = "reversed"),
+              margin = list(l = 100, r = 50, b = 100, t = 100)
+            )
+        }
       }
     })
     

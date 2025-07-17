@@ -49,15 +49,8 @@ create_consolidated_gene_choices <- function(genes) {
     # Find all variants for this base gene
     variants <- genes[base_genes == base_gene]
     
-    if (length(variants) == 1 && !grepl("_[A-Z][0-9]+[A-Z]$", variants[1])) {
-      # Single gene without variants
-      consolidated_choices[base_gene] <- base_gene
-    } else {
-      # Multiple variants or single variant
-      label <- paste0(base_gene, " (", length(variants), " variant", 
-                     ifelse(length(variants) > 1, "s", ""), ")")
-      consolidated_choices[label] <- base_gene
-    }
+    # FIX Bug #9: Just show gene name without variant count
+    consolidated_choices[base_gene] <- base_gene
   }
   
   return(consolidated_choices)
@@ -306,6 +299,15 @@ mod_de_analysis_server <- function(id, app_data) {
         
         # Update gene choices
         available_genes <- unique(processed_de$gene)
+        
+        # Debug: Check if VPS13C is in the list
+        vps13c_genes <- available_genes[grepl("VPS13C", available_genes)]
+        if (length(vps13c_genes) > 0) {
+          cat("[BUG 9 DEBUG] VPS13C variants found:", paste(vps13c_genes, collapse=", "), "\n")
+        } else {
+          cat("[BUG 9 DEBUG] No VPS13C variants found in available genes\n")
+        }
+        
         updateSelectizeInput(session, "gene_selection",
                             choices = available_genes,
                             selected = available_genes)  # Select all genes by default
@@ -337,6 +339,14 @@ mod_de_analysis_server <- function(id, app_data) {
       if (input$dataset_filter == "all") {
         # Consolidate gene names when "All Datasets" is selected
         consolidated_choices <- create_consolidated_gene_choices(all_genes)
+        
+        # Debug: Check VPS13C in consolidated choices
+        if ("VPS13C" %in% consolidated_choices) {
+          cat("[BUG 9 DEBUG] VPS13C is in consolidated choices\n")
+        } else {
+          cat("[BUG 9 DEBUG] VPS13C is NOT in consolidated choices. Available:", 
+              paste(head(names(consolidated_choices), 20), collapse=", "), "...\n")
+        }
         
         # Get currently selected genes and map to base names
         current_selection <- input$gene_selection
