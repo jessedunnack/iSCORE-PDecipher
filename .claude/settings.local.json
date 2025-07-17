@@ -40,7 +40,8 @@
       "Bash(conda run:*)",
       "Bash(cut:*)",
       "Bash(awk:*)",
-      "Bash(conda activate seuratv4)"
+      "Bash(conda activate seuratv4)",
+      "Bash(source:*)"
     ],
     "deny": []
   }
