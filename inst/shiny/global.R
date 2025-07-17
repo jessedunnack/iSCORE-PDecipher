@@ -201,37 +201,64 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   
   # Filter by modality if specified (FIXED: handle CRISPRi/CRISPRa properly)
   if (!is.null(modality) && modality != "All") {
+    cat("[FILTER DEBUG] Filtering by modality:", modality, "\n")
+    cat("[FILTER DEBUG] Data has 'modality' column:", "modality" %in% names(filtered_data), "\n")
+    
     if ("modality" %in% names(filtered_data)) {
       # Use modality column if it exists
+      before_count <- nrow(filtered_data)
       filtered_data <- filtered_data[filtered_data$modality == modality, ]
+      cat("[FILTER DEBUG] Filtered by modality column:", before_count, "->", nrow(filtered_data), "rows\n")
     } else {
       # Fallback: filter by analysis_type or method patterns for CRISPRi/CRISPRa
       # FIX Bug #5: Handle datasets without modality column more robustly
       if (modality == "CRISPRi") {
+        cat("[FILTER DEBUG] Handling CRISPRi without modality column\n")
+        
         if ("analysis_type" %in% names(filtered_data)) {
+          cat("[FILTER DEBUG] Using analysis_type column for CRISPRi filtering\n")
           # Try pattern matching first
           crispri_pattern_match <- grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$analysis_type, ignore.case = TRUE)
+          cat("[FILTER DEBUG] CRISPRi pattern matches:", sum(crispri_pattern_match), "rows\n")
+          
           if (any(crispri_pattern_match)) {
+            before_count <- nrow(filtered_data)
             filtered_data <- filtered_data[crispri_pattern_match, ]
+            cat("[FILTER DEBUG] Filtered by CRISPRi pattern:", before_count, "->", nrow(filtered_data), "rows\n")
           } else {
             # Fallback: If no CRISPRi pattern found, assume all MixScale is CRISPRi (legacy datasets)
+            cat("[FILTER DEBUG] No CRISPRi pattern found, falling back to all MixScale\n")
+            before_count <- nrow(filtered_data)
             filtered_data <- filtered_data[grepl("MixScale", filtered_data$analysis_type, ignore.case = TRUE), ]
+            cat("[FILTER DEBUG] Filtered by MixScale pattern:", before_count, "->", nrow(filtered_data), "rows\n")
           }
         } else if ("method" %in% names(filtered_data)) {
+          cat("[FILTER DEBUG] Using method column for CRISPRi filtering\n")
           # Try pattern matching first
           crispri_pattern_match <- grepl("MixScale.*CRISPRi|CRISPRi", filtered_data$method, ignore.case = TRUE)
+          cat("[FILTER DEBUG] CRISPRi pattern matches:", sum(crispri_pattern_match), "rows\n")
+          
           if (any(crispri_pattern_match)) {
+            before_count <- nrow(filtered_data)
             filtered_data <- filtered_data[crispri_pattern_match, ]
+            cat("[FILTER DEBUG] Filtered by CRISPRi pattern:", before_count, "->", nrow(filtered_data), "rows\n")
           } else {
             # Fallback: If no CRISPRi pattern found, assume all MixScale is CRISPRi (legacy datasets)
+            cat("[FILTER DEBUG] No CRISPRi pattern found, falling back to all MixScale\n")
+            before_count <- nrow(filtered_data)
             filtered_data <- filtered_data[grepl("MixScale", filtered_data$method, ignore.case = TRUE), ]
+            cat("[FILTER DEBUG] Filtered by MixScale pattern:", before_count, "->", nrow(filtered_data), "rows\n")
           }
         }
       } else if (modality == "CRISPRa") {
         if ("analysis_type" %in% names(filtered_data)) {
+          before_count <- nrow(filtered_data)
           filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$analysis_type, ignore.case = TRUE), ]
+          cat("[FILTER DEBUG] Filtered CRISPRa by analysis_type:", before_count, "->", nrow(filtered_data), "rows\n")
         } else if ("method" %in% names(filtered_data)) {
+          before_count <- nrow(filtered_data)
           filtered_data <- filtered_data[grepl("MixScale.*CRISPRa|CRISPRa", filtered_data$method, ignore.case = TRUE), ]
+          cat("[FILTER DEBUG] Filtered CRISPRa by method:", before_count, "->", nrow(filtered_data), "rows\n")
         }
         # Note: CRISPRa requires explicit labeling - no fallback to all MixScale
       }
@@ -240,12 +267,38 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   
   # Filter by analysis type (method) if specified
   if (!is.null(analysis_type) && analysis_type != "All" && "method" %in% names(filtered_data)) {
-    filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+    cat("[FILTER DEBUG] Filtering by analysis_type/method:", analysis_type, "\n")
+    before_count <- nrow(filtered_data)
+    
+    # Check what values exist in the method column
+    unique_methods <- unique(filtered_data$method)
+    cat("[FILTER DEBUG] Unique method values in data:", paste(unique_methods, collapse = ", "), "\n")
+    
+    # For MixScale, we need to be more flexible in matching
+    if (analysis_type == "MixScale") {
+      # Match any MixScale variant
+      filtered_data <- filtered_data[grepl("MixScale", filtered_data$method, ignore.case = TRUE), ]
+      cat("[FILTER DEBUG] Using flexible MixScale matching\n")
+    } else {
+      # Exact match for other types
+      filtered_data <- filtered_data[filtered_data$method == analysis_type, ]
+    }
+    
+    cat("[FILTER DEBUG] Filtered by method:", before_count, "->", nrow(filtered_data), "rows\n")
   }
   
   # Filter by experiment if specified
   if (!is.null(experiment) && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
+    before_count <- nrow(filtered_data)
     filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
+    cat("[FILTER DEBUG] Filtered by experiment:", experiment, ":", before_count, "->", nrow(filtered_data), "rows\n")
+  }
+  
+  # CRITICAL: Exclude A15_FPD-24 no matter what
+  if ("experiment" %in% names(filtered_data) && any(filtered_data$experiment == "A15_FPD-24")) {
+    before_count <- nrow(filtered_data)
+    filtered_data <- filtered_data[filtered_data$experiment != "A15_FPD-24", ]
+    cat("[FILTER DEBUG] EXCLUDED A15_FPD-24 (CRISPRa):", before_count, "->", nrow(filtered_data), "rows\n")
   }
   
   # Filter by p-value threshold

@@ -73,6 +73,12 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
           
           for (log2fc_col in log2fc_cols) {
             exp <- gsub("^log2FC_", "", log2fc_col)
+            
+            # CRITICAL: Skip A15_FPD-24 - this is CRISPRa data we DO NOT want
+            if (exp == "A15_FPD-24") {
+              next
+            }
+            
             pval_col <- paste0("p_cell_type", exp, ":weight")
             
             if (pval_col %in% names(results) && nrow(results) > 0) {
@@ -125,6 +131,12 @@ process_de_data_with_metadata <- function(de_results, metadata = NULL, max_genes
           
           for (log2fc_col in log2fc_cols) {
             exp <- gsub("^log2FC_", "", log2fc_col)
+            
+            # CRITICAL: Skip A15_FPD-24 - this is CRISPRa data we DO NOT want
+            if (exp == "A15_FPD-24") {
+              next
+            }
+            
             pval_col <- paste0("p_cell_type", exp, ":weight")
             
             if (pval_col %in% names(results) && nrow(results) > 0) {

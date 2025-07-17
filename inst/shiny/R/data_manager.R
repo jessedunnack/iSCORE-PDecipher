@@ -55,6 +55,16 @@ get_enrichment_data <- function(force_reload = FALSE) {
       # Filter to significant results
       data <- data[!is.na(data$p.adjust) & data$p.adjust <= 0.05, ]
       
+      # CRITICAL: Remove A15_FPD-24 CRISPRa data - we are NOT interested in CRISPRa results
+      if ("experiment" %in% names(data)) {
+        before_count <- nrow(data)
+        data <- data[data$experiment != "A15_FPD-24", ]
+        after_count <- nrow(data)
+        if (before_count > after_count) {
+          cat("Excluded", before_count - after_count, "A15_FPD-24 (CRISPRa) enrichment terms\n")
+        }
+      }
+      
       # Cache the data
       .data_cache$enrichment_data <- data
       .data_cache$loading_status <- "loaded"

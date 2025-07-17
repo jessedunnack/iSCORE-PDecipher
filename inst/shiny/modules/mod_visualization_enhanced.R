@@ -348,16 +348,26 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     
     # Data preparation function (keeping existing logic)
     prepare_dotplot_data <- function(data, n_terms) {
+      cat("[DOTPLOT DEBUG] ========== prepare_dotplot_data START ==========\n")
+      
       if (is.null(data) || nrow(data) == 0) {
-        message("prepare_dotplot_data: No data provided")
+        cat("[DOTPLOT DEBUG] ERROR: No data provided or empty data frame\n")
         return(NULL)
       }
       
-      message("prepare_dotplot_data: Input data has ", nrow(data), " rows")
+      cat("[DOTPLOT DEBUG] Input data has", nrow(data), "rows\n")
+      cat("[DOTPLOT DEBUG] Column names:", paste(names(data), collapse = ", "), "\n")
+      
+      # Sample first few rows for debugging
+      if (nrow(data) > 0) {
+        cat("[DOTPLOT DEBUG] First row sample:\n")
+        print(head(data[1, ], 1))
+      }
       
       # Ensure p.adjust column exists and is numeric
       if (!"p.adjust" %in% names(data)) {
-        message("Error: p.adjust column missing from data")
+        cat("[DOTPLOT DEBUG] ERROR: p.adjust column missing from data\n")
+        cat("[DOTPLOT DEBUG] Available columns:", paste(names(data), collapse = ", "), "\n")
         return(NULL)
       }
       
@@ -365,7 +375,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
       data$p.adjust <- as.numeric(data$p.adjust)
       data <- data[!is.na(data$p.adjust), ]
       
-      message("After cleaning p.adjust: ", nrow(data), " rows")
+      cat("[DOTPLOT DEBUG] After cleaning p.adjust:", nrow(data), "rows\n")
       
       # Sort by p-value and take top terms
       data <- data[order(data$p.adjust), ]
@@ -429,18 +439,37 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     processed_data <- reactive({
       req(global_selection(), enrichment_data())
       
+      cat("[VIZ DEBUG] ========== processed_data reactive START ==========\n")
+      
       selection <- global_selection()
       data <- enrichment_data()
+      
+      cat("[VIZ DEBUG] Global selection:\n")
+      cat("[VIZ DEBUG]   Analysis type:", selection$analysis_type, "\n")
+      cat("[VIZ DEBUG]   Gene:", selection$gene, "\n")
+      cat("[VIZ DEBUG]   Cluster:", selection$cluster, "\n")
+      cat("[VIZ DEBUG]   Enrichment type:", selection$enrichment_type, "\n")
+      cat("[VIZ DEBUG]   Direction:", selection$direction, "\n")
+      if (!is.null(selection$modality)) {
+        cat("[VIZ DEBUG]   Modality:", selection$modality, "\n")
+      }
+      
+      cat("[VIZ DEBUG] Enrichment data received:", 
+          if(is.null(data)) "NULL" else paste(nrow(data), "rows"), "\n")
       
       # Check if this is GSEA data
       is_gsea <- selection$enrichment_type == "GSEA"
       
       # Process the data and return result
-      if (nrow(data) > 0) {
+      if (!is.null(data) && nrow(data) > 0) {
+        cat("[VIZ DEBUG] Processing data...\n")
         if (!is_gsea) {
           prepared_data <- prepare_dotplot_data(data, input$top_terms %||% 20)
+          cat("[VIZ DEBUG] prepare_dotplot_data returned:", 
+              if(is.null(prepared_data)) "NULL" else paste(nrow(prepared_data), "rows"), "\n")
         } else {
           prepared_data <- data
+          cat("[VIZ DEBUG] Using raw data for GSEA\n")
         }
         
         return(list(
@@ -448,6 +477,7 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
           is_gsea = is_gsea
         ))
       } else {
+        cat("[VIZ DEBUG] No data to process, returning NULL\n")
         return(list(
           data = NULL,
           is_gsea = is_gsea
@@ -658,12 +688,26 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     
     # Render interactive plot with enhanced hover
     output$interactive_plot <- renderPlotly({
+      cat("[PLOTLY DEBUG] ========== renderPlotly START ==========\n")
+      
       result <- processed_data()
+      
+      cat("[PLOTLY DEBUG] Result received:\n")
+      cat("[PLOTLY DEBUG]   data:", if(is.null(result$data)) "NULL" else paste(nrow(result$data), "rows"), "\n")
+      cat("[PLOTLY DEBUG]   is_gsea:", result$is_gsea, "\n")
+      
       req(result$data)
       req(!result$is_gsea)
       
+      cat("[PLOTLY DEBUG] Creating plot with type:", input$plot_type, "\n")
+      
       p <- create_standard_plot_with_genes(result$data, input$plot_type, input$show_genes_in_hover)
+      
+      cat("[PLOTLY DEBUG] Plot created:", if(is.null(p)) "NULL" else "ggplot object", "\n")
+      
       if (!is.null(p)) {
+        cat("[PLOTLY DEBUG] Converting to plotly...\n")
+        
         if (input$show_genes_in_hover) {
           # Use custom hover text
           plotly_obj <- ggplotly(p, tooltip = "text") %>%
@@ -684,7 +728,11 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
             )
         }
         
+        cat("[PLOTLY DEBUG] Plotly conversion complete\n")
         plotly_obj
+      } else {
+        cat("[PLOTLY DEBUG] ERROR: Plot creation returned NULL\n")
+        NULL
       }
     })
     

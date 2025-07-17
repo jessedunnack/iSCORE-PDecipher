@@ -1332,9 +1332,17 @@ server <- function(input, output, session) {
       input$global_analysis_type  # fallback
     )
     
+    # Determine modality based on raw analysis type
+    modality <- switch(input$global_analysis_type,
+      "MixScale_CRISPRi" = "CRISPRi",
+      "MixScale_CRISPRa" = "CRISPRa",
+      NULL
+    )
+    
     list(
       analysis_type = analysis_type_for_filter,
       analysis_type_raw = input$global_analysis_type,  # Keep raw value for modules that need it
+      modality = modality,  # Add modality for modules to use
       gene = input$global_gene,
       cluster = input$global_cluster,
       experiment = input$global_experiment,
@@ -1353,6 +1361,15 @@ server <- function(input, output, session) {
     req(app_data$data_loaded)
     selection <- global_data_selection()
     
+    cat("[APP FILTER DEBUG] ========== filtered_data reactive START ==========\n")
+    cat("[APP FILTER DEBUG] Selection received:\n")
+    cat("[APP FILTER DEBUG]   analysis_type:", selection$analysis_type, "\n")
+    cat("[APP FILTER DEBUG]   analysis_type_raw:", selection$analysis_type_raw, "\n")
+    cat("[APP FILTER DEBUG]   gene:", selection$gene, "\n")
+    cat("[APP FILTER DEBUG]   cluster:", selection$cluster, "\n")
+    cat("[APP FILTER DEBUG]   enrichment_type:", selection$enrichment_type, "\n")
+    cat("[APP FILTER DEBUG]   direction:", selection$direction, "\n")
+    
     # Determine modality based on raw analysis type
     modality <- switch(selection$analysis_type_raw,
       "MixScale_CRISPRi" = "CRISPRi",
@@ -1360,7 +1377,10 @@ server <- function(input, output, session) {
       NULL
     )
     
-    get_significant_terms_from_consolidated(
+    cat("[APP FILTER DEBUG] Computed modality:", modality, "\n")
+    cat("[APP FILTER DEBUG] Data size before filtering:", nrow(app_data$consolidated_data), "\n")
+    
+    result <- get_significant_terms_from_consolidated(
       app_data$consolidated_data,
       analysis_type = selection$analysis_type,
       modality = modality,
@@ -1371,6 +1391,19 @@ server <- function(input, output, session) {
       direction = selection$direction,
       pval_threshold = selection$pval_threshold
     )
+    
+    cat("[APP FILTER DEBUG] Data size after filtering:", nrow(result), "\n")
+    
+    if (nrow(result) == 0) {
+      cat("[APP FILTER DEBUG] WARNING: No data returned after filtering!\n")
+      cat("[APP FILTER DEBUG] Check if data exists for:\n")
+      cat("[APP FILTER DEBUG]   analysis_type =", selection$analysis_type, "\n")
+      cat("[APP FILTER DEBUG]   modality =", modality, "\n")
+      cat("[APP FILTER DEBUG]   gene =", selection$gene, "\n")
+      cat("[APP FILTER DEBUG]   cluster =", selection$cluster, "\n")
+    }
+    
+    result
   })
   
   # Main visualization module (enhanced with interactivity)
