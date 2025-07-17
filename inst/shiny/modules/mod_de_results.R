@@ -2505,10 +2505,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             group_by(gene_name) %>%
             summarise(
               clusters_affected = n(),
-              clusters_list = paste(unique(cluster), collapse = ", "),
+              clusters_list = paste(unique(as.character(cluster)), collapse = ", "), # Fix: convert to char to prevent '[object Object]'
               mean_log2FC = round(mean(log2FC, na.rm = TRUE), 3),
               min_pvalue = min(p_val_adj, na.rm = TRUE),
               method = "MAST",
+              experiment = paste(unique(as.character(experiment)), collapse = ", "), # FIX Bug #8: Add experiment column
               .groups = "drop"
             ) %>%
             filter(clusters_affected >= input$min_clusters) %>%
@@ -2526,10 +2527,11 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             group_by(gene_name) %>%
             summarise(
               clusters_affected = n(),
-              clusters_list = paste(unique(cluster), collapse = ", "),
+              clusters_list = paste(unique(as.character(cluster)), collapse = ", "), # Fix: convert to char to prevent '[object Object]'
               mean_log2FC = round(mean(log2FC, na.rm = TRUE), 3),
               min_pvalue = min(p_val_adj, na.rm = TRUE),
               method = "MixScale",
+              experiment = paste(unique(as.character(experiment)), collapse = ", "), # FIX Bug #8: Add experiment column
               .groups = "drop"
             ) %>%
             filter(clusters_affected >= input$min_clusters) %>%
@@ -2545,7 +2547,8 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
       
       # Format for display (with safe column selection)
-      available_cols <- c("gene_name", "clusters_affected", "mean_log2FC", "min_pvalue", "clusters_list")
+      # FIX Bug #8: Add "experiment" to available columns
+      available_cols <- c("gene_name", "clusters_affected", "mean_log2FC", "min_pvalue", "clusters_list", "experiment")
       if ("method" %in% colnames(cross_cluster_data)) {
         available_cols <- c(available_cols, "method")
       }
@@ -2698,12 +2701,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             gene_subset <- mast_cluster_data[mast_cluster_data$gene == gene, ]
             
             # Apply direction filtering to prevent inflation
+            # FIX Bug #4: Use 'pvalue' column (actual) instead of 'p_val_adj' (expected but not created)
             if (selected_direction == "UP") {
-              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+              significant_genes <- gene_subset[gene_subset$pvalue < 0.05 & gene_subset$log2FC > 0, ]$gene_name
             } else if (selected_direction == "DOWN") {
-              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+              significant_genes <- gene_subset[gene_subset$pvalue < 0.05 & gene_subset$log2FC < 0, ]$gene_name
             } else {  # ALL - deduplicated
-              significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+              significant_genes <- unique(gene_subset[gene_subset$pvalue < 0.05, ]$gene_name)
             }
             
             if (length(significant_genes) >= min_genes) {
@@ -2721,12 +2725,13 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             gene_subset <- mixscale_cluster_data[mixscale_cluster_data$gene == gene, ]
             
             # Apply direction filtering to prevent inflation
+            # FIX Bug #4: Use 'pvalue' column (actual) instead of 'p_val_adj' (expected but not created)
             if (selected_direction == "UP") {
-              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC > 0, ]$gene_name
+              significant_genes <- gene_subset[gene_subset$pvalue < 0.05 & gene_subset$log2FC > 0, ]$gene_name
             } else if (selected_direction == "DOWN") {
-              significant_genes <- gene_subset[gene_subset$p_val_adj < 0.05 & gene_subset$log2FC < 0, ]$gene_name
+              significant_genes <- gene_subset[gene_subset$pvalue < 0.05 & gene_subset$log2FC < 0, ]$gene_name
             } else {  # ALL - deduplicated
-              significant_genes <- unique(gene_subset[gene_subset$p_val_adj < 0.05, ]$gene_name)
+              significant_genes <- unique(gene_subset[gene_subset$pvalue < 0.05, ]$gene_name)
             }
             
             if (length(significant_genes) >= min_genes) {

@@ -748,27 +748,43 @@ server <- function(input, output, session) {
   # Helper function to detect available methods in data
   detect_available_methods <- function(data) {
     if (is.null(data) || nrow(data) == 0) {
+      cat("[BUG #5 DEBUG] No data provided to detect_available_methods\n")
       return(list(MAST = FALSE, CRISPRi = FALSE, CRISPRa = FALSE))
     }
+    
+    # FIX Bug #5: Add comprehensive debug logging for CRISPRi detection
+    cat("[BUG #5 DEBUG] Detecting available methods in data...\n")
+    cat("[BUG #5 DEBUG] Data dimensions:", nrow(data), "rows x", ncol(data), "columns\n")
+    cat("[BUG #5 DEBUG] Column names:", paste(colnames(data), collapse = ", "), "\n")
     
     methods <- unique(data$method)
     modalities <- if ("modality" %in% names(data)) unique(data$modality) else character(0)
     
+    cat("[BUG #5 DEBUG] Available methods:", paste(methods, collapse = ", "), "\n")
+    cat("[BUG #5 DEBUG] Modality column exists:", "modality" %in% names(data), "\n")
+    if (length(modalities) > 0) {
+      cat("[BUG #5 DEBUG] Available modalities:", paste(modalities, collapse = ", "), "\n")
+    }
+    
     # If modality column exists, use it for precise detection
     if ("modality" %in% names(data)) {
-      list(
+      result <- list(
         MAST = "MAST" %in% methods,
         CRISPRi = "MixScale" %in% methods && "CRISPRi" %in% modalities,
         CRISPRa = "MixScale" %in% methods && "CRISPRa" %in% modalities
       )
+      cat("[BUG #5 DEBUG] Detection with modality column - MAST:", result$MAST, "CRISPRi:", result$CRISPRi, "CRISPRa:", result$CRISPRa, "\n")
+      return(result)
     } else {
       # Fallback: If no modality column, assume MixScale is CRISPRi
       # This handles datasets created before modality column was added
-      list(
+      result <- list(
         MAST = "MAST" %in% methods,
         CRISPRi = "MixScale" %in% methods,  # Assume MixScale = CRISPRi if no modality column
         CRISPRa = FALSE  # No CRISPRa without explicit modality
       )
+      cat("[BUG #5 DEBUG] Detection without modality column (fallback) - MAST:", result$MAST, "CRISPRi:", result$CRISPRi, "CRISPRa:", result$CRISPRa, "\n")
+      return(result)
     }
   }
   
@@ -1004,13 +1020,37 @@ server <- function(input, output, session) {
         )
         
         # Keep current selection if still valid, otherwise pick first
+        # FIX Bug #9: Handle gene consolidation in selection logic (PARK2/PRKN case)
         current_gene <- input$global_gene
-        selected <- if (!is.null(current_gene) && current_gene %in% valid_genes) {
-          current_gene
-        } else if (!is.null(app_data$default_gene) && app_data$default_gene %in% valid_genes) {
-          app_data$default_gene
+        
+        # Check if current gene is valid (handle both original and consolidated names)
+        is_current_valid <- if (!is.null(current_gene)) {
+          # Check original name
+          current_gene %in% valid_genes || 
+          # Check if current gene maps to any valid gene through consolidation
+          current_gene %in% names(labeled_choices) ||
+          current_gene %in% labeled_choices ||
+          # Check base gene mapping (PARK2 -> PRKN)
+          extract_base_gene(current_gene) %in% sapply(valid_genes, extract_base_gene)
         } else {
-          valid_genes[1]
+          FALSE
+        }
+        
+        selected <- if (is_current_valid) {
+          current_gene
+        } else if (!is.null(app_data$default_gene)) {
+          # Check if default gene is available (with consolidation support)
+          if (app_data$default_gene %in% valid_genes || 
+              app_data$default_gene %in% names(labeled_choices) ||
+              app_data$default_gene %in% labeled_choices) {
+            app_data$default_gene
+          } else {
+            # Use first available choice
+            if (length(labeled_choices) > 0) labeled_choices[1] else valid_genes[1]
+          }
+        } else {
+          # Use first available choice
+          if (length(labeled_choices) > 0) labeled_choices[1] else valid_genes[1]
         }
         
         updateSelectInput(session, "global_gene", 

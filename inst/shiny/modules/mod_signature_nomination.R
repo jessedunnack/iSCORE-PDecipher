@@ -2015,27 +2015,138 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # Extract shared genes from analysis results
     extract_shared_genes <- function(analysis_results, selected_pair, selected_cluster) {
       tryCatch({
+        cat("[DETAILS DEBUG] === EXTRACTING SHARED GENES ===\n")
+        cat("[DETAILS DEBUG] Selected pair:", selected_pair, "\n")
+        cat("[DETAILS DEBUG] Selected cluster:", selected_cluster, "\n")
+        
+        # Check analysis results structure
+        if (is.null(analysis_results)) {
+          cat("[DETAILS DEBUG] ERROR: analysis_results is NULL\n")
+          return(data.frame())
+        }
+        
+        cat("[DETAILS DEBUG] Analysis results structure:", paste(names(analysis_results), collapse = ", "), "\n")
+        
         # Get all signatures data
         all_sigs <- analysis_results$all_signatures
-        if (is.null(all_sigs)) return(data.frame())
+        if (is.null(all_sigs)) {
+          cat("[DETAILS DEBUG] ERROR: all_signatures is NULL\n")
+          # Try alternative data structures
+          if ("top_signatures" %in% names(analysis_results)) {
+            cat("[DETAILS DEBUG] Found top_signatures instead, trying that...\n")
+            all_sigs <- analysis_results$top_signatures
+          } else {
+            cat("[DETAILS DEBUG] Available analysis_results keys:", paste(names(analysis_results), collapse = ", "), "\n")
+            return(data.frame())
+          }
+        }
         
-        # Find the specific cluster data
-        cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
-                                all_sigs$cluster == selected_cluster, ]
+        cat("[DETAILS DEBUG] All signatures data type:", class(all_sigs), "\n")
+        if (is.data.frame(all_sigs)) {
+          cat("[DETAILS DEBUG] All signatures dimensions:", nrow(all_sigs), "rows x", ncol(all_sigs), "cols\n")
+          cat("[DETAILS DEBUG] All signatures columns:", paste(names(all_sigs), collapse = ", "), "\n")
+          
+          # Check for gene pairs in the data
+          if ("gene_pair" %in% names(all_sigs)) {
+            unique_pairs <- unique(all_sigs$gene_pair)
+            cat("[DETAILS DEBUG] Available gene pairs:", paste(head(unique_pairs, 10), collapse = ", "), "\n")
+          } else {
+            cat("[DETAILS DEBUG] No 'gene_pair' column found\n")
+          }
+        }
         
-        if (nrow(cluster_data) == 0) return(data.frame())
+        # Find the specific cluster data - try multiple matching strategies
+        cluster_data <- NULL
         
-        # Get overlap genes - check multiple possible column names
+        # Strategy 1: Exact match on gene_pair column
+        if (is.data.frame(all_sigs) && "gene_pair" %in% names(all_sigs)) {
+          cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
+                                  all_sigs$cluster == selected_cluster, ]
+          cat("[DETAILS DEBUG] Strategy 1 - Exact match found:", nrow(cluster_data), "rows\n")
+        }
+        
+        # Strategy 2: Try alternative gene pair formats if Strategy 1 failed
+        if (is.null(cluster_data) || nrow(cluster_data) == 0) {
+          # Try different gene pair formats
+          alternative_formats <- c(
+            selected_pair,
+            gsub(" vs ", "_vs_", selected_pair),
+            gsub("vs", "_vs_", selected_pair),
+            gsub(" ", "_", selected_pair)
+          )
+          
+          for (format in alternative_formats) {
+            if (is.data.frame(all_sigs) && "gene_pair" %in% names(all_sigs)) {
+              temp_data <- all_sigs[all_sigs$gene_pair == format & 
+                                   all_sigs$cluster == selected_cluster, ]
+              if (nrow(temp_data) > 0) {
+                cluster_data <- temp_data
+                cat("[DETAILS DEBUG] Strategy 2 - Found match with format:", format, "\n")
+                break
+              }
+            }
+          }
+        }
+        
+        # Strategy 3: Try list-based structure if data frame approach failed
+        if ((is.null(cluster_data) || nrow(cluster_data) == 0) && is.list(all_sigs)) {
+          cat("[DETAILS DEBUG] Strategy 3 - Trying list-based structure\n")
+          cat("[DETAILS DEBUG] List keys:", paste(names(all_sigs), collapse = ", "), "\n")
+          
+          # Look for data using selected_pair as key
+          if (selected_pair %in% names(all_sigs)) {
+            pair_data <- all_sigs[[selected_pair]]
+            if (is.list(pair_data) && selected_cluster %in% names(pair_data)) {
+              cluster_data <- pair_data[[selected_cluster]]
+              cat("[DETAILS DEBUG] Strategy 3 - Found data in list structure\n")
+            }
+          }
+        }
+        
+        if (is.null(cluster_data) || (is.data.frame(cluster_data) && nrow(cluster_data) == 0)) {
+          cat("[DETAILS DEBUG] ERROR: No cluster data found for pair:", selected_pair, "cluster:", selected_cluster, "\n")
+          return(data.frame())
+        }
+        
+        cat("[DETAILS DEBUG] Found cluster data, type:", class(cluster_data), "\n")
+        
+        # Extract overlap genes - check multiple possible column names and structures
         overlap_genes <- NULL
-        if ("overlap_genes" %in% names(cluster_data)) {
-          overlap_genes <- cluster_data$overlap_genes[[1]]
-        } else if ("gene_overlap" %in% names(cluster_data)) {
-          overlap_genes <- cluster_data$gene_overlap[[1]]
+        
+        if (is.data.frame(cluster_data)) {
+          cat("[DETAILS DEBUG] Cluster data columns:", paste(names(cluster_data), collapse = ", "), "\n")
+          
+          possible_columns <- c("overlap_genes", "gene_overlap", "shared_genes", "overlapping_genes")
+          for (col in possible_columns) {
+            if (col %in% names(cluster_data)) {
+              overlap_genes <- cluster_data[[col]]
+              if (is.list(overlap_genes)) {
+                overlap_genes <- overlap_genes[[1]]
+              }
+              cat("[DETAILS DEBUG] Found overlap genes in column:", col, "length:", length(overlap_genes), "\n")
+              break
+            }
+          }
+        } else if (is.list(cluster_data)) {
+          cat("[DETAILS DEBUG] Cluster data list keys:", paste(names(cluster_data), collapse = ", "), "\n")
+          
+          possible_keys <- c("overlap_genes", "gene_overlap", "shared_genes", "overlapping_genes")
+          for (key in possible_keys) {
+            if (key %in% names(cluster_data)) {
+              overlap_genes <- cluster_data[[key]]
+              cat("[DETAILS DEBUG] Found overlap genes in key:", key, "length:", length(overlap_genes), "\n")
+              break
+            }
+          }
         }
         
         if (is.null(overlap_genes) || length(overlap_genes) == 0) {
+          cat("[DETAILS DEBUG] ERROR: No overlap genes found\n")
           return(data.frame())
         }
+        
+        cat("[DETAILS DEBUG] SUCCESS: Found", length(overlap_genes), "overlap genes\n")
+        cat("[DETAILS DEBUG] Sample overlap genes:", paste(head(overlap_genes, 5), collapse = ", "), "\n")
         
         # Create a data frame with gene information
         genes_df <- data.frame(
@@ -2044,17 +2155,37 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         )
         
         # Add MAST and CRISPRi information if available
-        if ("mast_genes" %in% names(cluster_data)) {
-          genes_df$In_MAST <- genes_df$Gene %in% cluster_data$mast_genes[[1]]
+        if (is.data.frame(cluster_data)) {
+          if ("mast_genes" %in% names(cluster_data)) {
+            mast_genes <- cluster_data$mast_genes
+            if (is.list(mast_genes)) mast_genes <- mast_genes[[1]]
+            genes_df$In_MAST <- genes_df$Gene %in% mast_genes
+            cat("[DETAILS DEBUG] Added MAST information for", length(mast_genes), "genes\n")
+          }
+          
+          if ("crispri_genes" %in% names(cluster_data)) {
+            crispri_genes <- cluster_data$crispri_genes
+            if (is.list(crispri_genes)) crispri_genes <- crispri_genes[[1]]
+            genes_df$In_CRISPRi <- genes_df$Gene %in% crispri_genes
+            cat("[DETAILS DEBUG] Added CRISPRi information for", length(crispri_genes), "genes\n")
+          }
+        } else if (is.list(cluster_data)) {
+          if ("mast_genes" %in% names(cluster_data)) {
+            genes_df$In_MAST <- genes_df$Gene %in% cluster_data$mast_genes
+            cat("[DETAILS DEBUG] Added MAST information from list\n")
+          }
+          
+          if ("crispri_genes" %in% names(cluster_data)) {
+            genes_df$In_CRISPRi <- genes_df$Gene %in% cluster_data$crispri_genes
+            cat("[DETAILS DEBUG] Added CRISPRi information from list\n")
+          }
         }
         
-        if ("crispri_genes" %in% names(cluster_data)) {
-          genes_df$In_CRISPRi <- genes_df$Gene %in% cluster_data$crispri_genes[[1]]
-        }
-        
+        cat("[DETAILS DEBUG] Final genes data frame:", nrow(genes_df), "rows\n")
         return(genes_df)
         
       }, error = function(e) {
+        cat("[DETAILS DEBUG] ERROR in extract_shared_genes:", e$message, "\n")
         return(data.frame(Error = paste("Failed to extract shared genes:", e$message)))
       })
     }
@@ -2062,47 +2193,139 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
     # Extract shared pathways from analysis results
     extract_shared_pathways <- function(analysis_results, selected_pair, selected_cluster) {
       tryCatch({
-        # Get all signatures data
-        all_sigs <- analysis_results$all_signatures
-        if (is.null(all_sigs)) return(data.frame())
+        cat("[PATHWAYS DEBUG] === EXTRACTING SHARED PATHWAYS ===\n")
+        cat("[PATHWAYS DEBUG] Selected pair:", selected_pair, "\n")
+        cat("[PATHWAYS DEBUG] Selected cluster:", selected_cluster, "\n")
         
-        # Find the specific cluster data
-        cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
-                                all_sigs$cluster == selected_cluster, ]
-        
-        if (nrow(cluster_data) == 0) return(data.frame())
-        
-        # Get pathway information - check multiple possible column names
-        pathway_data <- NULL
-        if ("pathway_overlaps" %in% names(cluster_data)) {
-          pathway_data <- cluster_data$pathway_overlaps[[1]]
-        } else if ("shared_pathways" %in% names(cluster_data)) {
-          pathway_data <- cluster_data$shared_pathways[[1]]
-        }
-        
-        if (is.null(pathway_data) || length(pathway_data) == 0) {
+        # Check analysis results structure
+        if (is.null(analysis_results)) {
+          cat("[PATHWAYS DEBUG] ERROR: analysis_results is NULL\n")
           return(data.frame())
         }
         
-        # If pathway_data is a character vector, create a simple data frame
+        # Get all signatures data
+        all_sigs <- analysis_results$all_signatures
+        if (is.null(all_sigs)) {
+          cat("[PATHWAYS DEBUG] ERROR: all_signatures is NULL\n")
+          # Try alternative data structures
+          if ("top_signatures" %in% names(analysis_results)) {
+            cat("[PATHWAYS DEBUG] Found top_signatures instead, trying that...\n")
+            all_sigs <- analysis_results$top_signatures
+          } else {
+            return(data.frame())
+          }
+        }
+        
+        # Find the specific cluster data - use same strategy as genes function
+        cluster_data <- NULL
+        
+        # Strategy 1: Exact match on gene_pair column
+        if (is.data.frame(all_sigs) && "gene_pair" %in% names(all_sigs)) {
+          cluster_data <- all_sigs[all_sigs$gene_pair == selected_pair & 
+                                  all_sigs$cluster == selected_cluster, ]
+          cat("[PATHWAYS DEBUG] Strategy 1 - Exact match found:", nrow(cluster_data), "rows\n")
+        }
+        
+        # Strategy 2: Try alternative gene pair formats
+        if (is.null(cluster_data) || nrow(cluster_data) == 0) {
+          alternative_formats <- c(
+            selected_pair,
+            gsub(" vs ", "_vs_", selected_pair),
+            gsub("vs", "_vs_", selected_pair),
+            gsub(" ", "_", selected_pair)
+          )
+          
+          for (format in alternative_formats) {
+            if (is.data.frame(all_sigs) && "gene_pair" %in% names(all_sigs)) {
+              temp_data <- all_sigs[all_sigs$gene_pair == format & 
+                                   all_sigs$cluster == selected_cluster, ]
+              if (nrow(temp_data) > 0) {
+                cluster_data <- temp_data
+                cat("[PATHWAYS DEBUG] Strategy 2 - Found match with format:", format, "\n")
+                break
+              }
+            }
+          }
+        }
+        
+        # Strategy 3: Try list-based structure
+        if ((is.null(cluster_data) || nrow(cluster_data) == 0) && is.list(all_sigs)) {
+          cat("[PATHWAYS DEBUG] Strategy 3 - Trying list-based structure\n")
+          if (selected_pair %in% names(all_sigs)) {
+            pair_data <- all_sigs[[selected_pair]]
+            if (is.list(pair_data) && selected_cluster %in% names(pair_data)) {
+              cluster_data <- pair_data[[selected_cluster]]
+              cat("[PATHWAYS DEBUG] Strategy 3 - Found data in list structure\n")
+            }
+          }
+        }
+        
+        if (is.null(cluster_data) || (is.data.frame(cluster_data) && nrow(cluster_data) == 0)) {
+          cat("[PATHWAYS DEBUG] ERROR: No cluster data found\n")
+          return(data.frame())
+        }
+        
+        # Get pathway information - check multiple possible column names and structures
+        pathway_data <- NULL
+        
+        if (is.data.frame(cluster_data)) {
+          cat("[PATHWAYS DEBUG] Cluster data columns:", paste(names(cluster_data), collapse = ", "), "\n")
+          
+          possible_columns <- c("pathway_overlaps", "shared_pathways", "overlapping_pathways", "pathways")
+          for (col in possible_columns) {
+            if (col %in% names(cluster_data)) {
+              pathway_data <- cluster_data[[col]]
+              if (is.list(pathway_data)) {
+                pathway_data <- pathway_data[[1]]
+              }
+              cat("[PATHWAYS DEBUG] Found pathway data in column:", col, "\n")
+              break
+            }
+          }
+        } else if (is.list(cluster_data)) {
+          cat("[PATHWAYS DEBUG] Cluster data list keys:", paste(names(cluster_data), collapse = ", "), "\n")
+          
+          possible_keys <- c("pathway_overlaps", "shared_pathways", "overlapping_pathways", "pathways")
+          for (key in possible_keys) {
+            if (key %in% names(cluster_data)) {
+              pathway_data <- cluster_data[[key]]
+              cat("[PATHWAYS DEBUG] Found pathway data in key:", key, "\n")
+              break
+            }
+          }
+        }
+        
+        if (is.null(pathway_data) || length(pathway_data) == 0) {
+          cat("[PATHWAYS DEBUG] ERROR: No pathway data found\n")
+          return(data.frame())
+        }
+        
+        cat("[PATHWAYS DEBUG] Found pathway data, type:", class(pathway_data), "length:", length(pathway_data), "\n")
+        
+        # Convert pathway data to data frame
         if (is.character(pathway_data)) {
           pathways_df <- data.frame(
             Pathway = pathway_data,
             stringsAsFactors = FALSE
           )
+          cat("[PATHWAYS DEBUG] Created data frame from character vector\n")
         } else if (is.data.frame(pathway_data)) {
           pathways_df <- pathway_data
+          cat("[PATHWAYS DEBUG] Using existing data frame\n")
         } else {
           # Try to convert to data frame
           pathways_df <- data.frame(
             Pathway = as.character(pathway_data),
             stringsAsFactors = FALSE
           )
+          cat("[PATHWAYS DEBUG] Converted to data frame from other type\n")
         }
         
+        cat("[PATHWAYS DEBUG] SUCCESS: Final pathways data frame:", nrow(pathways_df), "rows\n")
         return(pathways_df)
         
       }, error = function(e) {
+        cat("[PATHWAYS DEBUG] ERROR in extract_shared_pathways:", e$message, "\n")
         return(data.frame(Error = paste("Failed to extract shared pathways:", e$message)))
       })
     }
