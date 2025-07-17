@@ -448,6 +448,73 @@ mod_de_results_ui <- function(id) {
             )
           )
         )
+      ),
+      # DE Gene Overlap Heatmap tab
+      tabPanel("DE Gene Overlap Heatmap",
+        wellPanel(
+          fluidRow(
+            column(12,
+              h4("DE Gene Overlap Analysis", icon("th")),
+              p("Compare overlapping DE genes between different mutations/perturbations using Fisher's exact test.", 
+                style = "color: #666; margin-bottom: 20px;"),
+              
+              # Controls for heatmap
+              fluidRow(
+                column(4,
+                  selectInput(ns("heatmap_cluster"), 
+                              "Select Cluster:",
+                              choices = NULL)
+                ),
+                column(4,
+                  radioButtons(ns("heatmap_method"),
+                               "Analysis Method:",
+                               choices = list("MAST only" = "MAST",
+                                            "CRISPRi only" = "CRISPRi",
+                                            "Both methods" = "Both"),
+                               selected = "MAST",
+                               inline = TRUE)
+                ),
+                column(4,
+                  numericInput(ns("min_genes_overlap"),
+                               "Minimum genes for overlap:",
+                               value = 5, min = 1, max = 100, step = 1)
+                )
+              ),
+              
+              fluidRow(
+                column(6,
+                  numericInput(ns("pval_cutoff_overlap"),
+                               "P-value cutoff for DE genes:",
+                               value = 0.05, min = 0.001, max = 0.1, step = 0.01)
+                ),
+                column(6,
+                  checkboxInput(ns("show_values_heatmap"),
+                                "Show values in cells",
+                                value = TRUE)
+                )
+              ),
+              
+              hr(),
+              
+              # DE gene overlap heatmap
+              div(style = "margin-top: 20px;",
+                h5("Gene Overlap Significance Matrix"),
+                shinycssloaders::withSpinner(
+                  plotlyOutput(ns("de_overlap_heatmap"), height = "600px"),
+                  type = 6,
+                  color = "#3c8dbc"
+                )
+              ),
+              
+              # Download button
+              div(style = "margin-top: 15px;",
+                downloadButton(ns("download_overlap_matrix"), 
+                              "Download Overlap Matrix", 
+                              class = "btn-primary")
+              )
+            )
+          )
+        )
       )
     )
   )
@@ -2530,6 +2597,225 @@ mod_de_results_server <- function(id, global_selection, app_data) {
            main = "Cross-Cluster Expression Heatmap")
       text(1, 1, "Heatmap visualization will be implemented here", cex = 1.5)
     })
+    
+    # === DE GENE OVERLAP HEATMAP OUTPUTS ===
+    
+    # Update cluster choices for heatmap
+    observe({
+      if (!is.null(app_data$sce_data)) {
+        cluster_choices <- sort(unique(colData(app_data$sce_data)$seurat_clusters))
+        updateSelectInput(session, "heatmap_cluster", 
+                         choices = cluster_choices,
+                         selected = cluster_choices[1])
+      }
+    })
+    
+    # DE gene overlap heatmap - INTERACTIVE VERSION
+    output$de_overlap_heatmap <- renderPlotly({
+      req(input$heatmap_cluster)
+      req(input$heatmap_cluster != "")
+      
+      selected_cluster <- input$heatmap_cluster
+      selected_method <- input$heatmap_method
+      min_genes <- input$min_genes_overlap %||% 5
+      pval_cutoff <- input$pval_cutoff_overlap %||% 0.05
+      
+      # Get all available genes/mutations
+      de_data <- app_data$full_de
+      
+      if (selected_method %in% c("MAST", "Both")) {
+        mast_genes <- names(de_data$iSCORE_PD_MAST)
+      } else {
+        mast_genes <- character(0)
+      }
+      
+      if (selected_method %in% c("CRISPRi", "Both")) {
+        crispri_genes <- names(de_data$CRISPRi_Mixscale)
+      } else {
+        crispri_genes <- character(0)
+      }
+      
+      all_genes <- unique(c(mast_genes, crispri_genes))
+      
+      if (length(all_genes) < 2) {
+        return(plot_ly() %>%
+               add_text(x = 0.5, y = 0.5, 
+                       text = "Need at least 2 genes for comparison",
+                       textfont = list(size = 16)) %>%
+               layout(xaxis = list(showgrid = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, showticklabels = FALSE)))
+      }
+      
+      # Create overlap matrix
+      n_genes <- length(all_genes)
+      overlap_matrix <- matrix(NA, nrow = n_genes, ncol = n_genes)
+      pval_matrix <- matrix(NA, nrow = n_genes, ncol = n_genes)
+      
+      for (i in 1:n_genes) {
+        for (j in 1:n_genes) {
+          if (i == j) {
+            # Diagonal - count of DE genes for this gene
+            gene_i <- all_genes[i]
+            de_genes_i <- character(0)
+            
+            if (gene_i %in% mast_genes && !is.null(de_data$iSCORE_PD_MAST[[gene_i]][[selected_cluster]]$results)) {
+              results_i <- de_data$iSCORE_PD_MAST[[gene_i]][[selected_cluster]]$results
+              de_genes_i <- rownames(results_i[results_i$p_val_adj < pval_cutoff, ])
+            } else if (gene_i %in% crispri_genes && !is.null(de_data$CRISPRi_Mixscale[[gene_i]][[selected_cluster]]$results)) {
+              results_i <- de_data$CRISPRi_Mixscale[[gene_i]][[selected_cluster]]$results
+              # Handle different p-value column names
+              if ("pvalue" %in% colnames(results_i)) {
+                de_genes_i <- rownames(results_i[results_i$pvalue < pval_cutoff, ])
+              }
+            }
+            
+            overlap_matrix[i, j] <- length(de_genes_i)
+            pval_matrix[i, j] <- NA
+          } else {
+            # Off-diagonal - overlap between two genes
+            gene_i <- all_genes[i]
+            gene_j <- all_genes[j]
+            
+            # Get DE genes for each
+            de_genes_i <- character(0)
+            de_genes_j <- character(0)
+            
+            # Get DE genes for gene i
+            if (gene_i %in% mast_genes && !is.null(de_data$iSCORE_PD_MAST[[gene_i]][[selected_cluster]]$results)) {
+              results_i <- de_data$iSCORE_PD_MAST[[gene_i]][[selected_cluster]]$results
+              de_genes_i <- rownames(results_i[results_i$p_val_adj < pval_cutoff, ])
+            } else if (gene_i %in% crispri_genes && !is.null(de_data$CRISPRi_Mixscale[[gene_i]][[selected_cluster]]$results)) {
+              results_i <- de_data$CRISPRi_Mixscale[[gene_i]][[selected_cluster]]$results
+              if ("pvalue" %in% colnames(results_i)) {
+                de_genes_i <- rownames(results_i[results_i$pvalue < pval_cutoff, ])
+              }
+            }
+            
+            # Get DE genes for gene j
+            if (gene_j %in% mast_genes && !is.null(de_data$iSCORE_PD_MAST[[gene_j]][[selected_cluster]]$results)) {
+              results_j <- de_data$iSCORE_PD_MAST[[gene_j]][[selected_cluster]]$results
+              de_genes_j <- rownames(results_j[results_j$p_val_adj < pval_cutoff, ])
+            } else if (gene_j %in% crispri_genes && !is.null(de_data$CRISPRi_Mixscale[[gene_j]][[selected_cluster]]$results)) {
+              results_j <- de_data$CRISPRi_Mixscale[[gene_j]][[selected_cluster]]$results
+              if ("pvalue" %in% colnames(results_j)) {
+                de_genes_j <- rownames(results_j[results_j$pvalue < pval_cutoff, ])
+              }
+            }
+            
+            # Calculate overlap
+            overlap_count <- length(intersect(de_genes_i, de_genes_j))
+            overlap_matrix[i, j] <- overlap_count
+            
+            # Fisher's exact test for significance
+            if (length(de_genes_i) >= min_genes && length(de_genes_j) >= min_genes && overlap_count > 0) {
+              # Total genes tested (use a reasonable background)
+              total_genes <- 20000  # Approximate human protein-coding genes
+              
+              # Create contingency table
+              # overlap | only_i
+              # only_j  | neither
+              contingency <- matrix(c(
+                overlap_count,
+                length(setdiff(de_genes_i, de_genes_j)),
+                length(setdiff(de_genes_j, de_genes_i)),
+                total_genes - length(union(de_genes_i, de_genes_j))
+              ), nrow = 2)
+              
+              fisher_result <- fisher.test(contingency, alternative = "greater")
+              pval_matrix[i, j] <- fisher_result$p.value
+            } else {
+              pval_matrix[i, j] <- NA
+            }
+          }
+        }
+      }
+      
+      # Set row and column names
+      rownames(overlap_matrix) <- all_genes
+      colnames(overlap_matrix) <- all_genes
+      rownames(pval_matrix) <- all_genes
+      colnames(pval_matrix) <- all_genes
+      
+      # Create hover text
+      hover_text <- matrix(NA, nrow = n_genes, ncol = n_genes)
+      for (i in 1:n_genes) {
+        for (j in 1:n_genes) {
+          if (i == j) {
+            hover_text[i, j] <- paste0(all_genes[i], "<br>",
+                                      "Total DE genes: ", overlap_matrix[i, j])
+          } else {
+            hover_text[i, j] <- paste0(all_genes[i], " vs ", all_genes[j], "<br>",
+                                      "Overlap: ", overlap_matrix[i, j], " genes<br>",
+                                      "p-value: ", 
+                                      ifelse(is.na(pval_matrix[i, j]), "NA", 
+                                            formatC(pval_matrix[i, j], format = "e", digits = 2)))
+          }
+        }
+      }
+      
+      # Create interactive heatmap with heatmaply
+      if (requireNamespace("heatmaply", quietly = TRUE)) {
+        # Transform p-values for visualization
+        plot_matrix <- -log10(pval_matrix + 1e-50)  # Add small value to avoid log(0)
+        plot_matrix[is.na(pval_matrix)] <- 0
+        diag(plot_matrix) <- NA  # Don't show diagonal in p-value plot
+        
+        p <- heatmaply::heatmaply(
+          plot_matrix,
+          custom_hovertext = hover_text,
+          cellnote = if(input$show_values_heatmap) overlap_matrix else NULL,
+          cellnote_textposition = "middle center",
+          colors = colorRampPalette(c("white", "yellow", "orange", "red"))(100),
+          na.value = "gray90",
+          main = paste("DE Gene Overlap Significance -", selected_cluster),
+          xlab = "", ylab = "",
+          showscale = TRUE,
+          colorbar_title = "-log10(p-value)",
+          dendrogram = "both",
+          margins = c(100, 100),
+          width = 700,
+          height = 700
+        )
+        
+        return(p)
+      } else {
+        # Fallback to plotly heatmap
+        plot_ly(
+          x = all_genes,
+          y = all_genes,
+          z = -log10(pval_matrix + 1e-50),
+          text = hover_text,
+          hoverinfo = "text",
+          type = "heatmap",
+          colorscale = list(
+            c(0, "white"),
+            c(0.25, "yellow"),
+            c(0.5, "orange"),
+            c(1, "red")
+          ),
+          colorbar = list(title = "-log10(p-value)")
+        ) %>%
+        layout(
+          title = paste("DE Gene Overlap Significance -", selected_cluster),
+          xaxis = list(title = ""),
+          yaxis = list(title = ""),
+          width = 700,
+          height = 700
+        )
+      }
+    })
+    
+    # Download handler for overlap matrix
+    output$download_overlap_matrix <- downloadHandler(
+      filename = function() {
+        paste0("de_gene_overlap_matrix_", input$heatmap_cluster, "_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        # Recreate the overlap matrix for download
+        # (Similar logic to above but save as CSV)
+        write.csv(data.frame(Message = "Matrix export not yet implemented"), file)
+      }
+    )
     
     # Return values for potential use by other modules
     return(list(
