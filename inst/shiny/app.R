@@ -845,6 +845,14 @@ server <- function(input, output, session) {
   
   # Helper function to check if a gene matches the selected gene (handles variants)
   gene_matches_selection <- function(data_genes, selected_gene, available_genes) {
+    # Handle PRKN/PARK2 special case
+    selected_base <- extract_base_gene(selected_gene)
+    if (selected_base == "PRKN" || selected_base == "PARK2") {
+      # Match any gene with PRKN or PARK2 as base
+      data_base_genes <- sapply(data_genes, extract_base_gene)
+      return(data_base_genes %in% c("PRKN", "PARK2"))
+    }
+    
     # If selected gene directly exists in data, use exact match
     if (selected_gene %in% data_genes) {
       return(data_genes == selected_gene)
@@ -862,8 +870,10 @@ server <- function(input, output, session) {
       }
     }
     
-    # Default: exact match
-    return(data_genes == selected_gene)
+    # If none of the above, try matching by base gene
+    # This handles consolidated gene names from "All Datasets"
+    data_base_genes <- sapply(data_genes, extract_base_gene)
+    return(data_base_genes == selected_base)
   }
   
   # Helper function to create labeled gene choices for dropdown
@@ -884,19 +894,23 @@ server <- function(input, output, session) {
         # Find all variants for this base gene
         variants <- genes[base_genes == base_gene]
         
+        # Special handling for PARK2/PRKN - always use PRKN as display
+        display_base <- if (base_gene == "PARK2") "PRKN" else base_gene
+        
         if (length(variants) == 1) {
           # Single gene, use as-is
           gene_label <- if (grepl("_[A-Z][0-9]+[A-Z]$", variants[1])) {
-            paste0(base_gene, " (includes variants)")
+            paste0(display_base, " (includes variants)")
           } else {
-            base_gene
+            display_base
           }
-          consolidated_choices[gene_label] <- variants[1]
+          # Use the display base name as the value for consistency
+          consolidated_choices[gene_label] <- display_base
         } else {
           # Multiple variants, consolidate under base name
-          gene_label <- paste0(base_gene, " (includes ", length(variants), " variants)")
-          # Use base gene name as value (query logic will handle variants)
-          consolidated_choices[gene_label] <- base_gene
+          gene_label <- paste0(display_base, " (includes ", length(variants), " variants)")
+          # Use display base name as value (query logic will handle variants)
+          consolidated_choices[gene_label] <- display_base
         }
       }
       
@@ -969,6 +983,17 @@ server <- function(input, output, session) {
       # Create user-friendly labels based on what's available
       choices <- c()
       
+      # Add "All Datasets" option if multiple methods are available
+      has_multiple <- sum(c(
+        isTRUE(app_data$available_methods$MAST),
+        isTRUE(app_data$available_methods$CRISPRi),
+        isTRUE(app_data$available_methods$CRISPRa)
+      )) > 1
+      
+      if (has_multiple) {
+        choices["All Datasets"] <- "ALL"
+      }
+      
       if (isTRUE(app_data$available_methods$MAST)) {
         choices["iSCORE-PD (MAST)"] <- "MAST"
       }
@@ -1003,20 +1028,26 @@ server <- function(input, output, session) {
     req(input$global_analysis_type)
     
     if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
-      # Get only genes valid for selected method
-      valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
+      # Get genes based on selection
+      if (input$global_analysis_type == "ALL") {
+        # For "All Datasets", get union of all genes
+        all_genes <- unique(unlist(app_data$available_genes_by_method))
+        valid_genes <- all_genes[!is.na(all_genes) & all_genes != ""]
+      } else {
+        # Get only genes valid for selected method
+        valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
+      }
       
       if (length(valid_genes) > 0) {
         # Determine if we should consolidate variants
-        # FIXED: Always consolidate when multiple methods/datasets available or when variants detected
-        has_multiple_datasets <- length(app_data$available_genes_by_method) > 1
-        has_variants <- any(grepl("_[A-Z][0-9]+[A-Z]$", valid_genes)) || "PARK2" %in% valid_genes
+        # FIX Bug #9: Consolidate when "ALL" is selected
+        should_consolidate <- input$global_analysis_type == "ALL"
         
         # Create labeled choices with optional variant consolidation
         labeled_choices <- create_labeled_gene_choices(
           valid_genes, 
           input$global_analysis_type,
-          dataset_selection = if(has_multiple_datasets || has_variants) "all" else "single"
+          dataset_selection = if(should_consolidate) "all" else "single"
         )
         
         # Keep current selection if still valid, otherwise pick first
@@ -1329,6 +1360,7 @@ server <- function(input, output, session) {
       "MAST" = "MAST",
       "MixScale_CRISPRi" = "MixScale",
       "MixScale_CRISPRa" = "MixScale",
+      "ALL" = NULL,  # NULL means don't filter by analysis type
       input$global_analysis_type  # fallback
     )
     
@@ -1336,6 +1368,7 @@ server <- function(input, output, session) {
     modality <- switch(input$global_analysis_type,
       "MixScale_CRISPRi" = "CRISPRi",
       "MixScale_CRISPRa" = "CRISPRa",
+      "ALL" = NULL,  # NULL means don't filter by modality
       NULL
     )
     

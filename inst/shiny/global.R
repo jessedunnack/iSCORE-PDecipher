@@ -266,7 +266,7 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   }
   
   # Filter by analysis type (method) if specified
-  if (!is.null(analysis_type) && analysis_type != "All" && "method" %in% names(filtered_data)) {
+  if (!is.null(analysis_type) && analysis_type != "All" && analysis_type != "" && "method" %in% names(filtered_data)) {
     cat("[FILTER DEBUG] Filtering by analysis_type/method:", analysis_type, "\n")
     before_count <- nrow(filtered_data)
     

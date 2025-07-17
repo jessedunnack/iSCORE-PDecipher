@@ -1345,10 +1345,10 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
       
       categories <- pd_analysis$pd_summary$biological_categories
       
-      # Convert to data frame
+      # Convert to data frame - ensure clean conversion to avoid [object Object]
       cat_data <- data.frame(
-        Category = names(categories),
-        Count = unlist(categories),
+        Category = as.character(names(categories)),
+        Count = as.numeric(unlist(categories, use.names = FALSE)),
         stringsAsFactors = FALSE
       )
       
