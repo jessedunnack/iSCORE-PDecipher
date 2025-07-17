@@ -288,7 +288,7 @@ get_significant_terms_from_consolidated <- function(data, gene = NULL, cluster =
   }
   
   # Filter by experiment if specified
-  if (!is.null(experiment) && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
+  if (!is.null(experiment) && experiment != "" && experiment != "All" && experiment != "default" && "experiment" %in% names(filtered_data)) {
     before_count <- nrow(filtered_data)
     filtered_data <- filtered_data[filtered_data$experiment == experiment, ]
     cat("[FILTER DEBUG] Filtered by experiment:", experiment, ":", before_count, "->", nrow(filtered_data), "rows\n")

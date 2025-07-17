@@ -983,16 +983,8 @@ server <- function(input, output, session) {
       # Create user-friendly labels based on what's available
       choices <- c()
       
-      # Add "All Datasets" option if multiple methods are available
-      has_multiple <- sum(c(
-        isTRUE(app_data$available_methods$MAST),
-        isTRUE(app_data$available_methods$CRISPRi),
-        isTRUE(app_data$available_methods$CRISPRa)
-      )) > 1
-      
-      if (has_multiple) {
-        choices["All Datasets"] <- "ALL"
-      }
+      # Don't add "All Datasets" option - it breaks filtering
+      # The DE analysis module handles cross-dataset comparisons properly
       
       if (isTRUE(app_data$available_methods$MAST)) {
         choices["iSCORE-PD (MAST)"] <- "MAST"
@@ -1028,20 +1020,13 @@ server <- function(input, output, session) {
     req(input$global_analysis_type)
     
     if (!app_data$update_in_progress && !is.null(app_data$consolidated_data)) {
-      # Get genes based on selection
-      if (input$global_analysis_type == "ALL") {
-        # For "All Datasets", get union of all genes
-        all_genes <- unique(unlist(app_data$available_genes_by_method))
-        valid_genes <- all_genes[!is.na(all_genes) & all_genes != ""]
-      } else {
-        # Get only genes valid for selected method
-        valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
-      }
+      # Get genes based on selection - only genes valid for selected method
+      valid_genes <- app_data$available_genes_by_method[[input$global_analysis_type]]
       
       if (length(valid_genes) > 0) {
         # Determine if we should consolidate variants
-        # FIX Bug #9: Consolidate when "ALL" is selected
-        should_consolidate <- input$global_analysis_type == "ALL"
+        # FIX Bug #9: Don't consolidate since we removed "ALL" option
+        should_consolidate <- FALSE
         
         # Create labeled choices with optional variant consolidation
         labeled_choices <- create_labeled_gene_choices(
@@ -1360,7 +1345,6 @@ server <- function(input, output, session) {
       "MAST" = "MAST",
       "MixScale_CRISPRi" = "MixScale",
       "MixScale_CRISPRa" = "MixScale",
-      "ALL" = NULL,  # NULL means don't filter by analysis type
       input$global_analysis_type  # fallback
     )
     
@@ -1368,7 +1352,6 @@ server <- function(input, output, session) {
     modality <- switch(input$global_analysis_type,
       "MixScale_CRISPRi" = "CRISPRi",
       "MixScale_CRISPRa" = "CRISPRa",
-      "ALL" = NULL,  # NULL means don't filter by modality
       NULL
     )
     
