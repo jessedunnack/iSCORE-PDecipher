@@ -2943,10 +2943,35 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         cat("[DETAILS DEBUG] Parsed genes - MAST:", mast_gene, "CRISPRi:", crispri_gene, "\n")
         
         # Get the enrichment data
-        enrichment_data <- app_data$consolidated_data
-        if (is.null(enrichment_data)) {
-          cat("[DETAILS DEBUG] No enrichment data available\n")
-          return(data.frame(Message = "Enrichment data not available"))
+        cat("[DETAILS DEBUG] Checking app_data structure\n")
+        cat("[DETAILS DEBUG] app_data class:", class(app_data), "\n")
+        if (!is.null(app_data)) {
+          cat("[DETAILS DEBUG] app_data names:", paste(names(app_data), collapse=", "), "\n")
+        }
+        
+        enrichment_data <- NULL
+        if (!is.null(app_data$consolidated_data)) {
+          enrichment_data <- app_data$consolidated_data
+          cat("[DETAILS DEBUG] Got enrichment data from app_data$consolidated_data\n")
+        } else {
+          cat("[DETAILS DEBUG] app_data$consolidated_data is NULL\n")
+          
+          # Alternative: Try to get the enrichment data from global environment or parent data
+          if (exists("consolidated_enrichment_data", envir = .GlobalEnv)) {
+            enrichment_data <- get("consolidated_enrichment_data", envir = .GlobalEnv)
+            cat("[DETAILS DEBUG] Found enrichment data in global environment\n")
+          } else {
+            cat("[DETAILS DEBUG] No enrichment data found anywhere\n")
+            return(data.frame(Message = "Enrichment data not loaded. Please ensure the enrichment data file is loaded in the app."))
+          }
+        }
+        
+        cat("[DETAILS DEBUG] Enrichment data available with", nrow(enrichment_data), "rows\n")
+        if (nrow(enrichment_data) > 0) {
+          cat("[DETAILS DEBUG] First few mutation values:", paste(head(enrichment_data$mutation_perturbation, 10), collapse=", "), "\n")
+          cat("[DETAILS DEBUG] First few cluster values:", paste(head(enrichment_data$cluster, 10), collapse=", "), "\n")
+          cat("[DETAILS DEBUG] Looking for MAST:", mast_gene, "cluster:", selected_cluster, "\n")
+          cat("[DETAILS DEBUG] Looking for CRISPRi:", crispri_gene, "cluster:", selected_cluster, "\n")
         }
         
         # Get enrichment terms for MAST
@@ -3029,8 +3054,14 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         # Get the enrichment data
         enrichment_data <- app_data$consolidated_data
         if (is.null(enrichment_data)) {
-          cat("[PATHWAYS DEBUG] No enrichment data available\n")
-          return(data.frame(Message = "Enrichment data not available"))
+          cat("[PATHWAYS DEBUG] No enrichment data available in app_data$consolidated_data\n")
+          # Try reactive version
+          if (!is.null(app_data) && is.reactive(app_data$consolidated_data)) {
+            enrichment_data <- app_data$consolidated_data()
+            cat("[PATHWAYS DEBUG] Found enrichment data in reactive version\n")
+          } else {
+            return(data.frame(Message = "Enrichment data not available"))
+          }
         }
         
         # Get enrichment terms for MAST
