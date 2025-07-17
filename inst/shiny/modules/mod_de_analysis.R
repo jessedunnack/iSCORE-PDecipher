@@ -515,8 +515,8 @@ mod_de_analysis_server <- function(id, app_data) {
           Direction = ifelse(`log2FC` > 0, "↑ UP", "↓ DOWN")
         )
       
-      # Create datatable with pagination and search
-      DT::datatable(
+      # Create datatable with search restricted to Gene column only
+      dt <- DT::datatable(
         display_data,
         options = list(
           pageLength = 15,  # Show 15 genes per page
@@ -547,7 +547,9 @@ mod_de_analysis_server <- function(id, app_data) {
           )
         ),
         rownames = FALSE
-      ) %>%
+      )
+      
+      dt %>%
         # Color-code the Direction column
         DT::formatStyle(
           "Direction",
