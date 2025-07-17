@@ -2904,7 +2904,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         shared_genes_data <- extract_shared_genes(values$analysis_results, selected_pair, selected_cluster)
         
         DT::datatable(shared_genes_data,
-                     options = list(pageLength = 10, scrollX = TRUE),
+                     options = list(pageLength = 100, 
+                                   lengthMenu = c(10, 25, 50, 100, 200),
+                                   scrollX = TRUE),
                      rownames = FALSE)
       }
     })
@@ -2922,7 +2924,9 @@ mod_signature_nomination_server <- function(id, global_selection, app_data) {
         shared_pathways_data <- extract_shared_pathways(values$analysis_results, selected_pair, selected_cluster)
         
         DT::datatable(shared_pathways_data,
-                     options = list(pageLength = 10, scrollX = TRUE),
+                     options = list(pageLength = 50, 
+                                   lengthMenu = c(10, 25, 50, 100, 200, 500),
+                                   scrollX = TRUE),
                      rownames = FALSE)
       }
     })
