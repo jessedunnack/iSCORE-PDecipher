@@ -32,8 +32,14 @@ pd_data <- all_data %>%
   filter(p.adjust < 0.05) %>%
   filter(grepl(pd_pattern, Description, ignore.case = TRUE))
 
-# Get all clusters
-all_clusters <- sort(unique(pd_data$cluster))
+# Natural sort helper
+natural_sort_clusters <- function(cluster_vec) {
+  numeric_part <- as.numeric(gsub("cluster_", "", cluster_vec))
+  cluster_vec[order(numeric_part)]
+}
+
+# Get all clusters and sort naturally
+all_clusters <- natural_sort_clusters(unique(pd_data$cluster))
 cat("Found", length(all_clusters), "clusters:", paste(all_clusters, collapse = ", "), "\n\n")
 
 # Function to analyze pathways in a cluster
@@ -171,6 +177,12 @@ cluster_plot_data <- all_cluster_stats %>%
     Method == "n_mixscale" ~ "CRISPRi\nPerturbation"
   ))
 
+# Ensure cluster is a factor with natural ordering for all plots
+cluster_plot_data$cluster <- factor(cluster_plot_data$cluster, 
+                                   levels = natural_sort_clusters(unique(all_cluster_stats$cluster)))
+all_cluster_stats$cluster <- factor(all_cluster_stats$cluster,
+                                   levels = natural_sort_clusters(unique(all_cluster_stats$cluster)))
+
 p1 <- ggplot(cluster_plot_data, aes(x = cluster, y = Count, fill = Method)) +
   geom_bar(stat = "identity", position = "dodge") +
   scale_fill_manual(values = c("Mutation\niSCORE-PD" = "#1f77b4", 
@@ -228,7 +240,8 @@ method_preference <- all_cluster_stats %>%
       TRUE ~ "Balanced"
     )
   ) %>%
-  select(cluster, n_mast, n_mixscale, mast_ratio, preference)
+  select(cluster, n_mast, n_mixscale, mast_ratio, preference) %>%
+  arrange(as.numeric(gsub("cluster_", "", cluster)))
 
 cat("\nMethod preference by cluster:\n")
 print(method_preference)

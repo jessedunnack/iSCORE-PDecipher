@@ -251,8 +251,8 @@ landingPageWithUmapUI <- function(id) {
               ),
               column(6,
                 div(style = "margin-top: 5px; font-size: 12px; color: #555; line-height: 1.4;",
-                    strong("MAST test:"), " LFC≥0.25, min.pct=0.1", br(),
-                    strong("Filters:"), " padj<0.05, top 25 markers")
+                    strong("MAST test:"), " LFC≥0.5, min.pct=0.25, min.diff.pct=0.2", br(),
+                    strong("Filters:"), " padj<0.05, top 25 markers, both pos/neg")
               )
             ),
             # Markers table - explicit height

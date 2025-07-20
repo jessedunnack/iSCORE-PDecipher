@@ -1052,7 +1052,7 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             icon("dna"), " Top Marker Genes for ", input$cluster_selector
           ),
           tags$div(style = "font-size: 11px; color: #666; margin-bottom: 8px;",
-            tags$strong("Method: "), "MAST test, LFC≥0.25, min.pct=0.1, padj<0.05"
+            tags$strong("Method: "), "MAST test, LFC≥0.5, min.pct=0.25, min.diff.pct=0.2, padj<0.05"
           ),
           div(style = "height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;",
             withSpinner(

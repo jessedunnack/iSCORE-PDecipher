@@ -88,9 +88,10 @@ calculate_cluster_markers <- function(seurat_obj, dataset_name, force_recalculat
     markers <- FindAllMarkers(
       seurat_obj,
       test.use = "MAST",
-      logfc.threshold = 0.25,    # Reasonable LFC threshold
-      min.pct = 0.1,             # Expressed in at least 10% of cells
-      only.pos = TRUE,           # Only positive markers
+      logfc.threshold = 0.5,     # More stringent LFC for better specificity
+      min.pct = 0.25,            # Expressed in at least 25% of cells
+      min.diff.pct = 0.2,        # 20% difference between cluster and others
+      only.pos = FALSE,          # Include both positive and negative markers
       max.cells.per.ident = 500, # Downsample for efficiency
       verbose = FALSE
     )
@@ -98,9 +99,9 @@ calculate_cluster_markers <- function(seurat_obj, dataset_name, force_recalculat
     # Add cluster information and sort
     markers$cluster <- factor(markers$cluster)
     markers <- markers %>%
-      arrange(cluster, desc(avg_log2FC)) %>%
+      arrange(cluster, desc(abs(avg_log2FC))) %>%  # Sort by absolute LFC to get both pos/neg
       group_by(cluster) %>%
-      slice_head(n = 50) %>%  # Keep top 50 markers per cluster
+      slice_head(n = 100) %>%  # Keep top 100 markers per cluster (50 pos + 50 neg)
       ungroup()
     
     # Save markers

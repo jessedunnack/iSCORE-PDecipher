@@ -24,6 +24,12 @@ results_base <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts/i
 output_dir <- file.path(results_base, "comprehensive")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
+# Natural sort helper
+natural_sort_clusters <- function(cluster_vec) {
+  numeric_part <- as.numeric(gsub("cluster_", "", cluster_vec))
+  cluster_vec[order(numeric_part)]
+}
+
 # Load pre-computed results
 cat("Loading analysis results...\n")
 
@@ -32,6 +38,10 @@ gene_summary <- read.csv(file.path(results_base, "by_gene/all_genes_summary.csv"
 
 # Cluster summaries
 cluster_stats <- read.csv(file.path(results_base, "by_cluster/cluster_method_breakdown.csv"), stringsAsFactors = FALSE)
+
+# Apply natural sorting to clusters
+cluster_stats$cluster <- factor(cluster_stats$cluster, 
+                               levels = natural_sort_clusters(unique(cluster_stats$cluster)))
 
 # Top signatures
 mast_top <- read.csv(file.path(results_base, "mast_top_fast.csv"), stringsAsFactors = FALSE)

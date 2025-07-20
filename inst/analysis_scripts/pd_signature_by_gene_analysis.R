@@ -6,6 +6,22 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
+# Helper function for gene harmonization
+harmonize_gene_names <- function(gene_name) {
+  gene_map <- c(
+    "PRKN" = "PARK2",
+    "VPS13C_A444P" = "VPS13C",
+    "VPS13C_W395C" = "VPS13C", 
+    "SNCA_A30P" = "SNCA",
+    "SNCA_A53T" = "SNCA",
+    "SNCA_Triplication" = "SNCA"
+  )
+  if (gene_name %in% names(gene_map)) {
+    return(gene_map[gene_name])
+  }
+  return(gene_name)
+}
+
 # Configuration
 data_file <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/iSCORE-PD_plus_CRISPRi/all_enrichment_padj005_complete_with_direction.rds"
 output_dir <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts/iSCORE-PDecipher/results/pd_signatures/by_gene"
@@ -20,6 +36,10 @@ if (!"gene" %in% names(all_data) && "mutation_perturbation" %in% names(all_data)
   all_data$gene <- all_data$mutation_perturbation
 }
 
+# Apply gene harmonization
+all_data$gene_original <- all_data$gene
+all_data$gene_harmonized <- sapply(all_data$gene, harmonize_gene_names)
+
 # PD keyword search
 pd_terms <- c("mitochondr", "lysosom", "autophagy", "synap", "dopamin", 
               "proteasom", "synuclein", "oxidative", "microglia", "calcium",
@@ -31,16 +51,16 @@ pd_data <- all_data %>%
   filter(p.adjust < 0.05) %>%
   filter(grepl(pd_pattern, Description, ignore.case = TRUE))
 
-# Get unique genes
-all_genes <- unique(pd_data$gene)
-cat("Found", length(all_genes), "genes to analyze:", paste(all_genes, collapse = ", "), "\n\n")
+# Get unique harmonized genes
+all_genes <- unique(pd_data$gene_harmonized)
+cat("Found", length(all_genes), "harmonized genes to analyze:", paste(all_genes, collapse = ", "), "\n\n")
 
 # Function to analyze a single gene
 analyze_gene_signatures <- function(data, gene_name) {
   cat("Analyzing", gene_name, "...\n")
   
-  # Filter data for this gene
-  gene_data <- data %>% filter(gene == gene_name)
+  # Filter data for this harmonized gene
+  gene_data <- data %>% filter(gene_harmonized == gene_name)
   
   if (nrow(gene_data) == 0) {
     return(list(
