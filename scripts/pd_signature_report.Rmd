@@ -1,0 +1,166 @@
+---
+title: "Parkinson's Disease Pathway Signatures: Cross-Method Analysis"
+subtitle: "Executive Summary for Thesis Committee"
+author: "iSCORE-PDecipher Analysis"
+date: "July 19, 2025"
+output: 
+  html_document:
+    toc: true
+    theme: united
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(knitr)
+
+# Load results
+results_dir <- "../results/pd_signatures"
+mast_top <- read.csv(file.path(results_dir, "mast_top_fast.csv"), stringsAsFactors = FALSE)
+mixscale_top <- read.csv(file.path(results_dir, "mixscale_top_fast.csv"), stringsAsFactors = FALSE)
+convergent_top <- read.csv(file.path(results_dir, "convergent_top_fast.csv"), stringsAsFactors = FALSE)
+```
+
+# Executive Summary
+
+We identified **45,671 PD-relevant pathways** from 663,280 total enrichment results across iSCORE-PD mutations and CRISPRi knockdowns. Our analysis reveals three compelling signature categories with distinct biological insights into Parkinson's disease pathogenesis.
+
+## Key Findings
+
+### 1. **MAST-only Signature: Synaptic Vesicle Dysfunction**
+- **Top pathway**: Vesicle-mediated transport in synapse (p < 10^-6)
+- **Found in 8 genes**: LRRK2, PARK7, PRKN, and others
+- **Biological insight**: Genetic mutations converge on synaptic vesicle trafficking defects
+
+### 2. **CRISPRi-only Signature: Mitochondrial Compensation**  
+- **Top pathway**: Mitochondrial small ribosomal subunit
+- **Found in 9 genes**: ATP13A2, DNAJC6, FBXO7, and others
+- **Biological insight**: Acute knockdowns trigger compensatory mitochondrial protein synthesis
+
+### 3. **Convergent Signature: Universal Synaptic Dysfunction**
+- **Top pathway**: Synapse (STRING database)
+- **13 MAST genes, 10 CRISPRi genes**
+- **Special finding**: "Dopamine perturbation network" shows extreme significance (p < 10^-17)
+- **Biological insight**: Core synaptic dysfunction is a universal feature across all perturbation methods
+
+# Detailed Analysis
+
+## Method Comparison
+
+```{r method_stats}
+method_stats <- data.frame(
+  Method = c("MAST (Mutations)", "CRISPRi (Knockdowns)", "Convergent"),
+  `Total Pathways` = c(
+    length(unique(mast_top$Description)),
+    length(unique(mixscale_top$Description)),
+    nrow(convergent_top)
+  ),
+  `Avg Genes/Pathway` = c(
+    round(mean(mast_top$n_genes), 2),
+    round(mean(mixscale_top$n_genes), 2),
+    round(mean(convergent_top$n_genes_mast + convergent_top$n_genes_mixscale)/2, 2)
+  ),
+  `Top Significance` = c(
+    round(max(mast_top$mean_neg_log_p), 2),
+    round(max(mixscale_top$mean_neg_log_p), 2),
+    round(max(convergent_top$mean_neg_log_p), 2)
+  )
+)
+
+kable(method_stats, caption = "Summary statistics by analysis method")
+```
+
+## Top 5 Pathways by Category
+
+### MAST-only Pathways
+```{r mast_table}
+mast_display <- mast_top %>%
+  head(5) %>%
+  select(Pathway = Description, 
+         `Genes (n)` = n_genes,
+         `Example Genes` = genes,
+         `-log10(p)` = mean_neg_log_p) %>%
+  mutate(
+    Pathway = substr(Pathway, 1, 60),
+    `-log10(p)` = round(`-log10(p)`, 2)
+  )
+
+kable(mast_display, caption = "Top MAST-only pathways")
+```
+
+### CRISPRi-only Pathways
+```{r mixscale_table}
+mixscale_display <- mixscale_top %>%
+  head(5) %>%
+  select(Pathway = Description,
+         `Genes (n)` = n_genes,
+         `Example Genes` = genes,
+         `-log10(p)` = mean_neg_log_p) %>%
+  mutate(
+    Pathway = substr(Pathway, 1, 60),
+    `-log10(p)` = round(`-log10(p)`, 2)
+  )
+
+kable(mixscale_display, caption = "Top CRISPRi-only pathways")
+```
+
+### Convergent Pathways
+```{r convergent_table}
+convergent_display <- convergent_top %>%
+  head(5) %>%
+  select(Pathway = Description,
+         `MAST Genes` = n_genes_mast,
+         `CRISPRi Genes` = n_genes_mixscale,
+         `-log10(p)` = mean_neg_log_p) %>%
+  mutate(
+    Pathway = substr(Pathway, 1, 60),
+    `-log10(p)` = round(`-log10(p)`, 2)
+  )
+
+kable(convergent_display, caption = "Top convergent pathways (found in both methods)")
+```
+
+# Biological Interpretation
+
+## 1. Synaptic Dysfunction as Central Theme
+- **MAST mutations** specifically affect vesicle trafficking
+- **Convergent analysis** confirms broad synaptic involvement
+- **Dopamine-specific** network highly enriched (p < 10^-17)
+
+## 2. Method-Specific Insights
+- **Mutations (MAST)**: Chronic adaptations → vesicle/transport defects
+- **Knockdowns (CRISPRi)**: Acute stress → mitochondrial compensation
+
+## 3. Therapeutic Implications
+- **Synaptic vesicle pathway** genes are druggable targets
+- **Mitochondrial support** may help in acute phases
+- **Dopamine network** components for biomarker development
+
+# Recommendations for Manuscript
+
+## Main Figure Components
+1. **Three-panel bar plot** showing top pathways by category
+2. **Heatmap** of convergent pathways across all genes
+3. **Network diagram** connecting PD genes through shared pathways
+
+## Key Messages
+1. **Validation**: Convergent signatures validate our dual-method approach
+2. **Novel insights**: Method-specific signatures reveal different aspects of PD biology
+3. **Clinical relevance**: Identified pathways suggest therapeutic strategies
+
+## Statistical Highlights
+- 934 convergent pathways (p < 0.05 in both methods)
+- Dopamine perturbation network: p < 10^-17
+- 13 PD genes converge on synaptic pathways
+
+# Next Steps
+
+1. **Deep dive** into dopamine perturbation network genes
+2. **Validate** key findings in additional datasets
+3. **Explore** therapeutic compounds targeting identified pathways
+4. **Develop** pathway-based biomarker panel
+
+---
+
+*Generated by iSCORE-PDecipher v0.2.9 | Data: iSCORE-PD + CRISPRi (no CRISPRa)*

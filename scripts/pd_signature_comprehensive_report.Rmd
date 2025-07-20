@@ -1,0 +1,491 @@
+---
+title: "Comprehensive Parkinson's Disease Signature Analysis Report"
+subtitle: "iSCORE-PDecipher: Convergent and Divergent Signatures Across Methods"
+author: "iSCORE-PDecipher Analysis Pipeline"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+    fig_width: 12
+    fig_height: 8
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(DT)
+library(gridExtra)
+
+# Set theme
+theme_set(theme_minimal(base_size = 14))
+
+# Load analysis results
+results_base <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts/iSCORE-PDecipher/results/pd_signatures"
+
+# Fast analysis results
+mast_top <- read.csv(file.path(results_base, "mast_top_fast.csv"), stringsAsFactors = FALSE)
+mixscale_top <- read.csv(file.path(results_base, "mixscale_top_fast.csv"), stringsAsFactors = FALSE)
+convergent_top <- read.csv(file.path(results_base, "convergent_top_fast.csv"), stringsAsFactors = FALSE)
+
+# Gene analysis
+gene_summary <- read.csv(file.path(results_base, "by_gene/all_genes_summary.csv"), stringsAsFactors = FALSE)
+
+# Cluster analysis
+cluster_stats <- read.csv(file.path(results_base, "by_cluster/cluster_method_breakdown.csv"), stringsAsFactors = FALSE)
+cluster_specific <- read.csv(file.path(results_base, "by_cluster/cluster_specific_pathways.csv"), stringsAsFactors = FALSE)
+ubiquitous <- read.csv(file.path(results_base, "by_cluster/ubiquitous_pathways.csv"), stringsAsFactors = FALSE)
+
+# Comprehensive summary
+if (file.exists(file.path(results_base, "comprehensive/comprehensive_summary.rds"))) {
+  comp_summary <- readRDS(file.path(results_base, "comprehensive/comprehensive_summary.rds"))
+}
+```
+
+# Executive Summary
+
+This comprehensive analysis examined Parkinson's disease (PD) functional enrichment signatures across two orthogonal experimental approaches:
+
+1. **Mutation - iSCORE-PD**: Genetic mutations in iPSC-derived neurons
+2. **CRISPRi Perturbation**: CRISPR interference knockdowns
+
+## Key Findings
+
+```{r summary_stats}
+total_pd_pathways <- nrow(mast_top) + nrow(mixscale_top) + nrow(convergent_top)
+n_genes_analyzed <- length(unique(gene_summary$gene))
+n_clusters_analyzed <- length(unique(cluster_stats$cluster))
+
+summary_table <- data.frame(
+  Metric = c("Total PD Genes Analyzed", 
+             "Total Clusters Analyzed",
+             "Mutation-Only Pathways", 
+             "CRISPRi-Only Pathways",
+             "Convergent Pathways",
+             "Cluster-Specific Pathways",
+             "Ubiquitous Pathways (8+ clusters)"),
+  Value = c(n_genes_analyzed,
+            n_clusters_analyzed,
+            nrow(mast_top),
+            nrow(mixscale_top),
+            nrow(convergent_top),
+            nrow(cluster_specific),
+            nrow(ubiquitous))
+)
+
+kable(summary_table, caption = "Dataset Overview")
+```
+
+## Top Discoveries
+
+### Most Compelling Signatures
+
+1. **Strongest Mutation-Only Signal**: `r mast_top$Description[1]` (p < 10^-`r round(mast_top$mean_neg_log_p[1])`)
+2. **Strongest CRISPRi-Only Signal**: `r mixscale_top$Description[1]` (p < 10^-`r round(mixscale_top$mean_neg_log_p[1])`)
+3. **Strongest Convergent Signal**: `r convergent_top$Description[1]` (p < 10^-`r round(convergent_top$mean_neg_log_p[1])`)
+
+# Method-Specific Signatures
+
+## Mutation - iSCORE-PD Only Pathways
+
+These pathways were uniquely enriched in genetic mutation data but not in CRISPRi perturbations:
+
+```{r mast_only_top}
+mast_display <- mast_top %>%
+  head(15) %>%
+  mutate(
+    Description = substr(Description, 1, 60),
+    `-log10(p)` = round(mean_neg_log_p, 2),
+    Genes = n_genes
+  ) %>%
+  select(Description, Genes, `-log10(p)`, enrichment_type)
+
+datatable(mast_display, 
+          caption = "Top 15 Mutation-Only PD Pathways",
+          options = list(pageLength = 10))
+```
+
+```{r mast_viz, fig.height=8}
+mast_plot_data <- mast_top %>%
+  head(10) %>%
+  mutate(
+    Description_short = ifelse(nchar(Description) > 50,
+                              paste0(substr(Description, 1, 50), "..."),
+                              Description)
+  )
+
+ggplot(mast_plot_data, aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
+  geom_bar(stat = "identity", fill = "#1f77b4") +
+  coord_flip() +
+  labs(
+    title = "Top Mutation - iSCORE-PD Only Pathways",
+    x = "",
+    y = "Mean -log10(adjusted p-value)"
+  ) +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+## CRISPRi Perturbation Only Pathways
+
+These pathways were uniquely enriched in CRISPRi knockdown experiments:
+
+```{r mixscale_only_top}
+mixscale_display <- mixscale_top %>%
+  head(15) %>%
+  mutate(
+    Description = substr(Description, 1, 60),
+    `-log10(p)` = round(mean_neg_log_p, 2),
+    Genes = n_genes
+  ) %>%
+  select(Description, Genes, `-log10(p)`, enrichment_type)
+
+datatable(mixscale_display, 
+          caption = "Top 15 CRISPRi-Only PD Pathways",
+          options = list(pageLength = 10))
+```
+
+```{r mixscale_viz, fig.height=8}
+mixscale_plot_data <- mixscale_top %>%
+  head(10) %>%
+  mutate(
+    Description_short = ifelse(nchar(Description) > 50,
+                              paste0(substr(Description, 1, 50), "..."),
+                              Description)
+  )
+
+ggplot(mixscale_plot_data, aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
+  geom_bar(stat = "identity", fill = "#ff7f0e") +
+  coord_flip() +
+  labs(
+    title = "Top CRISPRi Perturbation Only Pathways",
+    x = "",
+    y = "Mean -log10(adjusted p-value)"
+  ) +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+# Convergent Signatures
+
+These pathways showed significant enrichment in BOTH mutation and CRISPRi data:
+
+```{r convergent_analysis}
+convergent_display <- convergent_top %>%
+  head(20) %>%
+  mutate(
+    Description = substr(Description, 1, 60),
+    `MAST Genes` = n_genes_mast,
+    `CRISPRi Genes` = n_genes_mixscale,
+    `Total Genes` = n_genes_mast + n_genes_mixscale,
+    `-log10(p)` = round(mean_neg_log_p, 2)
+  ) %>%
+  select(Description, `MAST Genes`, `CRISPRi Genes`, `Total Genes`, `-log10(p)`)
+
+datatable(convergent_display, 
+          caption = "Top 20 Convergent Pathways",
+          options = list(pageLength = 10))
+```
+
+```{r convergent_viz, fig.height=10}
+# Prepare data for stacked bar
+convergent_plot <- convergent_top %>%
+  head(15) %>%
+  mutate(
+    Description_short = ifelse(nchar(Description) > 40,
+                              paste0(substr(Description, 1, 40), "..."),
+                              Description)
+  )
+
+# Create comparison data
+comp_data <- data.frame(
+  Description = rep(convergent_plot$Description_short, 2),
+  Genes = c(convergent_plot$n_genes_mast, convergent_plot$n_genes_mixscale),
+  Method = rep(c("Mutation\niSCORE-PD", "CRISPRi\nPerturbation"), each = nrow(convergent_plot))
+)
+
+ggplot(comp_data, aes(x = reorder(Description, Genes), y = Genes, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  scale_fill_manual(values = c("Mutation\niSCORE-PD" = "#1f77b4", 
+                              "CRISPRi\nPerturbation" = "#ff7f0e")) +
+  labs(
+    title = "Gene Coverage in Convergent Pathways",
+    x = "",
+    y = "Number of Genes"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+
+# Gene-Specific Analysis
+
+## Gene Signature Patterns
+
+```{r gene_patterns}
+# Classify genes by pattern
+gene_patterns <- gene_summary %>%
+  mutate(
+    pattern = case_when(
+      n_mast_only > n_mixscale_only & n_mast_only > n_convergent ~ "Mutation-dominant",
+      n_mixscale_only > n_mast_only & n_mixscale_only > n_convergent ~ "CRISPRi-dominant",
+      n_convergent > n_mast_only & n_convergent > n_mixscale_only ~ "Convergent-dominant",
+      TRUE ~ "Balanced"
+    )
+  )
+
+pattern_summary <- gene_patterns %>%
+  group_by(pattern) %>%
+  summarise(
+    n_genes = n(),
+    genes = paste(gene, collapse = ", "),
+    .groups = "drop"
+  )
+
+kable(pattern_summary, caption = "Gene Classification by Dominant Pattern")
+```
+
+```{r gene_heatmap, fig.height=8}
+# Create heatmap data
+heatmap_data <- gene_summary %>%
+  select(gene, `Mutation Only` = n_mast_only, 
+         `CRISPRi Only` = n_mixscale_only, 
+         `Convergent` = n_convergent) %>%
+  tidyr::pivot_longer(cols = -gene, names_to = "Category", values_to = "Count")
+
+ggplot(heatmap_data, aes(x = gene, y = Category, fill = Count)) +
+  geom_tile() +
+  geom_text(aes(label = Count), color = "white", size = 4) +
+  scale_fill_gradient(low = "lightblue", high = "darkred") +
+  labs(
+    title = "PD Pathway Distribution Across All Genes",
+    x = "Gene",
+    y = ""
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold", size = 16)
+  )
+```
+
+## Top Genes by Category
+
+```{r top_genes}
+# Mutation-dominant genes
+top_mutation_genes <- gene_summary %>%
+  arrange(desc(n_mast_only)) %>%
+  head(5) %>%
+  select(Gene = gene, `Mutation-Only Pathways` = n_mast_only)
+
+# CRISPRi-dominant genes
+top_crispri_genes <- gene_summary %>%
+  arrange(desc(n_mixscale_only)) %>%
+  head(5) %>%
+  select(Gene = gene, `CRISPRi-Only Pathways` = n_mixscale_only)
+
+# Convergent-dominant genes
+top_convergent_genes <- gene_summary %>%
+  arrange(desc(n_convergent)) %>%
+  head(5) %>%
+  select(Gene = gene, `Convergent Pathways` = n_convergent)
+```
+
+### Mutation-Dominant Genes
+```{r}
+kable(top_mutation_genes)
+```
+
+### CRISPRi-Dominant Genes
+```{r}
+kable(top_crispri_genes)
+```
+
+### Convergent-Dominant Genes
+```{r}
+kable(top_convergent_genes)
+```
+
+# Cluster Analysis
+
+## Cluster Enrichment Patterns
+
+```{r cluster_overview, fig.height=10}
+# Create two-panel figure
+p1 <- ggplot(cluster_stats, aes(x = cluster, y = n_pathways)) +
+  geom_bar(stat = "identity", fill = "#d62728") +
+  geom_text(aes(label = n_pathways), vjust = -0.5, size = 3) +
+  labs(
+    title = "Total PD Pathways by Cluster",
+    x = "Cluster",
+    y = "Number of Pathways"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+# Method breakdown
+cluster_method_data <- cluster_stats %>%
+  tidyr::pivot_longer(cols = c(n_mast, n_mixscale), 
+                     names_to = "Method", 
+                     values_to = "Count") %>%
+  mutate(Method = case_when(
+    Method == "n_mast" ~ "Mutation\niSCORE-PD",
+    Method == "n_mixscale" ~ "CRISPRi\nPerturbation"
+  ))
+
+p2 <- ggplot(cluster_method_data, aes(x = cluster, y = Count, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("Mutation\niSCORE-PD" = "#1f77b4", 
+                              "CRISPRi\nPerturbation" = "#ff7f0e")) +
+  labs(
+    title = "Method Distribution Across Clusters",
+    x = "Cluster",
+    y = "Number of Enriched Pathways"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+grid.arrange(p1, p2, ncol = 1)
+```
+
+## Top Enriched Clusters
+
+```{r top_clusters}
+top_clusters <- cluster_stats %>%
+  arrange(desc(n_pathways)) %>%
+  head(5) %>%
+  mutate(
+    `Method Preference` = case_when(
+      n_mast/(n_mast + n_mixscale) > 0.7 ~ "Mutation-dominant",
+      n_mast/(n_mast + n_mixscale) < 0.3 ~ "CRISPRi-dominant",
+      TRUE ~ "Balanced"
+    )
+  ) %>%
+  select(Cluster = cluster, 
+         `Total Pathways` = n_pathways,
+         `Mutation Pathways` = n_mast,
+         `CRISPRi Pathways` = n_mixscale,
+         `Method Preference`)
+
+kable(top_clusters, caption = "Clusters with Highest PD Pathway Enrichment")
+```
+
+## Cluster-Specific vs Ubiquitous Pathways
+
+```{r cluster_specificity}
+spec_summary <- data.frame(
+  Category = c("Cluster-Specific (1-2 clusters)", "Ubiquitous (8+ clusters)"),
+  Count = c(nrow(cluster_specific), nrow(ubiquitous)),
+  Example = c(
+    ifelse(nrow(cluster_specific) > 0, cluster_specific$Description[1], "None"),
+    ifelse(nrow(ubiquitous) > 0, ubiquitous$Description[1], "None")
+  )
+) %>%
+  mutate(Example = substr(Example, 1, 60))
+
+kable(spec_summary, caption = "Pathway Distribution Across Clusters")
+```
+
+# Biological Insights
+
+## Key Pathway Categories
+
+Based on our analysis, the most prominent PD-relevant biological processes include:
+
+```{r pathway_categories}
+# Function to categorize pathways
+categorize_pathway <- function(desc) {
+  desc_lower <- tolower(desc)
+  if (grepl("mitochondr|oxidative|atp|electron", desc_lower)) return("Mitochondrial/Energy")
+  if (grepl("synap|dopamin|neurotrans", desc_lower)) return("Synaptic/Neuronal")
+  if (grepl("lysosom|autophagy|endocyt", desc_lower)) return("Lysosomal/Autophagy")
+  if (grepl("proteasom|ubiquitin|protein degradation", desc_lower)) return("Protein Degradation")
+  if (grepl("apoptosis|cell death", desc_lower)) return("Cell Death")
+  if (grepl("microglia|inflamm|immune", desc_lower)) return("Neuroinflammation")
+  return("Other")
+}
+
+# Categorize top pathways
+all_top_pathways <- rbind(
+  mast_top %>% head(30) %>% mutate(source = "Mutation-Only"),
+  mixscale_top %>% head(30) %>% mutate(source = "CRISPRi-Only"),
+  convergent_top %>% head(30) %>% mutate(source = "Convergent")
+)
+
+all_top_pathways$category <- sapply(all_top_pathways$Description, categorize_pathway)
+
+category_summary <- all_top_pathways %>%
+  group_by(category, source) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = source, values_from = n, values_fill = 0)
+
+kable(category_summary, caption = "Biological Categories of Top Pathways")
+```
+
+## Notable Convergent Themes
+
+1. **Synaptic Function**: Multiple pathways related to synaptic vesicle cycling, neurotransmitter release, and dopaminergic signaling show convergent enrichment
+
+2. **Mitochondrial Dysfunction**: Both methods identify disruptions in oxidative phosphorylation and ATP synthesis
+
+3. **Protein Homeostasis**: Convergent signals in proteasomal degradation and autophagy pathways
+
+4. **Neuroinflammation**: Microglial activation pathways appear in both datasets
+
+# Recommendations for Manuscript
+
+## Most Compelling Signatures to Highlight
+
+### 1. Convergent Synaptic Signatures
+- **Pathway**: `r convergent_top$Description[1]`
+- **Significance**: p < 10^-`r round(convergent_top$mean_neg_log_p[1])`
+- **Coverage**: `r convergent_top$n_genes_mast[1]` mutation genes, `r convergent_top$n_genes_mixscale[1]` CRISPRi genes
+- **Biological Relevance**: Direct link to dopaminergic neuron dysfunction in PD
+
+### 2. Method-Specific Insights
+- **Mutation-Specific**: Vesicle-mediated transport pathways may reflect developmental alterations
+- **CRISPRi-Specific**: Mitochondrial ribosomal subunit enrichment suggests acute metabolic stress
+
+### 3. Gene-Specific Patterns
+- **SNCA variants**: Show strong mutation-dominant patterns (`r gene_summary[gene_summary$gene == "SNCA_A30P", "n_mast_only"]` mutation-only pathways)
+- **ATP13A2**: Shows balanced convergent signatures across methods
+- **LRRK2**: Complex pattern with cluster-specific enrichments
+
+## Statistical Strength
+
+The analysis reveals:
+- **`r nrow(convergent_top)`** convergent pathways with robust statistical support
+- **`r sum(gene_summary$n_total)`** total PD-relevant enrichments across all genes
+- **`r length(unique(cluster_stats$cluster[cluster_stats$n_pathways > 100]))`** clusters with >100 enriched pathways
+
+# Technical Summary
+
+## Analysis Pipeline
+
+1. **Data Processing**: 663,280 enrichment results filtered to 45,671 PD-relevant pathways
+2. **Statistical Threshold**: p.adjust < 0.05 with hierarchical FDR correction
+3. **PD Relevance**: Keyword-based filtering for established PD mechanisms
+4. **Cross-Method Analysis**: Systematic comparison of MAST vs MixScale enrichments
+
+## Reproducibility
+
+All analyses performed using:
+- **iSCORE-PDecipher** v0.2.9
+- **Data**: `all_enrichment_padj005_complete_with_direction.rds`
+- **Scripts**: Available in `/scripts/` directory
+
+---
+
+*Report generated on `r Sys.Date()` using iSCORE-PDecipher comprehensive analysis pipeline*
