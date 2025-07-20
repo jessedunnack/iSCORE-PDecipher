@@ -219,34 +219,45 @@ cat("- THESIS_COMMITTEE_SUMMARY.png\n\n")
 simple_fig <- convergent_top %>%
   head(10) %>%
   mutate(
-    Description_clean = case_when(
-      grepl("synapse", Description, ignore.case = TRUE) ~ "Synaptic Function",
-      grepl("vesicle", Description, ignore.case = TRUE) ~ "Vesicle Transport",
-      grepl("dopamin", Description, ignore.case = TRUE) ~ "Dopaminergic Signaling",
-      grepl("mitochond", Description, ignore.case = TRUE) ~ "Mitochondrial Function",
-      grepl("transport", Description, ignore.case = TRUE) ~ "Cellular Transport",
-      grepl("metabol", Description, ignore.case = TRUE) ~ "Metabolism",
-      TRUE ~ wrap_text(Description, width = 30)
-    )
+    # Use actual enrichment terms, just truncate if needed
+    Description_display = truncate_for_bars(Description, source_col = enrichment_type, max_chars = 50),
+    # Create informative labels showing genes involved
+    n_total_genes = n_genes_mast + n_genes_mixscale,
+    gene_info = paste0(n_genes_mast, " mut, ", n_genes_mixscale, " KD genes"),
+    # Extract key genes (first 2 from each method)
+    key_genes = sapply(seq_len(n()), function(i) {
+      mast_genes <- strsplit(genes_mast[i], ", ")[[1]][1:2]
+      mixscale_genes <- strsplit(genes_mixscale[i], ", ")[[1]][1:2]
+      all_genes <- unique(c(mast_genes, mixscale_genes))
+      all_genes <- all_genes[!is.na(all_genes)]
+      if (length(all_genes) > 3) all_genes <- all_genes[1:3]
+      paste(all_genes, collapse = ", ")
+    })
   ) %>%
-  ggplot(aes(x = reorder(Description_clean, mean_neg_log_p), y = mean_neg_log_p)) +
+  ggplot(aes(x = reorder(Description_display, mean_neg_log_p), y = mean_neg_log_p)) +
   geom_bar(stat = "identity", fill = "#2ca02c", alpha = 0.8) +
+  # Add gene info as subtitle for each bar
+  geom_text(aes(label = gene_info), 
+            hjust = 1.05, vjust = 0.5, size = 3, color = "gray40") +
+  # Add p-value on the right
   geom_text(aes(label = paste0("p < 10^-", round(mean_neg_log_p, 0))), 
             hjust = -0.1, size = 4) +
   coord_flip() +
   labs(
-    title = "Convergent Parkinson's Disease Pathways",
-    subtitle = "Validated through both genetic mutations and CRISPRi knockdowns",
+    title = "Top Convergent Parkinson's Disease Pathways",
+    subtitle = "Enriched in BOTH genetic mutations (mut) AND CRISPRi knockdowns (KD)",
     x = "",
-    y = "-log10(adjusted p-value)"
+    y = "-log10(adjusted p-value)",
+    caption = "Numbers show genes per method. Key genes include ATP13A2, DNAJC6, FBXO7, GBA, LRRK2"
   ) +
   theme_minimal(base_size = 16) +
   theme(
     plot.title = element_text(face = "bold", size = 22),
-    plot.subtitle = element_text(size = 16),
-    axis.text.y = element_text(size = 14)
+    plot.subtitle = element_text(size = 14, color = "gray30"),
+    plot.caption = element_text(size = 12, hjust = 0, color = "gray40"),
+    axis.text.y = element_text(size = 12)
   ) +
-  ylim(0, max(convergent_top$mean_neg_log_p[1:10]) * 1.1)
+  ylim(0, max(convergent_top$mean_neg_log_p[1:10]) * 1.2)
 
 ggsave(file.path(output_dir, "KEY_CONVERGENT_PATHWAYS.pdf"), 
        simple_fig, width = 12, height = 10)
