@@ -783,11 +783,18 @@ server <- function(input, output, session) {
     if (method_key == "MAST") {
       filtered_data <- data[data$method == "MAST", ]
     } else if (method_key == "MixScale_CRISPRi") {
-      # Check if modality column exists
+      # Check if modality column exists and has CRISPRi values
       if ("modality" %in% names(data)) {
+        # First try to filter by both method and modality
         filtered_data <- data[data$method == "MixScale" & data$modality == "CRISPRi", ]
+        # If no results, fallback to just MixScale method
+        if (nrow(filtered_data) == 0) {
+          cat("[DEBUG] No data found with modality='CRISPRi', falling back to method='MixScale'\n")
+          filtered_data <- data[data$method == "MixScale", ]
+        }
       } else {
-        # Fallback: assume all MixScale is CRISPRi if no modality column
+        # No modality column: assume all MixScale is CRISPRi
+        cat("[DEBUG] No modality column found, using all MixScale data\n")
         filtered_data <- data[data$method == "MixScale", ]
       }
     } else if (method_key == "MixScale_CRISPRa") {
@@ -957,13 +964,27 @@ server <- function(input, output, session) {
         ]
       } else if (input$global_analysis_type == "MixScale_CRISPRi") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          # First try with modality filter
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
             app_data$consolidated_data$modality == "CRISPRi" &
             app_data$consolidated_data[[gene_col]] == input$global_gene,
           ]
+          # If no results, fallback to just MixScale
+          if (nrow(filtered_data) == 0) {
+            cat("[DEBUG] No CRISPRi data found with modality filter, trying MixScale only\n")
+            filtered_data <- app_data$consolidated_data[
+              app_data$consolidated_data$method == "MixScale" &
+              app_data$consolidated_data[[gene_col]] == input$global_gene,
+            ]
+          }
         } else {
-          filtered_data <- data.frame()
+          # No modality column: use all MixScale data
+          cat("[DEBUG] No modality column, using all MixScale data\n")
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene,
+          ]
         }
       } else if (input$global_analysis_type == "MixScale_CRISPRa") {
         if ("modality" %in% names(app_data$consolidated_data)) {
@@ -1018,14 +1039,30 @@ server <- function(input, output, session) {
         ]
       } else if (input$global_analysis_type == "MixScale_CRISPRi") {
         if ("modality" %in% names(app_data$consolidated_data)) {
+          # First try with modality filter
           filtered_data <- app_data$consolidated_data[
             app_data$consolidated_data$method == "MixScale" &
             app_data$consolidated_data$modality == "CRISPRi" &
             app_data$consolidated_data[[gene_col]] == input$global_gene &
             app_data$consolidated_data$cluster == input$global_cluster,
           ]
+          # If no results, fallback to just MixScale
+          if (nrow(filtered_data) == 0) {
+            cat("[DEBUG] No CRISPRi experiment data found with modality filter, trying MixScale only\n")
+            filtered_data <- app_data$consolidated_data[
+              app_data$consolidated_data$method == "MixScale" &
+              app_data$consolidated_data[[gene_col]] == input$global_gene &
+              app_data$consolidated_data$cluster == input$global_cluster,
+            ]
+          }
         } else {
-          filtered_data <- data.frame()
+          # No modality column: use all MixScale data
+          cat("[DEBUG] No modality column for experiments, using all MixScale data\n")
+          filtered_data <- app_data$consolidated_data[
+            app_data$consolidated_data$method == "MixScale" &
+            app_data$consolidated_data[[gene_col]] == input$global_gene &
+            app_data$consolidated_data$cluster == input$global_cluster,
+          ]
         }
       } else if (input$global_analysis_type == "MixScale_CRISPRa") {
         if ("modality" %in% names(app_data$consolidated_data)) {

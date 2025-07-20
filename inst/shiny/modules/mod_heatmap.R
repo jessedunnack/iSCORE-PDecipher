@@ -85,6 +85,151 @@ mod_heatmap_ui <- function(id) {
                               "Both (non-ALL)" = "BOTH"),
                   selected = "ALL_DIR"),
       
+      hr(),
+      
+      # Data Filtering Panel (Collapsible)
+      div(
+        h5("Data Filtering", 
+           actionLink(ns("toggle_filtering"), "", 
+                     icon = icon("chevron-down", class = "rotate-icon"),
+                     style = "float: right;")),
+        conditionalPanel(
+          condition = "output.show_filtering == true", ns = ns,
+          wellPanel(
+            style = "margin-top: 10px;",
+            
+            # Gene/Mutation Filter
+            selectizeInput(ns("gene_filter"), 
+                          "Select Genes/Mutations:",
+                          choices = NULL, 
+                          multiple = TRUE,
+                          options = list(placeholder = "All genes")),
+            
+            # Term Keyword Search
+            textInput(ns("term_search"), 
+                     "Search Terms:",
+                     placeholder = "e.g., mitochondr, synap"),
+            
+            # P-value Threshold
+            sliderInput(ns("pvalue_filter"), 
+                       "Max Adjusted P-value:",
+                       min = 0.001, max = 0.05, 
+                       value = 0.05, step = 0.005)
+          )
+        )
+      ),
+      
+      # CRISPRi Options Panel (Collapsible, Conditional)
+      conditionalPanel(
+        condition = "input.method_filter == 'all' || input.method_filter == 'MixScale' || input.method_filter == 'union'",
+        ns = ns,
+        div(
+          h5("CRISPRi Options",
+             actionLink(ns("toggle_crispri"), "",
+                       icon = icon("chevron-down", class = "rotate-icon"),
+                       style = "float: right;")),
+          conditionalPanel(
+            condition = "output.show_crispri == true", ns = ns,
+            wellPanel(
+              style = "margin-top: 10px;",
+              
+              checkboxInput(ns("separate_crispri_experiments"),
+                           "Plot individual CRISPRi experiments separately",
+                           value = FALSE),
+              
+              conditionalPanel(
+                condition = "input.separate_crispri_experiments == true",
+                ns = ns,
+                checkboxGroupInput(ns("crispri_experiments"),
+                                  "Select Experiments:",
+                                  choices = c("C12_FPD-24" = "C12_FPD-24",
+                                            "C12_FPD-23" = "C12_FPD-23",
+                                            "C18_FPD-23" = "C18_FPD-23"),
+                                  selected = c("C12_FPD-24", "C12_FPD-23", "C18_FPD-23"))
+              )
+            )
+          )
+        )
+      ),
+      
+      # Display Options Panel (Collapsible)
+      div(
+        h5("Display Options",
+           actionLink(ns("toggle_display"), "",
+                     icon = icon("chevron-down", class = "rotate-icon"),
+                     style = "float: right;")),
+        conditionalPanel(
+          condition = "output.show_display == true", ns = ns,
+          wellPanel(
+            style = "margin-top: 10px;",
+            
+            # Column Annotations
+            checkboxInput(ns("show_column_annotations"),
+                         "Show column annotations",
+                         value = FALSE),
+            
+            # Top N per Gene
+            checkboxInput(ns("top_n_per_gene"),
+                         "Show top N terms per gene",
+                         value = FALSE),
+            conditionalPanel(
+              condition = "input.top_n_per_gene == true",
+              ns = ns,
+              numericInput(ns("n_terms_per_gene"), 
+                          "Terms per gene:",
+                          value = 10, min = 5, max = 50)
+            ),
+            
+            # Row annotations (moved here)
+            checkboxInput(ns("show_annotations"),
+                         "Show row annotations (type & direction)",
+                         value = TRUE)
+          )
+        )
+      ),
+      
+      # Advanced Options Panel (Collapsible)
+      div(
+        h5("Advanced Options",
+           actionLink(ns("toggle_advanced"), "",
+                     icon = icon("chevron-down", class = "rotate-icon"),
+                     style = "float: right;")),
+        conditionalPanel(
+          condition = "output.show_advanced == true", ns = ns,
+          wellPanel(
+            style = "margin-top: 10px;",
+            
+            # Direction Consistency Filter
+            radioButtons(ns("direction_consistency"),
+                        "Direction Filter:",
+                        choices = c("All" = "all",
+                                  "Consistent (same direction)" = "consistent",
+                                  "Opposite directions" = "opposite"),
+                        selected = "all"),
+            
+            # Biological Categories
+            checkboxInput(ns("show_bio_categories"),
+                         "Enable biological pathway categories",
+                         value = FALSE),
+            conditionalPanel(
+              condition = "input.show_bio_categories == true",
+              ns = ns,
+              checkboxGroupInput(ns("bio_categories"),
+                                "Filter by Category:",
+                                choices = c("Mitochondrial/Energy" = "mitochondrial",
+                                          "Synaptic/Neuronal" = "synaptic",
+                                          "Protein Degradation/UPS" = "protein_degradation",
+                                          "Lysosomal/Autophagy" = "lysosomal",
+                                          "Inflammation/Immune" = "inflammation",
+                                          "Cell Death/Apoptosis" = "cell_death"),
+                                selected = NULL)
+            )
+          )
+        )
+      ),
+      
+      hr(),
+      
       selectInput(ns("color_scale"),
                   "Color Scale:",
                   choices = c("Red (0 to max)" = "red",
@@ -100,10 +245,6 @@ mod_heatmap_ui <- function(id) {
                               "Quantile (adaptive)" = "quantile",
                               "Fixed breaks" = "fixed"),
                   selected = "linear"),
-      
-      checkboxInput(ns("show_annotations"),
-                    "Show Row Annotations (Type & Direction)",
-                    value = TRUE),
       
       checkboxInput(ns("cluster_rows"),
                     "Cluster Rows",
@@ -175,6 +316,42 @@ mod_heatmap_ui <- function(id) {
 mod_heatmap_server <- function(id, app_data, pval_threshold) {
   moduleServer(id, function(input, output, session) {
     
+    # Reactive values for collapsible panels
+    panel_states <- reactiveValues(
+      filtering = FALSE,
+      crispri = FALSE,
+      display = FALSE,
+      advanced = FALSE
+    )
+    
+    # Toggle panel observers
+    observeEvent(input$toggle_filtering, {
+      panel_states$filtering <- !panel_states$filtering
+    })
+    
+    observeEvent(input$toggle_crispri, {
+      panel_states$crispri <- !panel_states$crispri
+    })
+    
+    observeEvent(input$toggle_display, {
+      panel_states$display <- !panel_states$display
+    })
+    
+    observeEvent(input$toggle_advanced, {
+      panel_states$advanced <- !panel_states$advanced
+    })
+    
+    # Output panel states
+    output$show_filtering <- reactive({ panel_states$filtering })
+    output$show_crispri <- reactive({ panel_states$crispri })
+    output$show_display <- reactive({ panel_states$display })
+    output$show_advanced <- reactive({ panel_states$advanced })
+    
+    outputOptions(output, "show_filtering", suspendWhenHidden = FALSE)
+    outputOptions(output, "show_crispri", suspendWhenHidden = FALSE)
+    outputOptions(output, "show_display", suspendWhenHidden = FALSE)
+    outputOptions(output, "show_advanced", suspendWhenHidden = FALSE)
+    
     # Helper function to validate and create color vectors
     create_validated_colors <- function() {
       # Define complete color vectors with validation
@@ -215,6 +392,31 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       ))
     }
     
+    # Function to categorize biological pathways based on transparent rules
+    categorize_biological_pathway <- function(term_description) {
+      # Convert to lowercase for matching
+      term_lower <- tolower(term_description)
+      
+      # Define keyword rules for each category
+      # These rules are transparent and can be easily modified
+      
+      if (grepl("mitochondri|electron transport|atp synth|oxidative phosphorylation|respiratory chain|complex i|complex ii|complex iii|complex iv|complex v|energy|nadh|fadh", term_lower)) {
+        return("Mitochondrial/Energy")
+      } else if (grepl("synap|neurotransmi|dopamin|glutamat|gaba|serotonin|acetylcholine|axon|dendrit|neural|neuron", term_lower)) {
+        return("Synaptic/Neuronal")
+      } else if (grepl("proteasom|ubiquit|degradation|protein catabolism|protein turnover|misfolded|protein quality|e3 ligase|deubiquit", term_lower)) {
+        return("Protein Degradation/UPS")
+      } else if (grepl("lysosom|autophag|endocyt|phagocyt|vacuol|cathepsin|lamp1|lamp2|lc3|beclin|atg", term_lower)) {
+        return("Lysosomal/Autophagy")
+      } else if (grepl("inflamm|cytokine|interleukin|tnf|nf-kappa|nfkb|interferon|immune|microglia|astrocyt|neuroinflam|il-1|il-6", term_lower)) {
+        return("Inflammation/Immune")
+      } else if (grepl("apoptosis|cell death|caspase|bcl-2|bax|programmed cell death|necrosis|cytochrome c|death receptor|survival", term_lower)) {
+        return("Cell Death/Apoptosis")
+      } else {
+        return("Other")
+      }
+    }
+    
     # Helper function to create safe row annotations
     create_safe_row_annotations <- function(mat, annotation_data, show_annotations) {
       if (!show_annotations || is.null(annotation_data) || nrow(annotation_data) == 0) {
@@ -242,6 +444,15 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         Direction = as.character(annotation_data$direction),
         stringsAsFactors = FALSE
       )
+      
+      # Add biological category if available
+      if ("bio_category" %in% names(annotation_data)) {
+        row_colors$Category <- as.character(annotation_data$bio_category)
+      } else if ("Description" %in% names(annotation_data)) {
+        # Calculate biological categories on the fly if not already present
+        row_colors$Category <- sapply(annotation_data$Description, categorize_biological_pathway)
+      }
+      
       rownames(row_colors) <- rownames(mat)
       
       # Ensure all types and directions have colors
@@ -262,6 +473,17 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         color_vectors$direction <- c(color_vectors$direction, new_colors)
       }
       
+      # Define colors for biological categories
+      bio_category_colors <- c(
+        "Mitochondrial/Energy" = "#8B0000",      # Dark red
+        "Synaptic/Neuronal" = "#4B0082",        # Indigo
+        "Protein Degradation/UPS" = "#FF8C00",  # Dark orange
+        "Lysosomal/Autophagy" = "#008B8B",      # Dark cyan
+        "Inflammation/Immune" = "#DC143C",      # Crimson
+        "Cell Death/Apoptosis" = "#2F4F4F",     # Dark slate gray
+        "Other" = "#696969"                     # Dim gray
+      )
+      
       # For heatmaply, ensure palette is a simple named vector, not a list
       # Extract just the colors that are actually used
       used_types <- unique(row_colors$Type)
@@ -274,12 +496,29 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       type_palette <- type_palette[!is.na(names(type_palette))]
       dir_palette <- dir_palette[!is.na(names(dir_palette))]
       
+      # Create palette list
+      palette_list <- list(
+        Type = type_palette,
+        Direction = dir_palette
+      )
+      
+      # Add category palette if present
+      if ("Category" %in% names(row_colors)) {
+        used_categories <- unique(row_colors$Category)
+        # Ensure all used categories have colors
+        missing_categories <- setdiff(used_categories, names(bio_category_colors))
+        if (length(missing_categories) > 0) {
+          new_colors <- rainbow(length(missing_categories))
+          names(new_colors) <- missing_categories
+          bio_category_colors <- c(bio_category_colors, new_colors)
+        }
+        category_palette <- bio_category_colors[used_categories]
+        palette_list$Category <- category_palette
+      }
+      
       return(list(
         colors = row_colors,
-        palette = list(
-          Type = type_palette,
-          Direction = dir_palette
-        )
+        palette = palette_list
       ))
     }
     
@@ -288,6 +527,31 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
       data = NULL,
       plot = NULL
     )
+    
+    # Populate gene filter choices when data is available
+    observe({
+      req(app_data$consolidated_data)
+      
+      # Get unique genes/mutations
+      gene_col <- if ("mutation_perturbation" %in% names(app_data$consolidated_data)) {
+        "mutation_perturbation"
+      } else if ("gene" %in% names(app_data$consolidated_data)) {
+        "gene"
+      } else {
+        NULL
+      }
+      
+      if (!is.null(gene_col)) {
+        genes <- unique(app_data$consolidated_data[[gene_col]])
+        genes <- genes[!is.na(genes)]
+        genes <- sort(genes)
+        
+        updateSelectizeInput(session, "gene_filter",
+                            choices = genes,
+                            selected = NULL,
+                            server = TRUE)
+      }
+    })
     
     # Load and prepare data for heatmap
     observeEvent(input$generate_heatmap, {
@@ -365,6 +629,134 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             message("After significance filter: ", nrow(filtered_data), " rows")
           }
           
+          # Apply new filters from collapsible panels
+          
+          # Gene filter
+          if (!is.null(input$gene_filter) && length(input$gene_filter) > 0) {
+            gene_col <- if ("mutation_perturbation" %in% names(filtered_data)) {
+              "mutation_perturbation"
+            } else if ("gene" %in% names(filtered_data)) {
+              "gene"
+            } else {
+              NULL
+            }
+            
+            if (!is.null(gene_col)) {
+              filtered_data <- filtered_data %>%
+                dplyr::filter(.data[[gene_col]] %in% input$gene_filter)
+              message("After gene filter: ", nrow(filtered_data), " rows")
+            }
+          }
+          
+          # Term search filter
+          if (!is.null(input$term_search) && nchar(input$term_search) > 0) {
+            search_pattern <- tolower(input$term_search)
+            if ("Description" %in% names(filtered_data)) {
+              filtered_data <- filtered_data %>%
+                dplyr::filter(grepl(search_pattern, tolower(Description)))
+              message("After term search filter: ", nrow(filtered_data), " rows")
+            }
+          }
+          
+          # P-value threshold filter
+          if (!is.null(input$pvalue_filter) && "p.adjust" %in% names(filtered_data)) {
+            filtered_data <- filtered_data %>%
+              dplyr::filter(p.adjust <= input$pvalue_filter)
+            message("After p-value threshold filter: ", nrow(filtered_data), " rows")
+          }
+          
+          # CRISPRi experiment filter
+          if (input$method_filter %in% c("all", "MixScale", "union") && 
+              input$separate_crispri_experiments && 
+              length(input$crispri_experiments) > 0 &&
+              "experiment" %in% names(filtered_data)) {
+            # Filter to include MAST data and selected CRISPRi experiments
+            filtered_data <- filtered_data %>%
+              dplyr::filter(method == "MAST" | 
+                          (method == "MixScale" & experiment %in% input$crispri_experiments))
+            message("After CRISPRi experiment filter: ", nrow(filtered_data), " rows")
+          }
+          
+          # Direction consistency filter  
+          if (input$direction_consistency != "all" && 
+              input$method_filter %in% c("all", "union", "intersection")) {
+            # This requires comparing directions across methods
+            # Group by term and check direction consistency
+            if ("Description" %in% names(filtered_data) && 
+                "direction" %in% names(filtered_data) &&
+                "method" %in% names(filtered_data)) {
+              
+              term_directions <- filtered_data %>%
+                dplyr::group_by(Description) %>%
+                dplyr::summarise(
+                  n_methods = n_distinct(method),
+                  directions = paste(unique(direction), collapse = ","),
+                  .groups = "drop"
+                ) %>%
+                dplyr::filter(n_methods > 1)  # Only terms present in multiple methods
+              
+              if (input$direction_consistency == "consistent") {
+                # Keep terms with same direction across methods
+                consistent_terms <- term_directions %>%
+                  dplyr::filter(!grepl(",", directions)) %>%
+                  dplyr::pull(Description)
+                
+                filtered_data <- filtered_data %>%
+                  dplyr::filter(Description %in% consistent_terms)
+              } else if (input$direction_consistency == "opposite") {
+                # Keep terms with opposite directions
+                opposite_terms <- term_directions %>%
+                  dplyr::filter(grepl("UP.*DOWN|DOWN.*UP", directions)) %>%
+                  dplyr::pull(Description)
+                
+                filtered_data <- filtered_data %>%
+                  dplyr::filter(Description %in% opposite_terms)
+              }
+              message("After direction consistency filter: ", nrow(filtered_data), " rows")
+            }
+          }
+          
+          # Top N terms per gene filter
+          if (input$top_n_per_gene > 0) {
+            message("Applying top N terms per gene filter...")
+            
+            # Group by gene/mutation and select top N terms based on p-value
+            filtered_data <- filtered_data %>%
+              dplyr::group_by(mutation_perturbation) %>%
+              dplyr::arrange(p.adjust) %>%
+              dplyr::slice_head(n = input$top_n_per_gene) %>%
+              dplyr::ungroup()
+            
+            message("After top N per gene filter: ", nrow(filtered_data), " rows")
+          }
+          
+          # Biological category filter
+          if (input$show_bio_categories && length(input$bio_categories) > 0) {
+            message("Applying biological category filter...")
+            
+            # Add biological category to each term
+            filtered_data$bio_category <- sapply(filtered_data$Description, categorize_biological_pathway)
+            
+            # Map UI values to category names
+            category_mapping <- c(
+              "mitochondrial" = "Mitochondrial/Energy",
+              "synaptic" = "Synaptic/Neuronal",
+              "protein_degradation" = "Protein Degradation/UPS",
+              "lysosomal" = "Lysosomal/Autophagy",
+              "inflammation" = "Inflammation/Immune",
+              "cell_death" = "Cell Death/Apoptosis"
+            )
+            
+            selected_categories <- category_mapping[input$bio_categories]
+            
+            # Filter to selected categories
+            filtered_data <- filtered_data %>%
+              dplyr::filter(bio_category %in% selected_categories)
+            
+            message("After biological category filter: ", nrow(filtered_data), " rows")
+            message("Categories found: ", paste(unique(filtered_data$bio_category), collapse = ", "))
+          }
+          
           if (nrow(filtered_data) == 0) {
             removeNotification("loading")
             showNotification("No data matches the selected criteria", type = "warning", duration = 5)
@@ -438,8 +830,45 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         # Initialize x_var_display first
         x_var_display <- x_var
         
-        # Add source labels for gene columns
-        if (x_var %in% c("gene", "mutation", "mutation_perturbation")) {
+        # IMPLEMENT CRISPRi EXPERIMENT SEPARATION
+        if (input$separate_crispri_experiments && x_var %in% c("gene", "mutation", "mutation_perturbation")) {
+          message("Applying CRISPRi experiment separation...")
+          
+          # Check if this is CRISPRi data
+          if ("method" %in% names(df)) {
+            # For MixScale (CRISPRi) data, append experiment ID to gene name
+            mixscale_rows <- df$method == "MixScale"
+            
+            if (any(mixscale_rows) && "experiment" %in% names(df)) {
+              # Get selected experiments
+              selected_experiments <- input$crispri_experiments
+              
+              # Filter to only selected experiments
+              df <- df %>%
+                dplyr::filter(!mixscale_rows | (mixscale_rows & experiment %in% selected_experiments))
+              
+              # Create new display labels with experiment appended
+              df$crispri_label <- df[[x_var]]
+              df$crispri_label[mixscale_rows] <- paste0(
+                df[[x_var]][mixscale_rows], 
+                "_", 
+                df$experiment[mixscale_rows]
+              )
+              
+              # Use the new label for display
+              x_var_display <- "crispri_label"
+              
+              message("CRISPRi experiments separated. Unique labels: ", 
+                      paste(unique(df$crispri_label[mixscale_rows]), collapse = ", "))
+            } else if (any(mixscale_rows)) {
+              message("Warning: CRISPRi data found but no experiment column available")
+            }
+          }
+        }
+        
+        # Add source labels for gene columns (if not using CRISPRi separation)
+        if (x_var %in% c("gene", "mutation", "mutation_perturbation") && 
+            x_var_display == x_var) {  # Only if we haven't already set a custom display
           # Add source labels to distinguish iSCORE-PD vs PerturbSeq
           tryCatch({
             # Check if add_source_labels function exists
@@ -721,6 +1150,51 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               }
             }
             
+            # Prepare column annotations if requested
+            col_side_colors <- NULL
+            col_side_palette <- NULL
+            
+            if (input$show_column_annotations) {
+              message("Creating column annotations to distinguish methods...")
+              
+              # Create method annotation for columns
+              col_methods <- character(ncol(mat))
+              col_names <- colnames(mat)
+              
+              # Determine method for each column
+              for (i in seq_along(col_names)) {
+                col_name <- col_names[i]
+                
+                # Check if this is from CRISPRi experiments (contains experiment ID)
+                if (grepl("_C12_FPD-24|_C12_FPD-23|_C18_FPD-23", col_name)) {
+                  col_methods[i] <- "CRISPRi"
+                } else if (grepl("\\(i\\)|\\(P\\)", col_name)) {
+                  # Check for (i) or (P) suffixes from add_source_labels
+                  col_methods[i] <- "CRISPRi"
+                } else {
+                  # Default to MAST
+                  col_methods[i] <- "MAST"
+                }
+              }
+              
+              # Create column annotation matrix
+              col_side_colors <- matrix(col_methods, nrow = 1)
+              colnames(col_side_colors) <- colnames(mat)
+              rownames(col_side_colors) <- "Method"
+              
+              # Define consistent color palette (matching user's request)
+              col_side_palette <- list(
+                Method = c(
+                  "MAST" = "#1f77b4",     # Blue for MAST
+                  "CRISPRi" = "#ff7f0e"   # Orange for CRISPRi
+                )
+              )
+              
+              message("Column annotations created: ", 
+                      sum(col_methods == "MAST"), " MAST, ",
+                      sum(col_methods == "CRISPRi"), " CRISPRi")
+            }
+            
             # Create heatmaply heatmap with comprehensive error handling
             p <- tryCatch({
               if (!is.null(row_side_colors) && !is.null(row_side_palette) && input$show_annotations) {
@@ -751,7 +1225,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                     showticklabels = c(TRUE, TRUE),
                     plot_method = "plotly",
                     row_side_colors = row_side_colors,
-                    row_side_palette = row_side_palette
+                    row_side_palette = row_side_palette,
+                    col_side_colors = col_side_colors,
+                    col_side_palette = col_side_palette
                   )
                 }, error = function(e_ann) {
                   message("Heatmaply with annotations failed: ", e_ann$message)
@@ -770,11 +1246,14 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                     fontsize_row = 10,
                     fontsize_col = 10,
                     showticklabels = c(TRUE, TRUE),
-                    plot_method = "plotly"
+                    plot_method = "plotly",
+                    col_side_colors = col_side_colors,
+                    col_side_palette = col_side_palette
                   )
                 })
               } else {
-                message("Creating heatmaply without annotations...")
+                message("Creating heatmaply without row annotations...")
+                # Still include column annotations if requested
                 heatmaply::heatmaply(
                   mat,
                   dendrogram = dendrogram,
@@ -788,7 +1267,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                   fontsize_row = 10,
                   fontsize_col = 10,
                   showticklabels = c(TRUE, TRUE),
-                  plot_method = "plotly"
+                  plot_method = "plotly",
+                  col_side_colors = col_side_colors,
+                  col_side_palette = col_side_palette
                 )
               }
             }, error = function(e) {
