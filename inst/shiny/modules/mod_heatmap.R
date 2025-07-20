@@ -1371,7 +1371,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                   
                   # If we get here, fallback succeeded
                   message("SUCCESS: Heatmaply created without annotations (fallback)")
-                })
+                }
               } else {
                 message("Creating heatmaply without row annotations...")
                 # Still include column annotations if requested
