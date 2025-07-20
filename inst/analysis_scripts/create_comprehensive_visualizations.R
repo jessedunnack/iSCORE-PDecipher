@@ -232,7 +232,16 @@ p4 <- ggplot(conv_strength, aes(x = mast_strength, y = mixscale_strength)) +
   geom_point(aes(size = total_genes, color = mean_neg_log_p), alpha = 0.7) +
   geom_text_repel(aes(label = Description_short), 
                   data = conv_strength %>% head(10),
-                  size = 3, max.overlaps = 20) +
+                  size = 3.5,           # Increased from 3
+                  max.overlaps = 50,    # Increased from 20
+                  force = 2,            # Added force for better separation
+                  force_pull = 0.5,     # Pull labels toward points
+                  box.padding = 0.5,    # Added padding around text
+                  point.padding = 0.5,  # Added padding around points
+                  segment.size = 0.3,   # Added visible connecting lines
+                  segment.alpha = 0.6,  # Semi-transparent lines
+                  segment.color = "gray40",  # Gray connecting lines
+                  min.segment.length = 0) +  # Always show segments
   scale_color_viridis(name = "Combined\n-log10(p)") +
   scale_size_continuous(name = "Total Genes", range = c(3, 10)) +
   labs(title = "Convergent Pathway Strength Analysis",
