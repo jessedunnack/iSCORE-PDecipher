@@ -81,20 +81,6 @@ mixscale_top <- mixscale_data %>%
 convergent_terms <- intersect(mast_terms, mixscale_terms)
 cat("\nFound", length(convergent_terms), "convergent pathways\n")
 
-# Save actual pathway totals BEFORE filtering to top 30
-pathway_totals <- data.frame(
-  mast_only_total = length(mast_only_terms),
-  mixscale_only_total = length(mixscale_only_terms),
-  convergent_total = length(convergent_terms),
-  mast_total = length(mast_terms),
-  mixscale_total = length(mixscale_terms)
-)
-write.csv(pathway_totals, file.path(output_dir, "pathway_totals.csv"), row.names = FALSE)
-cat("\nActual pathway totals:\n")
-cat("- MAST-only:", pathway_totals$mast_only_total, "\n")
-cat("- MixScale-only:", pathway_totals$mixscale_only_total, "\n")
-cat("- Convergent:", pathway_totals$convergent_total, "\n")
-
 convergent_stats <- pd_data %>%
   filter(Description %in% convergent_terms) %>%
   group_by(Description, enrichment_type) %>%

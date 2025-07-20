@@ -5,11 +5,13 @@
 **First Bug Fix Attempt**: 4b10a6b (2025-07-16 13:05) - "feat: Comprehensive bug fixes...9 bugs resolved"
 **Current Progress**: v0.2.9-fixes branch - Implementing fixes from baseline
 
-## 🚨 HIGH PRIORITY: OUTSTANDING BUGS TO VERIFY/FIX
+## 🚨 HIGH PRIORITY: OUTSTANDING BUGS TO VERIFY
 1. **Bug #3** - [object Object] error in Cross-Cluster DE Gene Analysis - NEEDS VERIFICATION
-2. **Bug #5** - CRISPRi dotplots not rendering - NEEDS FIX (modality column issue)
-3. **Bug #6** - Interactive heatmap (heatmaply) - NEEDS VERIFICATION
-4. **Bug #9** - Gene dropdown "X variants" text - NEEDS VERIFICATION
+2. **Bug #6** - Interactive heatmap (heatmaply) - NEEDS VERIFICATION
+3. **Bug #9** - Gene dropdown "X variants" text - NEEDS VERIFICATION
+
+## ✅ RECENTLY FIXED
+1. **Bug #5** - CRISPRi dotplots now rendering (fixed with modality column fallback in app.R)
 
 ## Executive Summary
 
@@ -259,11 +261,14 @@ Based on this analysis and user feedback, here are the minimal fixes needed for 
    - Fix: Ensure proper column name handling and data serialization
    - Location: `mod_de_results.R`
 
-3. **Bug #5 (Tangential) - CRISPRi Dotplot Rendering**:
+3. **Bug #5 (Tangential) - CRISPRi Dotplot Rendering**: ✅ FIXED IN v0.2.9
    - Problem: Dotplots not rendering due to missing modality column
-   - Fix: Check if modality column exists before filtering, or skip modality filter entirely
-   - Do NOT over-engineer the solution
-   - Location: `global.R` filter function and `mod_visualization_enhanced.R`
+   - Fix: Added modality column fallback logic in app.R
+   - **UPDATE (2025-07-18)**: Successfully fixed by:
+     - Adding fallback when modality column missing
+     - If no CRISPRi data found with modality filter, falls back to all MixScale data
+     - Preserves data integrity while ensuring visualizations work
+   - Location: `app.R` lines 785-800
 
 ### ALREADY WORKING (Keep These Fixes):
 

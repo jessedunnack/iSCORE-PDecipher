@@ -24,9 +24,6 @@ mast_top <- read.csv(file.path(results_dir, "mast_top_fast.csv"), stringsAsFacto
 mixscale_top <- read.csv(file.path(results_dir, "mixscale_top_fast.csv"), stringsAsFactors = FALSE)
 convergent_top <- read.csv(file.path(results_dir, "convergent_top_fast.csv"), stringsAsFactors = FALSE)
 
-# Load actual pathway totals
-pathway_totals <- read.csv(file.path(results_dir, "pathway_totals.csv"), stringsAsFactors = FALSE)
-
 # Set theme
 theme_set(theme_minimal(base_size = 14))
 
@@ -42,7 +39,7 @@ p1 <- mast_top %>%
   coord_flip() +
   labs(
     title = "Top Mutation - iSCORE-PD Only Parkinson's Disease Pathways",
-    subtitle = paste("Found in genetic mutation data (", pathway_totals$mast_only_total, " total pathways)"),
+    subtitle = paste("Found in genetic mutation data (", nrow(mast_top), " total pathways)"),
     x = "",
     y = "Mean -log10(adjusted p-value)"
   ) +
@@ -62,7 +59,7 @@ p2 <- mixscale_top %>%
   coord_flip() +
   labs(
     title = "Top CRISPRi Perturbation Only Parkinson's Disease Pathways",
-    subtitle = paste("Found in knockdown data (", pathway_totals$mixscale_only_total, " total pathways)"),
+    subtitle = paste("Found in knockdown data (", nrow(mixscale_top), " total pathways)"),
     x = "",
     y = "Mean -log10(adjusted p-value)"
   ) +
@@ -101,7 +98,7 @@ p3 <- ggplot(combined_bars, aes(x = reorder(Description, Genes), y = Genes, fill
   scale_fill_manual(values = c("Mutation\niSCORE-PD" = "#1f77b4", "CRISPRi\nPerturbation" = "#ff7f0e")) +
   labs(
     title = "Convergent Pathways: Found in Both Methods",
-    subtitle = paste("Top pathways from", pathway_totals$convergent_total, "total convergent signatures"),
+    subtitle = paste("Top pathways from", nrow(convergent_top), "total convergent signatures"),
     x = "",
     y = "Number of Genes"
   ) +

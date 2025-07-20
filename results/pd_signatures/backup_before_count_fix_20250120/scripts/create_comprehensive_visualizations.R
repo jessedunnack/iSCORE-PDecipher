@@ -57,13 +57,6 @@ convergent_top <- read.csv(file.path(results_dir, "convergent_top_fast.csv"), st
 gene_summary <- read.csv(file.path(results_dir, "by_gene/all_genes_summary.csv"), stringsAsFactors = FALSE)
 cluster_stats <- read.csv(file.path(results_dir, "by_cluster/cluster_method_breakdown.csv"), stringsAsFactors = FALSE)
 
-# Load actual pathway totals
-pathway_totals <- read.csv(file.path(results_dir, "pathway_totals.csv"), stringsAsFactors = FALSE)
-cat("Loaded actual pathway totals:\n")
-cat("- MAST-only:", pathway_totals$mast_only_total, "\n")
-cat("- MixScale-only:", pathway_totals$mixscale_only_total, "\n")
-cat("- Convergent:", pathway_totals$convergent_total, "\n")
-
 # Ensure clusters are naturally sorted
 cluster_stats$cluster <- factor(cluster_stats$cluster, 
                                levels = natural_sort_clusters(unique(cluster_stats$cluster)))
@@ -83,12 +76,10 @@ theme_set(theme_minimal(base_size = 14))
 # ==============================================================================
 cat("Creating overview landscape...\n")
 
-# Panel A: Total counts (using actual pathway totals)
+# Panel A: Total counts
 overview_data <- data.frame(
   Category = c("Mutation-Only", "CRISPRi-Only", "Convergent"),
-  Count = c(pathway_totals$mast_only_total, 
-            pathway_totals$mixscale_only_total, 
-            pathway_totals$convergent_total)
+  Count = c(nrow(mast_top), nrow(mixscale_top), nrow(convergent_top))
 )
 
 p1a <- ggplot(overview_data, aes(x = Category, y = Count, fill = Category)) +
@@ -106,9 +97,9 @@ p1a <- ggplot(overview_data, aes(x = Category, y = Count, fill = Category)) +
 venn_summary <- data.frame(
   Label = c("Total PD Pathways", "Mutation + Convergent", "CRISPRi + Convergent", "All Methods"),
   Value = c(sum(overview_data$Count), 
-            pathway_totals$mast_total,
-            pathway_totals$mixscale_total,
-            pathway_totals$convergent_total)
+            nrow(mast_top) + nrow(convergent_top),
+            nrow(mixscale_top) + nrow(convergent_top),
+            nrow(convergent_top))
 )
 
 p1b <- ggplot(venn_summary, aes(x = Label, y = Value)) +
@@ -388,19 +379,19 @@ cat("Creating method comparison summary...\n")
 method_summary <- data.frame(
   Metric = c("Total Pathways", "Avg Genes/Pathway", "Avg -log10(p)", "Top Category"),
   Mutation_Only = c(
-    pathway_totals$mast_only_total,
+    nrow(mast_top),
     round(mean(mast_top$n_genes), 1),
     round(mean(mast_top$mean_neg_log_p), 1),
     names(sort(table(sapply(mast_top$Description[1:20], categorize_pathway)), decreasing = TRUE)[1])
   ),
   CRISPRi_Only = c(
-    pathway_totals$mixscale_only_total,
+    nrow(mixscale_top),
     round(mean(mixscale_top$n_genes), 1),
     round(mean(mixscale_top$mean_neg_log_p), 1),
     names(sort(table(sapply(mixscale_top$Description[1:20], categorize_pathway)), decreasing = TRUE)[1])
   ),
   Convergent = c(
-    pathway_totals$convergent_total,
+    nrow(convergent_top),
     round(mean(convergent_top$n_genes_mast + convergent_top$n_genes_mixscale), 1),
     round(mean(convergent_top$mean_neg_log_p), 1),
     names(sort(table(sapply(convergent_top$Description[1:20], categorize_pathway)), decreasing = TRUE)[1])
@@ -492,7 +483,7 @@ cat("Creating summary infographic...\n")
 key_stats <- list(
   n_genes = length(unique(gene_summary$gene)),
   n_clusters = length(unique(cluster_stats$cluster)),
-  n_total_pathways = sum(pathway_totals$mast_only_total, pathway_totals$mixscale_only_total, pathway_totals$convergent_total),
+  n_total_pathways = nrow(mast_top) + nrow(mixscale_top) + nrow(convergent_top),
   top_convergent = convergent_top$Description[1],
   top_convergent_p = round(convergent_top$mean_neg_log_p[1], 1),
   strongest_gene = gene_summary$gene[which.max(gene_summary$n_convergent)]

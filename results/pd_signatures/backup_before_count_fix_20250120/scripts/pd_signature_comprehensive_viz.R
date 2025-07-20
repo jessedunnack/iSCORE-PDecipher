@@ -38,9 +38,6 @@ mast_top <- read.csv(file.path(results_base, "mast_top_fast.csv"), stringsAsFact
 mixscale_top <- read.csv(file.path(results_base, "mixscale_top_fast.csv"), stringsAsFactors = FALSE)
 convergent_top <- read.csv(file.path(results_base, "convergent_top_fast.csv"), stringsAsFactors = FALSE)
 
-# Load actual pathway totals
-pathway_totals <- read.csv(file.path(results_base, "pathway_totals.csv"), stringsAsFactors = FALSE)
-
 # Load full data for detailed analysis
 all_data <- readRDS(data_file)
 if (!"gene" %in% names(all_data) && "mutation_perturbation" %in% names(all_data)) {
@@ -184,7 +181,7 @@ panel_c <- ggplot(panel_c_data, aes(x = reorder(Description_short, total_genes),
 # Panel D: Method comparison
 method_comp_data <- data.frame(
   Method = c("Mutation\niSCORE-PD", "CRISPRi\nPerturbation"),
-  Unique_Pathways = c(pathway_totals$mast_only_total, pathway_totals$mixscale_only_total),
+  Unique_Pathways = c(nrow(mast_top), nrow(mixscale_top)),
   Avg_Genes = c(mean(mast_top$n_genes), mean(mixscale_top$n_genes))
 )
 
@@ -328,9 +325,9 @@ summary_report <- list(
     total_genes = total_genes,
     total_clusters = total_clusters,
     total_pathways = total_pathways,
-    mutation_only_pathways = pathway_totals$mast_only_total,
-    crispri_only_pathways = pathway_totals$mixscale_only_total,
-    convergent_pathways = pathway_totals$convergent_total
+    mutation_only_pathways = nrow(mast_top),
+    crispri_only_pathways = nrow(mixscale_top),
+    convergent_pathways = nrow(convergent_top)
   ),
   gene_patterns = pattern_summary,
   method_stats = method_summary,
@@ -349,9 +346,9 @@ manuscript_table <- data.frame(
   Value = c(
     total_genes,
     total_clusters,
-    pathway_totals$mast_only_total,
-    pathway_totals$mixscale_only_total,
-    pathway_totals$convergent_total,
+    nrow(mast_top),
+    nrow(mixscale_top),
+    nrow(convergent_top),
     paste0(convergent_top$Description[1], " (p<1e-", 
            round(convergent_top$mean_neg_log_p[1]), ")")
   )

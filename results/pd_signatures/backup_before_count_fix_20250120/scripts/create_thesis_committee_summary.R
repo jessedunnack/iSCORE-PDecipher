@@ -26,9 +26,6 @@ mixscale_top <- read.csv(file.path(results_dir, "mixscale_top_fast.csv"), string
 convergent_top <- read.csv(file.path(results_dir, "convergent_top_fast.csv"), stringsAsFactors = FALSE)
 gene_summary <- read.csv(file.path(results_dir, "by_gene/all_genes_summary.csv"), stringsAsFactors = FALSE)
 
-# Load actual pathway totals
-pathway_totals <- read.csv(file.path(results_dir, "pathway_totals.csv"), stringsAsFactors = FALSE)
-
 # Set theme
 theme_set(theme_minimal(base_size = 12))
 
@@ -38,7 +35,7 @@ cat("Creating thesis committee summary figure...\n")
 # Panel A: Overview
 overview_data <- data.frame(
   Category = c("Mutation-\nOnly", "CRISPRi-\nOnly", "Convergent"),
-  Count = c(pathway_totals$mast_only_total, pathway_totals$mixscale_only_total, pathway_totals$convergent_total),
+  Count = c(nrow(mast_top), nrow(mixscale_top), nrow(convergent_top)),
   y_pos = c(1.1, 1.1, 1.1)
 )
 

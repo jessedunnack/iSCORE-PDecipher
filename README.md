@@ -2,11 +2,24 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.2.9-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.3.1-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
 iSCORE-PDecipher is an R package for comprehensive analysis of Parkinson's disease research data, integrating genetic mutations (iSCORE-PD) and gene knockdown perturbations (CRISPRi). The package provides tools for differential expression analysis, functional enrichment analysis, cross-method signature discovery, and interactive visualizations.
+
+## 🎯 New in v0.3.0/v0.3.1: Comprehensive PD Signature Analysis Suite
+
+**Major features for manuscript preparation:**
+- **PD Signature Discovery Pipeline**: Identifies mutation-only, CRISPRi-only, and convergent pathways
+- **Gene-by-Gene Analysis**: All 16 PD genes analyzed with individual reports
+- **Cluster Analysis Framework**: Complete analysis across all 15 clusters
+- **Publication-Ready Visualizations**: Heatmaps, bar charts, and multi-panel figures
+- **Key Findings**: 30 mutation-only, 30 CRISPRi-only, and 30 convergent pathways identified
+
+**v0.3.1 fixes**: Gene harmonization (PRKN→PARK2), hierarchical clustering, natural cluster sorting
+
+[See analysis scripts documentation](inst/analysis_scripts/README.md)
 
 ## Enhanced Interactive Correlation Plots (v0.2.7)
 
