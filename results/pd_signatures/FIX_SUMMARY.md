@@ -1,4 +1,4 @@
-# Summary of Fixes Applied - July 20, 2025
+# Summary of Fixes Applied - January 20, 2025
 
 ## 🔧 Issues Fixed
 
@@ -74,5 +74,21 @@
   5. `05_summary_statistics.pdf` - Key metrics table
   6. `06_variant_mapping.pdf` - Shows how variants map to base genes
 
+### 4. Pathway Count Correction ✅
+**Problem**: Plots showed filtered "top 30" counts instead of actual totals
+
+**Solution**: Modified `pd_signature_discovery_fast.R` to save `pathway_totals.csv` with real counts:
+- MAST-only: 826 pathways (was showing 30)
+- CRISPRi-only: 531 pathways (was showing 30)
+- Convergent: 934 pathways (was showing 30)
+
+**Impact**: Reveals convergent pathways as the MOST abundant category (40% of all pathways)
+
+**Results**: Updated all visualizations to show correct distributions
+
 ## 🚀 Ready for Presentation
-All visualizations now accurately represent the convergent signatures between mutation and CRISPRi approaches, with proper gene grouping, clustering, and sorting.
+All visualizations now accurately represent the convergent signatures between mutation and CRISPRi approaches, with:
+- Proper gene grouping (variants mapped to base genes)
+- Hierarchical clustering on heatmaps
+- Natural sorting of clusters
+- **Correct pathway counts showing strong method convergence**

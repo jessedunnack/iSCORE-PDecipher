@@ -6,27 +6,32 @@
 ### Dataset Overview
 - **16 PD genes analyzed** (including SNCA variants A30P, A53T, Triplication)
 - **15 clusters analyzed** (cluster_0 through cluster_14)
-- **45,671 PD-relevant pathways** identified from 663,280 total enrichments
+- **45,671 PD-relevant enrichments** identified from 663,280 total enrichments
+- **2,291 unique PD-relevant pathways** discovered (826 mutation-only + 531 CRISPRi-only + 934 convergent)
 
 ### Three Categories of Compelling Signatures
 
-#### 1. 🔵 Mutation - iSCORE-PD Only (30 unique pathways)
+#### 1. 🔵 Mutation - iSCORE-PD Only (826 unique pathways)
 **Top signature**: vesicle-mediated transport in synapse (p < 10^-5.95)
 - Found exclusively in genetic mutation data
 - Strong representation from SNCA variants (SNCA_A30P: 543 pathways)
 - Reflects developmental and structural alterations
+- Captures broader range of biological processes than CRISPRi
 
-#### 2. 🟠 CRISPRi Perturbation Only (30 unique pathways)
+#### 2. 🟠 CRISPRi Perturbation Only (531 unique pathways)
 **Top signature**: mitochondrial small ribosomal subunit (p < 10^-5.01)
 - Unique to knockdown experiments
 - Suggests acute metabolic stress responses
 - FBXO7 shows CRISPRi-dominant pattern
+- More focused on immediate cellular responses
 
-#### 3. 🟢 Convergent Signatures (30 shared pathways)
+#### 3. 🟢 Convergent Signatures (934 shared pathways)
 **Top signature**: synapse (p < 10^-17.14)
 - Validated across both methods
+- **MOST ABUNDANT CATEGORY** - representing 40% of all unique pathways
 - Strongest biological relevance
 - ATP13A2 and PARK7 show balanced convergent patterns
+- Indicates strong agreement between orthogonal approaches
 
 ## 📊 Key Discoveries by Analysis Type
 
@@ -54,17 +59,23 @@ Pattern Distribution:
 
 ## 🔬 Most Compelling Stories for Manuscript
 
-### Story 1: Convergent Synaptic Dysfunction
+### Story 1: Strong Method Convergence
+- **934 convergent pathways** - the largest category
+- **40% convergence rate** demonstrates robust biological signals
+- **Evidence**: Independent methods converge on same core pathways
+- **Impact**: Validates findings across orthogonal approaches
+
+### Story 2: Convergent Synaptic Dysfunction
 - **Pathway**: Synaptic vesicle cycle, neurotransmitter release
 - **Evidence**: p < 10^-17 across multiple genes
 - **Relevance**: Direct link to PD dopaminergic dysfunction
 
-### Story 2: Method-Specific Insights
-- **Mutations**: Reveal developmental/structural alterations
-- **CRISPRi**: Capture acute stress responses
-- **Complementary**: Together provide complete picture
+### Story 3: Method-Specific Insights
+- **Mutations**: Reveal developmental/structural alterations (826 unique)
+- **CRISPRi**: Capture acute stress responses (531 unique)
+- **Complementary**: Together provide complete picture (2,291 total pathways)
 
-### Story 3: Gene-Specific Therapeutic Targets
+### Story 4: Gene-Specific Therapeutic Targets
 - **SNCA variants**: Mutation-specific interventions needed
 - **ATP13A2/PARK7**: Convergent targets for therapy
 - **LRRK2**: Complex, cluster-specific approaches required
@@ -78,10 +89,11 @@ Pattern Distribution:
 
 ## 🎯 Recommendations for Presentation
 
-1. **Lead with convergent synapse story** - strongest statistical support
-2. **Highlight method complementarity** - not redundancy
-3. **Show gene-specific patterns** - personalized medicine angle
-4. **Emphasize cluster insights** - cell-type specificity
+1. **Lead with strong convergence finding** - 934 pathways (40%) validated by both methods
+2. **Emphasize validation aspect** - orthogonal approaches confirm core PD biology
+3. **Highlight method complementarity** - each captures unique insights (1,357 method-specific pathways)
+4. **Show gene-specific patterns** - personalized medicine angle
+5. **Present total coverage** - 2,291 unique PD pathways comprehensively mapped
 
 ## 📁 Available Visualizations
 
