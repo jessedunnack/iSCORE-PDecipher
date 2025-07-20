@@ -9,6 +9,19 @@ mod_visualization_ui <- function(id) {
       width = 3,
       h4("Visualization Settings"),
       
+      # Enrichment Database Selection (moved from global settings)
+      selectInput(ns("enrichment_type"),
+                  "Enrichment Database:",
+                  choices = c("GO_BP" = "GO_BP",
+                            "GO_CC" = "GO_CC", 
+                            "GO_MF" = "GO_MF",
+                            "KEGG" = "KEGG",
+                            "Reactome" = "Reactome",
+                            "WikiPathways" = "WikiPathways",
+                            "STRING" = "STRING",
+                            "GSEA" = "GSEA"),
+                  selected = "GO_BP"),
+      
       # Conditional UI based on enrichment type
       conditionalPanel(
         condition = "output.is_gsea == false",
@@ -164,6 +177,33 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     gene_associations_loaded <- reactiveVal(FALSE)
     gene_data <- reactiveVal(NULL)
     
+    # Update enrichment type choices based on available data
+    observe({
+      req(enrichment_data())
+      data <- enrichment_data()
+      
+      if (!is.null(data) && nrow(data) > 0 && "enrichment_type" %in% names(data)) {
+        available_types <- sort(unique(data$enrichment_type))
+        
+        # Create named vector for choices
+        type_choices <- setNames(available_types, available_types)
+        
+        # Update the dropdown with available types
+        current_selection <- input$enrichment_type
+        if (!is.null(current_selection) && current_selection %in% available_types) {
+          selected <- current_selection
+        } else if ("GO_BP" %in% available_types) {
+          selected <- "GO_BP"  # Default to GO_BP if available
+        } else {
+          selected <- available_types[1]  # Otherwise use first available
+        }
+        
+        updateSelectInput(session, "enrichment_type",
+                         choices = type_choices,
+                         selected = selected)
+      }
+    })
+    
     observe({
       tryCatch({
         # Load gene association data using proper package path
@@ -303,8 +343,8 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     
     # Check if current selection is GSEA
     output$is_gsea <- reactive({
-      result <- processed_data()
-      isTRUE(result$is_gsea)
+      # Check the local enrichment type selection
+      input$enrichment_type == "GSEA"
     })
     outputOptions(output, "is_gsea", suspendWhenHidden = FALSE)
     
@@ -390,15 +430,21 @@ mod_visualization_server <- function(id, global_selection, enrichment_data) {
     # Reactive data processing
     processed_data <- reactive({
       req(global_selection(), enrichment_data())
+      req(input$enrichment_type)  # Require local enrichment type selection
       
       selection <- global_selection()
       data <- enrichment_data()
       
-      # Check if this is GSEA data
-      is_gsea <- selection$enrichment_type == "GSEA"
+      # Filter by local enrichment type selection
+      if (!is.null(data) && nrow(data) > 0 && "enrichment_type" %in% names(data)) {
+        data <- data[data$enrichment_type == input$enrichment_type, ]
+      }
+      
+      # Check if this is GSEA data (using local selection)
+      is_gsea <- input$enrichment_type == "GSEA"
       
       # Process the data and return result
-      if (nrow(data) > 0) {
+      if (!is.null(data) && nrow(data) > 0) {
         if (!is_gsea) {
           prepared_data <- prepare_dotplot_data(data, input$top_terms %||% 20)
         } else {

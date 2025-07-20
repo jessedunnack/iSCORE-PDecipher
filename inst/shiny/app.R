@@ -1255,11 +1255,38 @@ server <- function(input, output, session) {
     )
   })
   
+  # Create unfiltered data reactive specifically for visualization module
+  # This allows the module to handle enrichment type filtering internally
+  filtered_data_for_viz <- reactive({
+    req(app_data$data_loaded)
+    selection <- global_data_selection()
+    
+    # Determine modality based on raw analysis type
+    modality <- switch(selection$analysis_type_raw,
+      "MixScale_CRISPRi" = "CRISPRi",
+      "MixScale_CRISPRa" = "CRISPRa",
+      NULL
+    )
+    
+    # Get data WITHOUT enrichment_type filter - let the module handle it
+    get_significant_terms_from_consolidated(
+      app_data$consolidated_data,
+      analysis_type = selection$analysis_type,
+      modality = modality,
+      gene = selection$gene,
+      cluster = selection$cluster,
+      experiment = selection$experiment,
+      enrichment_type = NULL,  # Don't filter by enrichment type
+      direction = selection$direction,
+      pval_threshold = selection$pval_threshold
+    )
+  })
+  
   # Main visualization module (enhanced with interactivity)
   visualization_results <- mod_visualization_server(
     "visualization_module",
     global_selection = global_data_selection,
-    enrichment_data = filtered_data
+    enrichment_data = filtered_data_for_viz  # Use unfiltered data
   )
   
   # DE Results module (NEW - volcano plots with UMAP)
