@@ -210,7 +210,7 @@ mod_heatmap_ui <- function(id) {
             # Biological Categories
             checkboxInput(ns("show_bio_categories"),
                          "Enable biological pathway categories",
-                         value = FALSE),
+                         value = TRUE),
             conditionalPanel(
               condition = "input.show_bio_categories == true",
               ns = ns,
@@ -222,7 +222,8 @@ mod_heatmap_ui <- function(id) {
                                           "Lysosomal/Autophagy" = "lysosomal",
                                           "Inflammation/Immune" = "inflammation",
                                           "Cell Death/Apoptosis" = "cell_death"),
-                                selected = NULL)
+                                selected = c("mitochondrial", "synaptic", "protein_degradation", 
+                                           "lysosomal", "inflammation", "cell_death"))
             )
           )
         )
@@ -318,10 +319,10 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     
     # Reactive values for collapsible panels
     panel_states <- reactiveValues(
-      filtering = FALSE,
-      crispri = FALSE,
-      display = FALSE,
-      advanced = FALSE
+      filtering = TRUE,
+      crispri = TRUE,
+      display = TRUE,
+      advanced = TRUE
     )
     
     # Toggle panel observers
@@ -351,6 +352,16 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     outputOptions(output, "show_crispri", suspendWhenHidden = FALSE)
     outputOptions(output, "show_display", suspendWhenHidden = FALSE)
     outputOptions(output, "show_advanced", suspendWhenHidden = FALSE)
+    
+    # Auto-update color scale based on gene direction
+    observeEvent(input$direction_filter, {
+      if (input$direction_filter == "UP") {
+        updateSelectInput(session, "color_scale", selected = "red")
+      } else if (input$direction_filter == "DOWN") {
+        updateSelectInput(session, "color_scale", selected = "blue")
+      }
+      # For "ALL_DIR" and "BOTH", keep current selection
+    })
     
     # Helper function to validate and create color vectors
     create_validated_colors <- function() {
