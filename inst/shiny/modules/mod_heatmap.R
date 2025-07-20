@@ -1299,8 +1299,12 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 tryCatch({
                   # Debug palette structure
                   message("Attempting heatmaply with validated palette")
-                  message("  Palette sample: ", paste(head(names(row_side_palette), 5), "=", 
-                                                      head(row_side_palette, 5), collapse=", "))
+                  if (is.list(row_side_palette)) {
+                    for (nm in names(row_side_palette)) {
+                      message("  ", nm, " palette: ", paste(names(row_side_palette[[nm]]), "=", 
+                                                           row_side_palette[[nm]], collapse=", "))
+                    }
+                  }
                   
                   heatmaply::heatmaply(
                     mat,
@@ -1371,25 +1375,32 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 if (is.null(p)) {
                   message("Creating heatmaply without any annotations...")
                   # Fallback to heatmaply without any annotations
-                  p <- heatmaply::heatmaply(
-                    mat,
-                    dendrogram = dendrogram,
-                    colors = colors,
-                    xlab = "",
-                    ylab = "",
-                    main = paste("Interactive Enrichment Heatmap -", legend_title),
-                    margins = c(150, 250, 50, 50),
-                    custom_hovertext = custom_text,
-                    label_names = c("Row", "Column", "Value"),
-                    fontsize_row = 10,
-                    fontsize_col = 10,
-                    showticklabels = c(TRUE, TRUE),
-                    plot_method = "plotly"
-                    # Removed all annotations for this fallback
-                  )
+                  p <- tryCatch({
+                    heatmaply::heatmaply(
+                      mat,
+                      dendrogram = dendrogram,
+                      colors = colors,
+                      xlab = "",
+                      ylab = "",
+                      main = paste("Interactive Enrichment Heatmap -", legend_title),
+                      margins = c(150, 250, 50, 50),
+                      custom_hovertext = custom_text,
+                      label_names = c("Row", "Column", "Value"),
+                      fontsize_row = 10,
+                      fontsize_col = 10,
+                      showticklabels = c(TRUE, TRUE),
+                      plot_method = "plotly"
+                      # Removed all annotations for this fallback
+                    )
+                  }, error = function(e_fallback) {
+                    message("ERROR: Even basic heatmaply failed: ", e_fallback$message)
+                    NULL
+                  })
                   
-                  # If we get here, fallback succeeded
-                  message("SUCCESS: Heatmaply created without annotations (fallback)")
+                  if (!is.null(p)) {
+                    # If we get here, fallback succeeded
+                    message("SUCCESS: Heatmaply created without annotations (fallback)")
+                  }
                 }
               } else {
                 message("Creating heatmaply without row annotations...")
@@ -1420,7 +1431,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               message("Falling back to simple plotly heatmap...")
               
               # Fallback to basic plotly heatmap without annotations
-              tryCatch({
+              p <- tryCatch({
                 # Create basic hover text
                 hover_text <- matrix(
                   paste0("Term: ", rep(full_descriptions, ncol(mat)), "<br>",
@@ -1459,6 +1470,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                     font = list(size = 12, color = "red")
                   )
               })
+              
+              # Return the fallback plot
+              return(p)
             })
             
             # Store the plotly object for download
