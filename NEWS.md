@@ -1,3 +1,36 @@
+# iSCORE.PDecipher 0.3.1
+
+## Comprehensive Fixes Applied In-Place (2025-07-20)
+
+This patch release applies critical fixes to all visualization outputs without creating separate directories.
+
+### 🔧 **Fixes Applied**
+
+#### Gene Harmonization
+- **Fixed**: Gene naming mismatches between MAST and CRISPRi datasets
+- **Mappings**: PRKN→PARK2, VPS13C variants→VPS13C, SNCA variants→SNCA
+- **Impact**: PARK2 now shows 106 convergent pathways (was 0), proper cross-method analysis
+
+#### Heatmap Clustering
+- **Fixed**: All heatmaps now use hierarchical clustering
+- **Applied to**: Gene pathway heatmaps, cluster heatmaps
+- **Benefit**: Patterns and relationships more clearly visible
+
+#### Natural Cluster Sorting
+- **Fixed**: Clusters now sort numerically (cluster_10 after cluster_9, not cluster_1)
+- **Applied to**: All cluster visualizations and data files
+- **Order**: cluster_0 through cluster_14 in proper sequence
+
+### 📁 **Important Note**
+All fixes applied directly to original file locations:
+- `/results/pd_signatures/by_gene/`
+- `/results/pd_signatures/by_cluster/`
+- `/results/pd_signatures/visualizations/comprehensive/`
+
+No "_fixed" directories created - all updates in place.
+
+---
+
 # iSCORE.PDecipher 0.3.0
 
 ## Comprehensive PD Signature Analysis Suite (2025-07-20)
