@@ -13,6 +13,56 @@ wrap_text <- function(text, width = 40) {
   })
 }
 
+# Improved function for bar plot labels - handles STRING database results
+truncate_for_bars <- function(text, source_col = NULL) {
+  sapply(seq_along(text), function(i) {
+    x <- text[i]
+    if (is.na(x)) return('')
+    
+    # Check if it's a STRING result (either by pattern or source column)
+    is_string <- FALSE
+    if (!is.null(source_col) && length(source_col) >= i) {
+      is_string <- source_col[i] == "STRING"
+    } else {
+      is_string <- grepl("^\\(\\d{4}\\)", x)
+    }
+    
+    if (is_string) {
+      # For STRING: Just show year and first key term
+      if (grepl("^\\(\\d{4}\\)", x)) {
+        year <- gsub("^(\\(\\d{4}\\)).*", "\\1", x)
+        rest <- gsub("^\\(\\d{4}\\)\\s*", "", x)
+        
+        # Look for key terms
+        key_terms <- c("mitochondr", "synap", "ribosom", "oxidative", 
+                      "ubiquitin", "dopamin", "transport", "vesicle")
+        
+        for (term in key_terms) {
+          if (grepl(term, rest, ignore.case = TRUE)) {
+            # Find the word containing this term
+            words <- strsplit(rest, " ")[[1]]
+            matching_word <- words[grep(term, words, ignore.case = TRUE)[1]]
+            if (!is.na(matching_word)) {
+              return(paste(year, matching_word))
+            }
+          }
+        }
+        
+        # If no key term found, just show year + first 2 words
+        words <- strsplit(rest, " ")[[1]]
+        return(paste(c(year, words[1:min(2, length(words))], "..."), collapse = " "))
+      }
+    }
+    
+    # For regular pathways, limit to 45 characters
+    if (nchar(x) > 45) {
+      return(paste0(substr(x, 1, 42), "..."))
+    }
+    
+    return(x)
+  })
+}
+
 
 # Load data
 results_dir <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/update_analysis_scripts/iSCORE-PDecipher/results/pd_signatures"
@@ -35,7 +85,7 @@ p1 <- mast_top %>%
   head(15) %>%
   mutate(
     Description = as.character(Description),
-    Description_short = wrap_text(Description, width = 50),
+    Description_short = truncate_for_bars(Description, source_col = enrichment_type),
     sample_info = paste0("(", n_genes, " genes, ", n_clusters, " clusters)")
   ) %>%
   ggplot(aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
@@ -65,7 +115,7 @@ p2 <- mixscale_top %>%
   head(15) %>%
   mutate(
     Description = as.character(Description),
-    Description_short = wrap_text(Description, width = 50),
+    Description_short = truncate_for_bars(Description, source_col = enrichment_type),
     sample_info = paste0("(", n_genes, " genes, ", n_clusters, " clusters)")
   ) %>%
   ggplot(aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
@@ -95,7 +145,7 @@ convergent_plot_data <- convergent_top %>%
   head(15) %>%
   mutate(
     Description = as.character(Description),
-    Description_short = wrap_text(Description, width = 40)
+    Description_short = truncate_for_bars(Description, source_col = enrichment_type)
   )
 
 # Create data for stacked bar
