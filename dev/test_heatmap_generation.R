@@ -95,9 +95,18 @@ test_heatmap_generation <- function() {
         row.names = rownames(mat)
       )
       
-      # Define color palettes
-      type_colors <- c("GO_BP" = "#8DD3C7", "KEGG" = "#FB8072")
-      dir_colors <- c("UP" = "#FF6B6B", "DOWN" = "#4ECDC4")
+      # Define color palettes (using flattened structure)
+      row_side_palette <- c(
+        "GO_BP" = "#8DD3C7", 
+        "KEGG" = "#FB8072",
+        "UP" = "#FF6B6B", 
+        "DOWN" = "#4ECDC4"
+      )
+      
+      cat("  Row side colors structure:\n")
+      str(row_side_colors)
+      cat("  Row side palette structure:\n")
+      str(row_side_palette)
       
       p2 <- tryCatch({
         heatmaply(
@@ -108,10 +117,7 @@ test_heatmap_generation <- function() {
           margins = c(100, 150, 50, 50),
           plot_method = "plotly",
           row_side_colors = row_side_colors,
-          row_side_palette = list(
-            Type = type_colors,
-            Direction = dir_colors
-          )
+          row_side_palette = row_side_palette
         )
         cat("✓ Heatmaply created successfully WITH annotations!\n")
         TRUE
@@ -120,6 +126,28 @@ test_heatmap_generation <- function() {
         cat("  This matches the issue seen in the app\n")
         FALSE
       })
+      
+      # Test 3b: Try ggplot2 backend
+      if (!p2) {
+        cat("\nTest 3b: Trying ggplot2 backend...\n")
+        p3 <- tryCatch({
+          heatmaply(
+            mat,
+            dendrogram = "both",
+            colors = viridis::viridis(256),
+            main = "Test Heatmap - ggplot2 backend",
+            margins = c(100, 150, 50, 50),
+            plot_method = "ggplot2",
+            row_side_colors = row_side_colors,
+            row_side_palette = row_side_palette
+          )
+          cat("✓ Heatmaply with ggplot2 backend works!\n")
+          TRUE
+        }, error = function(e) {
+          cat("✗ ggplot2 backend also failed:", e$message, "\n")
+          FALSE
+        })
+      }
     }
     
     # Test 4: Fallback to basic plotly

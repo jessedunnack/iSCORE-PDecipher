@@ -316,6 +316,40 @@ mod_heatmap_ui <- function(id) {
 mod_heatmap_server <- function(id, app_data, pval_threshold) {
   moduleServer(id, function(input, output, session) {
     
+    # Helper function to validate and fix palette structure for heatmaply
+    validate_heatmaply_palette <- function(palette, context = "palette") {
+      if (is.null(palette)) return(NULL)
+      
+      # If it's already a flat named vector, return as is
+      if (is.character(palette) && !is.null(names(palette))) {
+        # Validate all colors
+        valid <- sapply(palette, function(x) {
+          tryCatch({
+            col2rgb(x)
+            TRUE
+          }, error = function(e) FALSE)
+        })
+        if (all(valid)) {
+          message(sprintf("  %s is valid (flat named vector)", context))
+          return(palette)
+        }
+      }
+      
+      # If it's a list, flatten it
+      if (is.list(palette)) {
+        message(sprintf("  %s is a list, flattening...", context))
+        flat_palette <- unlist(palette)
+        if (!is.null(names(flat_palette))) {
+          # Remove any list prefixes from names (e.g., "Type.GO_BP" -> "GO_BP")
+          names(flat_palette) <- gsub("^[^.]+\\.", "", names(flat_palette))
+          return(flat_palette)
+        }
+      }
+      
+      message(sprintf("  WARNING: %s could not be validated", context))
+      return(NULL)
+    }
+    
     # Reactive values for collapsible panels
     panel_states <- reactiveValues(
       filtering = FALSE,
@@ -516,9 +550,13 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         palette_list$Category <- category_palette
       }
       
+      # Flatten palette for heatmaply compatibility
+      # heatmaply expects a single named vector, not a nested list
+      flattened_palette <- unlist(palette_list)
+      
       return(list(
         colors = row_colors,
-        palette = palette_list
+        palette = flattened_palette
       ))
     }
     
@@ -1200,11 +1238,10 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               rownames(col_side_colors) <- colnames(mat)
               
               # Define consistent color palette (matching user's request)
-              col_side_palette <- list(
-                Method = c(
-                  "MAST" = "#1f77b4",     # Blue for MAST
-                  "CRISPRi" = "#ff7f0e"   # Orange for CRISPRi
-                )
+              # Use flattened structure for heatmaply compatibility
+              col_side_palette <- c(
+                "MAST" = "#1f77b4",     # Blue for MAST
+                "CRISPRi" = "#ff7f0e"   # Orange for CRISPRi
               )
               
               message("Column annotations created: ", 
@@ -1213,20 +1250,38 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               }  # End of else block for column names check
             }
             
+            # Validate palettes before using them
+            if (!is.null(row_side_palette)) {
+              message("Validating row side palette...")
+              row_side_palette <- validate_heatmaply_palette(row_side_palette, "row_side_palette")
+            }
+            if (!is.null(col_side_palette)) {
+              message("Validating column side palette...")
+              col_side_palette <- validate_heatmaply_palette(col_side_palette, "col_side_palette")
+            }
+            
             # Create heatmaply heatmap with comprehensive error handling
             p <- tryCatch({
               if (!is.null(row_side_colors) && !is.null(row_side_palette) && input$show_annotations) {
-                message("Creating heatmaply with annotations...")
+                message("Creating heatmaply with row annotations...")
                 message("Row side colors dimensions: ", nrow(row_side_colors), " x ", ncol(row_side_colors))
-                message("Row side palette Type colors: ", length(row_side_palette$Type))
-                message("Row side palette Direction colors: ", length(row_side_palette$Direction))
+                message("Row side palette length: ", length(row_side_palette))
+                message("Row side palette names: ", paste(names(row_side_palette), collapse=", "))
+                
+                # Log column annotation info if present
+                if (!is.null(col_side_colors) && input$show_col_annotations) {
+                  message("Also including column annotations...")
+                  message("Column side colors dimensions: ", nrow(col_side_colors), " x ", ncol(col_side_colors))
+                  message("Column side palette length: ", length(col_side_palette))
+                  message("Column side palette names: ", paste(names(col_side_palette), collapse=", "))
+                }
                 
                 # Try with annotations first
                 tryCatch({
                   # Debug palette structure
-                  message("Attempting heatmaply with row_side_palette structure:")
-                  message("  Type palette: ", paste(names(row_side_palette$Type), "=", row_side_palette$Type, collapse=", "))
-                  message("  Direction palette: ", paste(names(row_side_palette$Direction), "=", row_side_palette$Direction, collapse=", "))
+                  message("Attempting heatmaply with validated palette")
+                  message("  Palette sample: ", paste(head(names(row_side_palette), 5), "=", 
+                                                      head(row_side_palette, 5), collapse=", "))
                   
                   heatmaply::heatmaply(
                     mat,
@@ -1247,11 +1302,57 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                     col_side_colors = col_side_colors,
                     col_side_palette = col_side_palette
                   )
+                  
+                  # If we get here, heatmaply succeeded
+                  message("SUCCESS: Heatmaply created with annotations (plotly backend)")
+                  
                 }, error = function(e_ann) {
-                  message("Heatmaply with annotations failed: ", e_ann$message)
-                  message("Trying without annotations...")
-                  # Fallback to heatmaply without annotations
-                  heatmaply::heatmaply(
+                  message("Heatmaply with plotly backend failed: ", e_ann$message)
+                  
+                  # Try ggplot2 backend if annotations are causing issues
+                  if (grepl("color|palette|annotation", e_ann$message, ignore.case = TRUE)) {
+                    message("Trying ggplot2 backend for better annotation support...")
+                    p_gg <- tryCatch({
+                      heatmaply::heatmaply(
+                        mat,
+                        dendrogram = dendrogram,
+                        colors = colors,
+                        xlab = "",
+                        ylab = "",
+                        main = paste("Interactive Enrichment Heatmap -", legend_title),
+                        margins = c(150, 300, 50, 50),
+                        custom_hovertext = custom_text,
+                        label_names = c("Row", "Column", "Value"),
+                        fontsize_row = 10,
+                        fontsize_col = 10,
+                        showticklabels = c(TRUE, TRUE),
+                        plot_method = "ggplot2",  # Use ggplot2 backend
+                        row_side_colors = row_side_colors,
+                        row_side_palette = row_side_palette,
+                        col_side_colors = col_side_colors,
+                        col_side_palette = col_side_palette
+                      )
+                      
+                      # If we get here, ggplot2 backend succeeded
+                      message("SUCCESS: Heatmaply created with annotations (ggplot2 backend)")
+                      
+                    }, error = function(e_gg) {
+                      message("ggplot2 backend also failed: ", e_gg$message)
+                      message("Falling back to heatmap without annotations...")
+                      # Final fallback without annotations
+                      NULL
+                    })
+                    return(p_gg)
+                  } else {
+                    NULL
+                  }
+                })
+                
+                # If previous attempts returned NULL, try without annotations
+                if (is.null(p)) {
+                  message("Creating heatmaply without any annotations...")
+                  # Fallback to heatmaply without any annotations
+                  p <- heatmaply::heatmaply(
                     mat,
                     dendrogram = dendrogram,
                     colors = colors,
@@ -1264,15 +1365,17 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                     fontsize_row = 10,
                     fontsize_col = 10,
                     showticklabels = c(TRUE, TRUE),
-                    plot_method = "plotly",
-                    col_side_colors = col_side_colors,
-                    col_side_palette = col_side_palette
+                    plot_method = "plotly"
+                    # Removed all annotations for this fallback
                   )
+                  
+                  # If we get here, fallback succeeded
+                  message("SUCCESS: Heatmaply created without annotations (fallback)")
                 })
               } else {
                 message("Creating heatmaply without row annotations...")
                 # Still include column annotations if requested
-                heatmaply::heatmaply(
+                p <- heatmaply::heatmaply(
                   mat,
                   dendrogram = dendrogram,
                   colors = colors,
@@ -1289,6 +1392,9 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                   col_side_colors = col_side_colors,
                   col_side_palette = col_side_palette
                 )
+                
+                # If we get here, it succeeded
+                message("SUCCESS: Heatmaply created with column annotations only")
               }
             }, error = function(e) {
               message("Heatmaply failed: ", e$message)
