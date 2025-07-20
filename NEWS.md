@@ -1,3 +1,25 @@
+# iSCORE.PDecipher 0.3.3
+
+## Enhanced Visualizations and Documentation (2025-07-20)
+
+### 🎨 **Visualization Improvements**
+- **Fixed**: Label visibility in convergence strength plots
+- **Corrected**: Pathway count display to show actual totals instead of filtered top 30
+- **Updated**: Summary documentation with corrected pathway counts and key insights
+
+---
+
+# iSCORE.PDecipher 0.3.2
+
+## Improved Plot Readability (2025-07-20)
+
+### 📊 **Visualization Enhancements**
+- **Implemented**: Word wrapping for long pathway names in all PD signature plots
+- **Improved**: Label readability across bar charts and visualizations
+- **Enhanced**: Overall plot aesthetics for publication quality
+
+---
+
 # iSCORE.PDecipher 0.3.1
 
 ## Comprehensive Fixes Applied In-Place (2025-07-20)
