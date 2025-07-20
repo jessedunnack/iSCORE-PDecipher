@@ -250,7 +250,7 @@ simple_fig <- convergent_top %>%
     plot.subtitle = element_text(size = 16),
     axis.text.y = element_text(size = 14)
   ) +
-  xlim(NA, max(convergent_top$mean_neg_log_p[1:10]) * 1.3)
+  ylim(0, max(convergent_top$mean_neg_log_p[1:10]) * 1.1)
 
 ggsave(file.path(output_dir, "KEY_CONVERGENT_PATHWAYS.pdf"), 
        simple_fig, width = 12, height = 10)

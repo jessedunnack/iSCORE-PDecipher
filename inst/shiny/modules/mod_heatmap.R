@@ -1101,11 +1101,19 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               mat_values <- mat_values[!is.na(mat_values)]
               if (length(mat_values) > 0) {
                 quantile_breaks <- quantile(mat_values, probs = seq(0, 1, length.out = 10))
+                # Store names before matrix recreation
+                stored_rownames <- rownames(mat)
+                stored_colnames <- colnames(mat)
+                
                 mat <- matrix(
                   cut(as.vector(mat), breaks = quantile_breaks, labels = FALSE, include.lowest = TRUE),
                   nrow = nrow(mat),
                   ncol = ncol(mat)
                 )
+                
+                # Restore row and column names
+                rownames(mat) <- stored_rownames
+                colnames(mat) <- stored_colnames
               }
             } else if (input$scale_method == "fixed" && input$heatmap_type == "pvalue") {
               # Use fixed breaks for p-values
@@ -1177,10 +1185,12 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                 }
               }
               
-              # Create column annotation matrix
-              col_side_colors <- matrix(col_methods, nrow = 1)
-              colnames(col_side_colors) <- colnames(mat)
-              rownames(col_side_colors) <- "Method"
+              # Create column annotation data.frame (matching row annotation structure)
+              col_side_colors <- data.frame(
+                Method = col_methods,
+                stringsAsFactors = FALSE
+              )
+              rownames(col_side_colors) <- colnames(mat)
               
               # Define consistent color palette (matching user's request)
               col_side_palette <- list(
