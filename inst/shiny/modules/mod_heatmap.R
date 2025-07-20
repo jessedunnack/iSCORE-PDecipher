@@ -320,7 +320,36 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
     validate_heatmaply_palette <- function(palette, context = "palette") {
       if (is.null(palette)) return(NULL)
       
-      # If it's already a flat named vector, return as is
+      # For heatmaply, we actually need to keep it as a list
+      if (is.list(palette)) {
+        # Validate each sub-palette
+        all_valid <- TRUE
+        for (name in names(palette)) {
+          sub_palette <- palette[[name]]
+          if (is.character(sub_palette) && !is.null(names(sub_palette))) {
+            # Validate all colors in this sub-palette
+            valid <- sapply(sub_palette, function(x) {
+              tryCatch({
+                col2rgb(x)
+                TRUE
+              }, error = function(e) FALSE)
+            })
+            if (!all(valid)) {
+              message(sprintf("  Invalid colors in %s sub-palette", name))
+              all_valid <- FALSE
+            }
+          } else {
+            message(sprintf("  Sub-palette %s is not properly formatted", name))
+            all_valid <- FALSE
+          }
+        }
+        if (all_valid) {
+          message(sprintf("  %s is valid (list of named vectors)", context))
+          return(palette)
+        }
+      }
+      
+      # If it's a single named vector, that's also ok
       if (is.character(palette) && !is.null(names(palette))) {
         # Validate all colors
         valid <- sapply(palette, function(x) {
@@ -330,19 +359,8 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           }, error = function(e) FALSE)
         })
         if (all(valid)) {
-          message(sprintf("  %s is valid (flat named vector)", context))
+          message(sprintf("  %s is valid (named vector)", context))
           return(palette)
-        }
-      }
-      
-      # If it's a list, flatten it
-      if (is.list(palette)) {
-        message(sprintf("  %s is a list, flattening...", context))
-        flat_palette <- unlist(palette)
-        if (!is.null(names(flat_palette))) {
-          # Remove any list prefixes from names (e.g., "Type.GO_BP" -> "GO_BP")
-          names(flat_palette) <- gsub("^[^.]+\\.", "", names(flat_palette))
-          return(flat_palette)
         }
       }
       
@@ -550,13 +568,12 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
         palette_list$Category <- category_palette
       }
       
-      # Flatten palette for heatmaply compatibility
-      # heatmaply expects a single named vector, not a nested list
-      flattened_palette <- unlist(palette_list)
+      # For heatmaply, we need to return the palette as a list, not flattened
+      # Each column in row_colors needs its own palette
       
       return(list(
         colors = row_colors,
-        palette = flattened_palette
+        palette = palette_list  # Return the list structure, not flattened
       ))
     }
     
@@ -1238,10 +1255,12 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               rownames(col_side_colors) <- colnames(mat)
               
               # Define consistent color palette (matching user's request)
-              # Use flattened structure for heatmaply compatibility
-              col_side_palette <- c(
-                "MAST" = "#1f77b4",     # Blue for MAST
-                "CRISPRi" = "#ff7f0e"   # Orange for CRISPRi
+              # Use list structure for heatmaply compatibility
+              col_side_palette <- list(
+                Method = c(
+                  "MAST" = "#1f77b4",     # Blue for MAST
+                  "CRISPRi" = "#ff7f0e"   # Orange for CRISPRi
+                )
               )
               
               message("Column annotations created: ", 
@@ -1326,7 +1345,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
                         fontsize_row = 10,
                         fontsize_col = 10,
                         showticklabels = c(TRUE, TRUE),
-                        plot_method = "ggplot2",  # Use ggplot2 backend
+                        plot_method = "ggplot",  # Use ggplot backend
                         row_side_colors = row_side_colors,
                         row_side_palette = row_side_palette,
                         col_side_colors = col_side_colors,
@@ -1445,6 +1464,13 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             # Store the plotly object for download
             heatmap_data$plotly_object <- p
             
+            # Debug logging
+            if (!is.null(p)) {
+              message("Heatmap object created successfully: ", class(p)[1])
+            } else {
+              message("WARNING: Heatmap object is NULL")
+            }
+            
             return(p)
             
           } else {
@@ -1501,6 +1527,13 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
             
             # Store the plotly object for download
             heatmap_data$plotly_object <- p
+            
+            # Debug logging
+            if (!is.null(p)) {
+              message("Heatmap object created successfully: ", class(p)[1])
+            } else {
+              message("WARNING: Heatmap object is NULL")
+            }
             
             return(p)
           }
