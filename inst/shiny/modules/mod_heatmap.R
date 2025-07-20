@@ -1166,10 +1166,17 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               message("Creating column annotations to distinguish methods...")
               
               # Create method annotation for columns
-              col_methods <- character(ncol(mat))
               col_names <- colnames(mat)
               
-              # Determine method for each column
+              # Ensure mat has column names
+              if (is.null(col_names)) {
+                message("Warning: Matrix has no column names. Skipping column annotations.")
+                col_side_colors <- NULL
+                col_side_palette <- NULL
+              } else {
+                col_methods <- character(ncol(mat))
+                
+                # Determine method for each column
               for (i in seq_along(col_names)) {
                 col_name <- col_names[i]
                 
@@ -1203,6 +1210,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
               message("Column annotations created: ", 
                       sum(col_methods == "MAST"), " MAST, ",
                       sum(col_methods == "CRISPRi"), " CRISPRi")
+              }  # End of else block for column names check
             }
             
             # Create heatmaply heatmap with comprehensive error handling
@@ -1625,6 +1633,39 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           })
         }
         
+        # Create column annotation if requested
+        column_ha <- NULL
+        if (input$show_column_annotations) {
+          tryCatch({
+            # Get column names
+            col_names <- colnames(mat)
+            
+            # Create method vector for columns
+            col_methods <- sapply(col_names, function(col_name) {
+              if (grepl("_C12_FPD-24|_C12_FPD-23|_C18_FPD-23", col_name)) {
+                "CRISPRi"
+              } else if (grepl("\\(i\\)|\\(P\\)", col_name)) {
+                "CRISPRi"
+              } else {
+                "MAST"
+              }
+            })
+            
+            # Create column annotation
+            column_ha <- ComplexHeatmap::HeatmapAnnotation(
+              Method = col_methods,
+              col = list(Method = c("MAST" = "#1f77b4", "CRISPRi" = "#ff7f0e")),
+              annotation_name_side = "left",
+              show_annotation_name = TRUE,
+              annotation_name_gp = grid::gpar(fontsize = 8),
+              simple_anno_size = grid::unit(0.3, "cm")
+            )
+          }, error = function(e) {
+            message("Error creating ComplexHeatmap column annotations: ", e$message)
+            column_ha <<- NULL
+          })
+        }
+        
         # Create ComplexHeatmap
         ht <- ComplexHeatmap::Heatmap(
           mat,
@@ -1647,6 +1688,7 @@ mod_heatmap_server <- function(id, app_data, pval_threshold) {
           column_title = paste("Enrichment Heatmap -", input$heatmap_type),
           column_title_gp = grid::gpar(fontsize = input$pdf_fontsize + 2),
           left_annotation = row_ha,
+          top_annotation = column_ha,
           use_raster = FALSE
         )
         

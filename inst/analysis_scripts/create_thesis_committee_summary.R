@@ -16,7 +16,7 @@ wrap_text <- function(text, width = 40) {
 }
 
 # Improved function for bar plot labels - handles STRING database results
-truncate_for_bars <- function(text, source_col = NULL) {
+truncate_for_bars <- function(text, source_col = NULL, max_chars = 60) {
   sapply(seq_along(text), function(i) {
     x <- text[i]
     if (is.na(x)) return('')
@@ -29,36 +29,32 @@ truncate_for_bars <- function(text, source_col = NULL) {
       is_string <- grepl("^\\(\\d{4}\\)", x)
     }
     
-    if (is_string) {
-      # For STRING: Just show year and first key term
-      if (grepl("^\\(\\d{4}\\)", x)) {
-        year <- gsub("^(\\(\\d{4}\\)).*", "\\1", x)
-        rest <- gsub("^\\(\\d{4}\\)\\s*", "", x)
-        
-        # Look for key terms
-        key_terms <- c("mitochondr", "synap", "ribosom", "oxidative", 
-                      "ubiquitin", "dopamin", "transport", "vesicle")
-        
-        for (term in key_terms) {
-          if (grepl(term, rest, ignore.case = TRUE)) {
-            # Find the word containing this term
-            words <- strsplit(rest, " ")[[1]]
-            matching_word <- words[grep(term, words, ignore.case = TRUE)[1]]
-            if (!is.na(matching_word)) {
-              return(paste(year, matching_word))
-            }
-          }
+    if (is_string && grepl("^\\(\\d{4}\\)", x)) {
+      # For STRING papers: keep as much of the title as possible
+      # But limit to max_chars to prevent overlap
+      if (nchar(x) > max_chars) {
+        # Find a good break point (prefer breaking at spaces)
+        truncated <- substr(x, 1, max_chars)
+        # Try to break at last complete word
+        last_space <- regexpr(" [^ ]*$", truncated)
+        if (last_space > 0) {
+          truncated <- substr(truncated, 1, last_space - 1)
         }
-        
-        # If no key term found, just show year + first 2 words
-        words <- strsplit(rest, " ")[[1]]
-        return(paste(c(year, words[1:min(2, length(words))], "..."), collapse = " "))
+        return(paste0(truncated, "..."))
       }
+      return(x)
     }
     
-    # For regular pathways, limit to 45 characters
-    if (nchar(x) > 45) {
-      return(paste0(substr(x, 1, 42), "..."))
+    # For regular pathways, use slightly shorter limit
+    regular_max <- max_chars - 5
+    if (nchar(x) > regular_max) {
+      truncated <- substr(x, 1, regular_max)
+      # Try to break at last complete word
+      last_space <- regexpr(" [^ ]*$", truncated)
+      if (last_space > 0) {
+        truncated <- substr(truncated, 1, last_space - 1)
+      }
+      return(paste0(truncated, "..."))
     }
     
     return(x)
