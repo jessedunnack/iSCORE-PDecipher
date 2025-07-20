@@ -35,16 +35,26 @@ p1 <- mast_top %>%
   head(15) %>%
   mutate(
     Description = as.character(Description),
-    Description_short = wrap_text(Description, width = 50)
+    Description_short = wrap_text(Description, width = 50),
+    sample_info = paste0("(", n_genes, " genes, ", n_clusters, " clusters)")
   ) %>%
   ggplot(aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
   geom_bar(stat = "identity", fill = "#1f77b4") +
+  # Add sample size labels with white background
+  geom_label(aes(label = sample_info, y = mean_neg_log_p/2), 
+            fill = "white", 
+            color = "black", 
+            alpha = 0.9,
+            label.r = unit(0.25, "lines"),
+            label.padding = unit(0.35, "lines"),
+            size = 3) +
   coord_flip() +
   labs(
     title = "Top Mutation - iSCORE-PD Only Parkinson's Disease Pathways",
     subtitle = paste("Found in genetic mutation data (", pathway_totals$mast_only_total, " total pathways)"),
     x = "",
-    y = "Mean -log10(adjusted p-value)"
+    y = "Mean -log10(adjusted p-value)",
+    caption = "Sample sizes shown in parentheses: (# genes with pathway, # clusters with enrichment)"
   ) +
   theme(plot.title = element_text(face = "bold"))
 
@@ -55,16 +65,26 @@ p2 <- mixscale_top %>%
   head(15) %>%
   mutate(
     Description = as.character(Description),
-    Description_short = wrap_text(Description, width = 50)
+    Description_short = wrap_text(Description, width = 50),
+    sample_info = paste0("(", n_genes, " genes, ", n_clusters, " clusters)")
   ) %>%
   ggplot(aes(x = reorder(Description_short, mean_neg_log_p), y = mean_neg_log_p)) +
   geom_bar(stat = "identity", fill = "#ff7f0e") +
+  # Add sample size labels with white background
+  geom_label(aes(label = sample_info, y = mean_neg_log_p/2), 
+            fill = "white", 
+            color = "black", 
+            alpha = 0.9,
+            label.r = unit(0.25, "lines"),
+            label.padding = unit(0.35, "lines"),
+            size = 3) +
   coord_flip() +
   labs(
     title = "Top CRISPRi Perturbation Only Parkinson's Disease Pathways",
     subtitle = paste("Found in knockdown data (", pathway_totals$mixscale_only_total, " total pathways)"),
     x = "",
-    y = "Mean -log10(adjusted p-value)"
+    y = "Mean -log10(adjusted p-value)",
+    caption = "Sample sizes shown in parentheses: (# genes with pathway, # clusters with enrichment)"
   ) +
   theme(plot.title = element_text(face = "bold"))
 
