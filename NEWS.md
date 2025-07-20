@@ -1,3 +1,33 @@
+# iSCORE.PDecipher 0.3.5
+
+## Enrichment Type Selection Moved to Visualization Module (2025-07-20)
+
+### 🎯 **User Experience Improvements**
+- **Moved**: Enrichment database selection from global settings to visualization module
+- **Benefits**: Users can quickly switch between GO_BP, GO_CC, GO_MF, KEGG, Reactome, WikiPathways, STRING, and GSEA
+- **Dynamic**: Dropdown updates based on available enrichment types in the data
+- **Workflow**: No need to leave the visualization page to change enrichment database
+
+### 🔧 **Technical Implementation**
+- Created `filtered_data_for_viz` reactive that passes all enrichment types to visualization module
+- Module now handles enrichment filtering internally
+- Maintains backward compatibility for other modules using global enrichment filter
+- Dropdown positioned at top of visualization settings for easy access
+
+---
+
+# iSCORE.PDecipher 0.3.4
+
+## Heatmap UI/UX Enhancements (2025-07-20)
+
+### 🎨 **Functional Enrichment Heatmap Improvements**
+- **All collapsible panels start expanded**: Better discoverability of features
+- **Biological pathway categories enabled by default**: All categories pre-selected
+- **Auto color scale selection**: Automatically selects red for UP-regulated, blue for DOWN-regulated
+- **Improved workflow**: Reduces clicks needed for common heatmap tasks
+
+---
+
 # iSCORE.PDecipher 0.3.3
 
 ## Enhanced Visualizations and Documentation (2025-07-20)
