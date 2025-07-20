@@ -1,3 +1,67 @@
+# iSCORE.PDecipher 0.3.0
+
+## Comprehensive PD Signature Analysis Suite (2025-07-20)
+
+This major release introduces a comprehensive analysis pipeline for identifying compelling Parkinson's Disease signatures across mutation and CRISPRi perturbation methods, preparing for manuscript publication.
+
+### 🎯 **New Analysis Features**
+
+#### PD Signature Discovery Pipeline
+- **Fast discovery script**: Efficiently filters 663K+ enrichments to identify PD-relevant pathways
+- **Method-specific analysis**: Identifies mutation-only, CRISPRi-only, and convergent signatures
+- **Statistical rigor**: All pathways filtered with p.adjust < 0.05
+
+#### Gene-by-Gene Analysis
+- **Individual gene reports**: Analyzes all 16 PD genes (including SNCA variants)
+- **Pattern classification**: Identifies mutation-dominant, CRISPRi-dominant, and convergent genes
+- **Visual summaries**: Creates gene-specific signature plots and heatmaps
+
+#### Cluster Analysis Framework
+- **Comprehensive coverage**: Analyzes all 15 clusters (cluster_0 through cluster_14)
+- **Specificity analysis**: Identifies cluster-specific vs ubiquitous pathways
+- **Method preferences**: Determines which clusters prefer mutation vs CRISPRi signatures
+
+#### Advanced Visualizations
+- **Multi-panel figures**: Comprehensive summary visualizations for manuscripts
+- **Gene × pathway matrices**: Shows pathway distribution across all genes
+- **Cluster heatmaps**: Visualizes enrichment patterns across clusters
+- **Updated labeling**: "Mutation - iSCORE-PD" and "CRISPRi Perturbation" throughout
+
+### 📊 **Key Discoveries**
+
+- **30 mutation-only pathways**: Including vesicle-mediated transport in synapse
+- **30 CRISPRi-only pathways**: Including mitochondrial small ribosomal subunit
+- **30 convergent pathways**: Led by synapse pathway (p < 10^-17)
+- **Gene patterns**: SNCA variants show mutation-dominance, ATP13A2 shows convergence
+- **Cluster insights**: Cluster_4 has highest enrichment (1,152 pathways)
+
+### 🔧 **Technical Improvements**
+
+#### Enhanced Heatmap Module (from concurrent development)
+- **CRISPRi experiment separation**: Individual columns for C12_FPD-24, C12_FPD-23, C18_FPD-23
+- **Column annotations**: Visual method distinction (MAST blue, CRISPRi orange)
+- **Advanced UI**: Collapsible sections, gene filters, term search, p-value threshold
+- **Biological categorization**: Transparent keyword-based pathway classification
+
+#### Analysis Scripts Organization
+- **Location**: `inst/analysis_scripts/` for package distribution
+- **Documentation**: Comprehensive README with usage instructions
+- **Reproducibility**: All paths and parameters documented
+
+### 📝 **Reports and Documentation**
+
+- **Comprehensive R Markdown report**: Full analysis with interactive elements
+- **Executive summary**: Key findings for thesis committee presentation
+- **Visualization gallery**: Publication-ready figures in multiple formats
+
+### 🐛 **Bug Fixes** (from 0.2.9 branch)
+- Fixed gene details modal to show actual genes
+- Fixed CRISPRi dotplots with modality column fallback
+- Restricted DE table search to Gene column only
+- Maintained CRISPRa exclusion from analyses
+
+---
+
 # iSCORE.PDecipher 0.2.9
 
 ## Minimal Bug Fixes from Clean Baseline (2025-07-17)
