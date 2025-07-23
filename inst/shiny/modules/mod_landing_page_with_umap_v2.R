@@ -263,8 +263,7 @@ landingPageWithUmapUI <- function(id) {
             ),
             # Markers table - explicit height
             div(id = ns("markers_table_container"), 
-                style = "height: 400px; overflow-y: auto; margin-top: 10px; border: 1px solid #ddd; padding: 5px;",
-              p("Loading marker genes...", id = ns("markers_loading_text"), style = "color: #888; text-align: center;"),
+                style = "height: 400px; overflow-y: auto; margin-top: 10px;",
               withSpinner(
                 DT::dataTableOutput(ns("markers_table"), height = "385px"),
                 type = 1,
@@ -415,16 +414,18 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       markers = NULL
     )
     
-    # Observer to monitor markers loading
+    # Observer to monitor markers loading - use isolate to prevent loops
     observe({
-      if (!is.null(umap_data$markers)) {
-        cat("\n[MARKERS OBSERVER] Markers have been loaded!\n")
-        cat("[MARKERS OBSERVER] Total rows:", nrow(umap_data$markers), "\n")
-        cat("[MARKERS OBSERVER] Columns:", paste(colnames(umap_data$markers), collapse=", "), "\n")
-        cat("[MARKERS OBSERVER] Unique clusters:", paste(unique(umap_data$markers$cluster), collapse=", "), "\n\n")
-      } else {
-        cat("[MARKERS OBSERVER] Markers are NULL\n")
-      }
+      isolate({
+        if (!is.null(umap_data$markers)) {
+          cat("\n[MARKERS OBSERVER] Markers have been loaded!\n")
+          cat("[MARKERS OBSERVER] Total rows:", nrow(umap_data$markers), "\n")
+          cat("[MARKERS OBSERVER] Columns:", paste(colnames(umap_data$markers), collapse=", "), "\n")
+          cat("[MARKERS OBSERVER] Unique clusters:", paste(unique(umap_data$markers$cluster), collapse=", "), "\n\n")
+        } else {
+          cat("[MARKERS OBSERVER] Markers are NULL\n")
+        }
+      })
     })
     
     # Welcome sticky note dismissal
@@ -577,13 +578,18 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     observeEvent(input$pc_selection, {
       req(umap_data$dataset_name)
       
-      # Load new UMAP data
-      if (load_umap_data(umap_data$dataset_name, input$pc_selection)) {
-        # Trigger plot redraw
-        umap_data$loaded <- isolate(!umap_data$loaded)
-        umap_data$loaded <- isolate(!umap_data$loaded)
+      # Only reload if PC actually changed
+      current_pc <- input$pc_selection
+      if (!is.null(current_pc)) {
+        isolate({
+          # Load new UMAP data
+          if (load_umap_data(umap_data$dataset_name, current_pc)) {
+            # Just update loaded status once
+            umap_data$loaded <- TRUE
+          }
+        })
       }
-    })
+    }, ignoreInit = TRUE)  # Don't trigger on initial load
     
     # Render UMAP plot
     output$umap_plot <- renderPlot({
@@ -661,59 +667,61 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     })
     
     # Update cluster choices when UMAP data is loaded
-    observe({
+    observeEvent(umap_data$loaded, {
       if (umap_data$loaded && !is.null(umap_data$sce)) {
-        clusters <- unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters)
-        
-        # Sort clusters numerically using standardized function
-        clusters_sorted <- natural_sort_clusters(as.character(clusters))
-        
-        # Clean up cluster names: remove "cluster_" prefix and create clean display names
-        cluster_labels <- sapply(clusters_sorted, function(x) {
-          if (grepl("^cluster_", x)) {
-            # Extract number after "cluster_" and format as "Cluster X"
-            cluster_num <- gsub("^cluster_", "", x)
-            paste("Cluster", cluster_num)
-          } else {
-            # If not in "cluster_X" format, just add "Cluster" prefix
-            paste("Cluster", x)
+        isolate({
+          clusters <- unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters)
+          
+          # Sort clusters numerically using standardized function
+          clusters_sorted <- natural_sort_clusters(as.character(clusters))
+          
+          # Clean up cluster names: remove "cluster_" prefix and create clean display names
+          cluster_labels <- sapply(clusters_sorted, function(x) {
+            if (grepl("^cluster_", x)) {
+              # Extract number after "cluster_" and format as "Cluster X"
+              cluster_num <- gsub("^cluster_", "", x)
+              paste("Cluster", cluster_num)
+            } else {
+              # If not in "cluster_X" format, just add "Cluster" prefix
+              paste("Cluster", x)
+            }
+          })
+          
+          cluster_choices <- setNames(clusters_sorted, cluster_labels)
+          
+          # Only update if choices have changed
+          current_choices <- isolate(input$selected_cluster)
+          if (is.null(current_choices) || !identical(names(cluster_choices), names(current_choices))) {
+            updateSelectInput(session, "selected_cluster",
+                             choices = cluster_choices,
+                             selected = cluster_choices[1])
           }
         })
-        
-        cluster_choices <- setNames(clusters_sorted, cluster_labels)
-        
-        updateSelectInput(session, "selected_cluster",
-                         choices = cluster_choices,
-                         selected = cluster_choices[1])
       }
-    })
-    
-    # Test: Simple text output first
-    output$markers_test <- renderText({
-      paste("Test: Cluster", input$selected_cluster, "selected. Markers loaded:", !is.null(umap_data$markers))
-    })
+    }, ignoreInit = FALSE)
     
     # Render markers table
     output$markers_table <- DT::renderDataTable({
-      cat("\n[MARKERS RENDER] Starting renderDataTable function\n")
+      # Reduce debug output to prevent loops
+      # cat("\n[MARKERS RENDER] Starting renderDataTable function\n")
       
       # Check if cluster is selected
       if (is.null(input$selected_cluster)) {
-        cat("[MARKERS RENDER] No cluster selected\n")
+        # cat("[MARKERS RENDER] No cluster selected\n")
         return(NULL)
       }
-      cat("[MARKERS RENDER] Selected cluster:", input$selected_cluster, "\n")
+      # cat("[MARKERS RENDER] Selected cluster:", input$selected_cluster, "\n")
       
       # Check if markers are loaded
       if (is.null(umap_data$markers)) {
-        cat("[MARKERS RENDER] No markers data loaded\n")
+        # cat("[MARKERS RENDER] No markers data loaded\n")
         return(NULL)
       }
-      cat("[MARKERS RENDER] Markers loaded with", nrow(umap_data$markers), "rows\n")
+      # cat("[MARKERS RENDER] Markers loaded with", nrow(umap_data$markers), "rows\n")
       
-      # Debug logging
-      cat("[MARKERS DEBUG] Available clusters in markers:", 
-          paste(unique(umap_data$markers$cluster), collapse=", "), "\n")
+      # Debug logging - commented to reduce loops
+      # cat("[MARKERS DEBUG] Available clusters in markers:", 
+      #     paste(unique(umap_data$markers$cluster), collapse=", "), "\n")
       
       # Handle cluster name format mismatch
       # If selected_cluster is "0" but markers have "cluster_0", adjust accordingly
@@ -723,15 +731,15 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         cluster_with_prefix <- paste0("cluster_", cluster_to_find)
         if (cluster_with_prefix %in% umap_data$markers$cluster) {
           cluster_to_find <- cluster_with_prefix
-          cat("[MARKERS DEBUG] Using prefixed cluster name:", cluster_to_find, "\n")
+          # cat("[MARKERS DEBUG] Using prefixed cluster name:", cluster_to_find, "\n")
         } else {
-          cat("[MARKERS DEBUG] ERROR: Cluster not found with or without prefix\n")
+          # cat("[MARKERS DEBUG] ERROR: Cluster not found with or without prefix\n")
           return(NULL)
         }
       }
       
       # Filter markers for selected cluster
-      cat("[MARKERS DEBUG] Filtering for cluster:", cluster_to_find, "\n")
+      # cat("[MARKERS DEBUG] Filtering for cluster:", cluster_to_find, "\n")
       cluster_markers <- tryCatch({
         umap_data$markers %>%
           filter(cluster == cluster_to_find) %>%
@@ -745,21 +753,25 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             pct.2 = round(pct.2, 3)
           )
       }, error = function(e) {
-        cat("[MARKERS DEBUG] ERROR in data processing:", e$message, "\n")
+        # cat("[MARKERS DEBUG] ERROR in data processing:", e$message, "\n")
         return(NULL)
       })
       
       # Check if we have any markers for this cluster
       if (is.null(cluster_markers) || nrow(cluster_markers) == 0) {
-        cat("[MARKERS DEBUG] No markers found for cluster:", cluster_to_find, "\n")
+        # cat("[MARKERS DEBUG] No markers found for cluster:", cluster_to_find, "\n")
         return(NULL)
       }
       
-      cat("[MARKERS DEBUG] Found", nrow(cluster_markers), "markers for display\n")
-      cat("[MARKERS DEBUG] First 3 genes:", paste(head(cluster_markers$gene, 3), collapse=", "), "\n")
+      # Only log once when first loaded
+      if (isolate(!isTRUE(umap_data$markers_logged))) {
+        cat("[MARKERS DEBUG] Found", nrow(cluster_markers), "markers for display\n")
+        cat("[MARKERS DEBUG] First 3 genes:", paste(head(cluster_markers$gene, 3), collapse=", "), "\n")
+        umap_data$markers_logged <- TRUE
+      }
       
       # Try to create the table
-      cat("[MARKERS DEBUG] Creating DT::datatable...\n")
+      # cat("[MARKERS DEBUG] Creating DT::datatable...\n")
       dt_result <- tryCatch({
         DT::datatable(
           cluster_markers,
@@ -798,11 +810,11 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           backgroundPosition = 'center'
         )
       }, error = function(e) {
-        cat("[MARKERS DEBUG] ERROR creating DT::datatable:", e$message, "\n")
+        # cat("[MARKERS DEBUG] ERROR creating DT::datatable:", e$message, "\n")
         return(NULL)
       })
       
-      cat("[MARKERS DEBUG] DT::datatable creation complete\n")
+      # cat("[MARKERS DEBUG] DT::datatable creation complete\n")
       return(dt_result)
     })
     
