@@ -448,6 +448,10 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     plot_var <- reactiveVal("seurat_clusters")
     plot_type <- reactiveVal("metadata")  # "metadata" or "gene"
     
+    # Load gene expression matrix if available
+    gene_expr_matrix <- reactiveVal(NULL)
+    gene_info <- reactiveVal(NULL)
+    
     # Observer to monitor markers loading - use isolate to prevent loops
     observe({
       isolate({
@@ -592,6 +596,33 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
               }
             }
             
+            # Load gene expression matrix if available
+            # First try the all markers file, then fall back to key genes only
+            expr_path <- file.path(dirname(path), paste0(dataset_name, "_all_markers_expr.rds"))
+            if (!file.exists(expr_path)) {
+              expr_path <- file.path(dirname(path), paste0(dataset_name, "_key_genes_expr.rds"))
+            }
+            
+            if (file.exists(expr_path)) {
+              gene_expr_matrix(readRDS(expr_path))
+              message("Loaded gene expression matrix for ", dataset_name)
+              
+              # Load gene info - try all genes first
+              info_path <- file.path(dirname(path), paste0(dataset_name, "_all_genes_info.rds"))
+              if (!file.exists(info_path)) {
+                info_path <- file.path(dirname(path), paste0(dataset_name, "_gene_info.rds"))
+              }
+              
+              if (file.exists(info_path)) {
+                gene_info(readRDS(info_path))
+                info <- readRDS(info_path)
+                cat(sprintf("  [GENE INFO] Loaded info for %d genes (%d markers, %d key genes)\n",
+                           nrow(info),
+                           sum(info$is_marker, na.rm = TRUE),
+                           sum(info$is_key_gene, na.rm = TRUE)))
+              }
+            }
+            
             return(TRUE)
           }, error = function(e) {
             message("Failed to load UMAP from ", path, ": ", e$message)
@@ -678,18 +709,33 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         
         # Create the plot
         if (plot_type() == "gene") {
-          # Gene expression plot
-          p <- dittoDimPlot(
-            sce_copy,
-            var = var_to_plot,
-            reduction.use = "UMAP",
-            size = 0.7,  # Increased point size for better visibility
-            do.label = FALSE,
-            legend.show = TRUE,
-            main = "",  # Title handled separately
-            min.color = "lightgrey",
-            max.color = "darkred"
-          )
+          # Gene expression plot - need to add expression to SCE
+          expr_mat <- gene_expr_matrix()
+          if (!is.null(expr_mat) && var_to_plot %in% rownames(expr_mat)) {
+            # Get expression values for the gene
+            gene_expr <- expr_mat[var_to_plot, colnames(sce_copy)]
+            
+            # Add to SCE metadata for plotting
+            colData(sce_copy)[[paste0("expr_", var_to_plot)]] <- as.numeric(gene_expr)
+            
+            p <- dittoDimPlot(
+              sce_copy,
+              var = paste0("expr_", var_to_plot),
+              reduction.use = "UMAP",
+              size = 0.7,  # Increased point size for better visibility
+              do.label = FALSE,
+              legend.show = TRUE,
+              main = "",  # Title handled separately
+              min.color = "lightgrey",
+              max.color = "darkred"
+            )
+          } else {
+            # Fallback if gene expression not available
+            plot.new()
+            text(0.5, 0.5, paste("Gene expression data not available for", var_to_plot), 
+                 cex = 1.2, col = "red")
+            return()
+          }
         } else {
           # Metadata plot
           # Check if variable is continuous or discrete
@@ -791,22 +837,42 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         plot_var(input$umap_color_by)
         plot_type("metadata")
       } else {
-        req(umap_data$sce)
+        req(gene_expr_matrix())
         
-        # Check if gene exists in data (case-insensitive)
-        available_genes <- rownames(umap_data$sce)
+        # Check if gene exists in expression matrix (case-insensitive)
+        available_genes <- rownames(gene_expr_matrix())
         gene_match <- available_genes[toupper(available_genes) == toupper(gene)]
         
         if (length(gene_match) > 0) {
           plot_var(gene_match[1])  # Use first match
           plot_type("gene")
         } else if (nchar(gene) > 2) {
-          # Show notification if gene not found (only after typing a few chars)
-          showNotification(
-            sprintf("Gene '%s' not found in dataset", gene),
-            type = "warning",
-            duration = 3
-          )
+          # Check gene info for more informative message
+          info <- gene_info()
+          if (!is.null(info)) {
+            all_genes <- info$gene
+            gene_check <- all_genes[toupper(all_genes) == toupper(gene)]
+            if (length(gene_check) > 0) {
+              showNotification(
+                sprintf("Gene '%s' is not available in the expression data. Only key marker and PD genes are included.", gene),
+                type = "warning",
+                duration = 5
+              )
+            } else {
+              showNotification(
+                sprintf("Gene '%s' not found. Expression data includes %d cluster markers and key PD genes.", 
+                        gene, nrow(gene_expr_matrix())),
+                type = "info",
+                duration = 5
+              )
+            }
+          } else {
+            showNotification(
+              sprintf("Gene expression data not available. Only metadata visualization is supported.", gene),
+              type = "warning",
+              duration = 5
+            )
+          }
         }
       }
     })

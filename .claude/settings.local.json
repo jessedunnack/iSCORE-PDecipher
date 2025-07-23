@@ -45,7 +45,10 @@
       "Bash(then echo \"EXISTS: $file\")",
       "Bash(else echo \"MISSING: $file\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(./run_expression_processing.sh:*)",
+      "Bash(source:*)",
+      "Bash(conda activate:*)"
     ],
     "deny": []
   }

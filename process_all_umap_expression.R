@@ -5,9 +5,11 @@
 # Configuration
 UMAP_DIR <- "inst/extdata/umap_data"
 SEURAT_FILES <- list(
-  "iSCORE_PD" = "../../iSCORE-PD/iSCORE-PD.rds",
-  "iSCORE_PD_CRISPRi" = "../../iSCORE-PD_plus_CRISPRi/iSCORE-PD_plus_CRISPRi.rds",
-  "Full_Dataset" = "../../iSCORE-PD_plus_CRISPRi_and_CRISPRa/iSCORE-PD_plus_CRISPRi_and_CRISPRa.rds"
+  # Only process datasets that actually exist
+  "iSCORE_PD_CRISPRi" = "../../iSCORE-PD_plus_CRISPRi/iSCORE-PD_plus_CRISPRi.rds"
+  # Add other datasets when they become available:
+  # "iSCORE_PD" = "../../all_iSCORE-PD_v1.rds",  # This might be the iSCORE-only file
+  # "Full_Dataset" = "../../iSCORE-PD_plus_CRISPRi_and_CRISPRa/iSCORE-PD_plus_CRISPRi_and_CRISPRa.rds"
 )
 
 # Process each dataset
