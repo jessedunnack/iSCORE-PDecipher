@@ -761,6 +761,9 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           var_data <- colData(sce_copy)[[var_to_plot]]
           is_continuous <- is.numeric(var_data) && length(unique(var_data)) > 20
           
+          # Use randomized order for all metadata except seurat_clusters
+          plot_order <- if (var_to_plot != "seurat_clusters") "randomize" else "unordered"
+          
           p <- dittoDimPlot(
             sce_copy,
             var = var_to_plot,
@@ -769,7 +772,8 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             do.label = !is_continuous && var_to_plot == "seurat_clusters",
             labels.size = 6,  # DOUBLED label size as requested
             legend.show = TRUE,
-            main = ""  # No title to save space
+            main = "",  # No title to save space
+            order = plot_order
           )
         }
         
