@@ -471,19 +471,12 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     gene_expr_matrix <- reactiveVal(NULL)
     gene_info <- reactiveVal(NULL)
     
-    # Observer to monitor markers loading - use isolate to prevent loops
-    observe({
-      isolate({
-        if (!is.null(umap_data$markers)) {
-          cat("\n[MARKERS OBSERVER] Markers have been loaded!\n")
-          cat("[MARKERS OBSERVER] Total rows:", nrow(umap_data$markers), "\n")
-          cat("[MARKERS OBSERVER] Columns:", paste(colnames(umap_data$markers), collapse=", "), "\n")
-          cat("[MARKERS OBSERVER] Unique clusters:", paste(unique(umap_data$markers$cluster), collapse=", "), "\n\n")
-        } else {
-          cat("[MARKERS OBSERVER] Markers are NULL\n")
-        }
-      })
-    })
+    # Flags to prevent reactive loops
+    update_flags <- reactiveValues(
+      updating_clusters = FALSE,
+      updating_metadata = FALSE,
+      loading_umap = FALSE
+    )
     
     # Welcome sticky note dismissal
     observeEvent(input$dismiss_welcome, {
@@ -558,10 +551,15 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         }
       }
       
-      umap_data$dataset_name <- dataset_to_load
-      
-      # Load default 30 PC UMAP first (changed from 100)
-      load_umap_data(dataset_to_load, "30")
+      # Only load if not already loading
+      if (!update_flags$loading_umap) {
+        update_flags$loading_umap <- TRUE
+        umap_data$dataset_name <- dataset_to_load
+        
+        # Load default 30 PC UMAP first (changed from 100)
+        load_umap_data(dataset_to_load, "30")
+        update_flags$loading_umap <- FALSE
+      }
     })
     
     # Function to load UMAP data for specific PC count
@@ -675,18 +673,30 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       }
     }, ignoreInit = TRUE)  # Don't trigger on initial load
     
+    # Create a debounced reactive for plot updates
+    plot_trigger <- reactive({
+      list(
+        pc = input$pc_selection,
+        loaded = umap_data$loaded,
+        var = plot_var(),
+        type = plot_type()
+      )
+    }) %>% debounce(300)  # 300ms debounce
+    
     # Render UMAP plot
     output$umap_plot <- renderPlot({
-      # Add dependency on PC selection to trigger re-render
-      req(input$pc_selection)
+      # Use debounced trigger
+      trigger <- plot_trigger()
+      req(trigger$pc)
       
-      if (!umap_data$loaded || is.null(umap_data$sce)) {
-        # Placeholder when no data
-        plot.new()
-        text(0.5, 0.5, "UMAP data not available\nPlease run extract_umap_data.R", 
-             cex = 1.2, col = "gray60")
-        return()
-      }
+      isolate({
+        if (!umap_data$loaded || is.null(umap_data$sce)) {
+          # Placeholder when no data
+          plot.new()
+          text(0.5, 0.5, "UMAP data not available\nPlease run extract_umap_data.R", 
+               cex = 1.2, col = "gray60")
+          return()
+        }
       
       # Check if dittoSeq is available
       if (!requireNamespace("dittoSeq", quietly = TRUE)) {
@@ -809,6 +819,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         text(0.5, 0.5, paste("Error creating UMAP:\n", e$message), 
              cex = 1.2, col = "red")
       })
+      })  # Close isolate
     })
     
     # Update metadata choices when UMAP data is loaded
