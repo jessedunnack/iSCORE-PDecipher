@@ -181,35 +181,45 @@ landingPageWithUmapUI <- function(id) {
       # Left column - UMAP visualization (expanded width)
       column(8,  # Increased from 7 to 8 for more width
         div(class = "box box-primary", style = "margin-top: 0;",
-          div(class = "box-header with-border",
-            fluidRow(
-              column(12,
-                fluidRow(
-                  column(6,
-                    h3(class = "box-title", style = "margin: 0;",
-                       icon("chart-line"),
-                       "Dataset UMAP Visualization")
-                  ),
-                  column(2, style = "padding-top: 8px;",
-                    selectInput(ns("pc_selection"), 
-                               label = NULL,
-                               choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
-                               selected = "30",
-                               width = "100%")
-                  ),
-                  column(3, style = "padding-top: 8px;",
-                    selectInput(ns("umap_color_by"), 
-                               label = NULL,
-                               choices = c("Clusters" = "seurat_clusters"),
-                               selected = "seurat_clusters",
-                               width = "100%")
-                  ),
-                  column(3, style = "padding-top: 8px;",
-                    textInput(ns("gene_search"),
+          div(class = "box-header with-border", style = "padding: 10px 15px;",
+            div(style = "display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;",
+              # Title section
+              div(style = "flex: 0 0 auto; margin-right: 20px;",
+                h3(class = "box-title", style = "margin: 0; white-space: nowrap;",
+                   icon("chart-line"),
+                   "Dataset UMAP Visualization")
+              ),
+              # Controls section
+              div(style = "flex: 1 1 auto; display: flex; align-items: center; gap: 10px; justify-content: flex-end;",
+                # PC selection
+                div(style = "flex: 0 0 100px;",
+                  div(style = "font-size: 11px; color: #666; margin-bottom: 2px;", "PCs:"),
+                  selectInput(ns("pc_selection"), 
                              label = NULL,
-                             placeholder = "Search gene (e.g., LRRK2)...",
+                             choices = c("30" = "30", "50" = "50", "100" = "100"),
+                             selected = "30",
                              width = "100%")
-                  )
+                ),
+                # Vertical divider
+                div(style = "width: 1px; height: 30px; background-color: #ddd; margin: 0 5px;"),
+                # Color by dropdown
+                div(style = "flex: 0 0 180px;",
+                  div(style = "font-size: 11px; color: #666; margin-bottom: 2px;", "Color by:"),
+                  selectInput(ns("umap_color_by"), 
+                             label = NULL,
+                             choices = c("Clusters" = "seurat_clusters"),
+                             selected = "seurat_clusters",
+                             width = "100%")
+                ),
+                # OR text
+                div(style = "flex: 0 0 auto; color: #666; font-weight: bold; padding: 0 5px;", "OR"),
+                # Gene search
+                div(style = "flex: 0 1 250px; min-width: 180px;",
+                  div(style = "font-size: 11px; color: #666; margin-bottom: 2px;", "Gene expression:"),
+                  textInput(ns("gene_search"),
+                           label = NULL,
+                           placeholder = "Search gene (e.g., LRRK2)...",
+                           width = "100%")
                 )
               )
             )

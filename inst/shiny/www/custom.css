@@ -267,6 +267,7 @@
   background-repeat: no-repeat;
   background-position: 10px center;
   background-size: 16px 16px;
+  height: 34px;
 }
 
 #landing_page-gene_search:focus {
@@ -279,9 +280,27 @@
   font-style: italic;
 }
 
-/* UMAP color dropdown styling */
-#landing_page-umap_color_by {
-  border: 1px solid #3c8dbc;
+/* UMAP control styling */
+#landing_page-umap_color_by,
+#landing_page-pc_selection {
+  border: 1px solid #ccc;
+  height: 34px;
+  font-size: 14px;
+}
+
+#landing_page-umap_color_by:focus,
+#landing_page-pc_selection:focus {
+  border-color: #3c8dbc;
+  box-shadow: 0 0 0 0.2rem rgba(60, 141, 188, 0.25);
+}
+
+/* UMAP header controls container */
+.box-header .selectize-control {
+  margin-bottom: 0;
+}
+
+.box-header .form-group {
+  margin-bottom: 0;
 }
 
 /* Responsive improvements */
