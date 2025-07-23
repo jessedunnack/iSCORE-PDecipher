@@ -532,11 +532,78 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       de_data_mast = NULL,
       de_data_mixscale = NULL,
       umap_data = NULL,
-      sce_list = NULL
+      sce_list = NULL,
+      cluster_markers = NULL,
+      group_markers = NULL
     )
     
     # Store dataset name for PC switching
     dataset_name <- reactiveVal(NULL)
+    
+    # Function to load markers for a dataset
+    load_markers_for_dataset <- function(dataset_name) {
+      # Initialize empty marker lists
+      values$cluster_markers <- NULL
+      values$group_markers <- NULL
+      
+      # Try multiple possible paths for markers
+      base_paths <- c(
+        system.file("extdata", "umap_data", package = "iSCORE.PDecipher"),
+        file.path(getwd(), "inst", "extdata", "umap_data"),
+        "../../inst/extdata/umap_data"
+      )
+      
+      # Load cluster markers
+      for (base_path in base_paths) {
+        cluster_markers_file <- file.path(base_path, paste0(dataset_name, "_cluster_markers.rds"))
+        if (file.exists(cluster_markers_file)) {
+          tryCatch({
+            values$cluster_markers <- readRDS(cluster_markers_file)
+            cat("[DE Results] Loaded cluster markers from:", cluster_markers_file, "\n")
+            break
+          }, error = function(e) {
+            cat("[DE Results] Failed to load cluster markers:", e$message, "\n")
+          })
+        }
+      }
+      
+      # Load group comparison markers
+      for (base_path in base_paths) {
+        group_markers_file <- file.path(base_path, paste0(dataset_name, "_group_comparison_markers.rds"))
+        if (file.exists(group_markers_file)) {
+          tryCatch({
+            values$group_markers <- readRDS(group_markers_file)
+            cat("[DE Results] Loaded group comparison markers from:", group_markers_file, "\n")
+            break
+          }, error = function(e) {
+            cat("[DE Results] Failed to load group markers:", e$message, "\n")
+          })
+        }
+      }
+      
+      # Check for combined markers file as fallback
+      if (is.null(values$cluster_markers) || is.null(values$group_markers)) {
+        for (base_path in base_paths) {
+          combined_file <- file.path(base_path, paste0(dataset_name, "_all_markers_combined.rds"))
+          if (file.exists(combined_file)) {
+            tryCatch({
+              all_markers <- readRDS(combined_file)
+              if (is.null(values$cluster_markers) && !is.null(all_markers$cluster_markers)) {
+                values$cluster_markers <- all_markers$cluster_markers
+                cat("[DE Results] Loaded cluster markers from combined file\n")
+              }
+              if (is.null(values$group_markers) && !is.null(all_markers$group_markers)) {
+                values$group_markers <- all_markers$group_markers
+                cat("[DE Results] Loaded group markers from combined file\n")
+              }
+              break
+            }, error = function(e) {
+              cat("[DE Results] Failed to load combined markers:", e$message, "\n")
+            })
+          }
+        }
+      }
+    }
     
     # Function to load UMAP data for specific PC count (from Overview page)
     load_umap_data <- function(dataset_name, pc_count) {
@@ -592,6 +659,10 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               )
               
               cat("[DE Results] UMAP data extracted:", nrow(values$umap_data), "cells\n")
+              
+              # Load markers if available
+              load_markers_for_dataset(dataset_name)
+              
               return(TRUE)
             }
           }, error = function(e) {
@@ -1046,33 +1117,87 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         # Cell type breakdown
         cell_type_info,
         
-        # Top Cluster Markers section (replicated from Overview page)
+        # Marker Genes section
         tags$div(style = "margin-top: 15px;",
           tags$h5(style = "margin-bottom: 10px; color: #3c8dbc;",
-            icon("dna"), " Top Marker Genes for ", input$cluster_selector
+            icon("dna"), " Marker Genes Analysis"
           ),
-          tags$div(style = "font-size: 11px; color: #666; margin-bottom: 8px;",
-            tags$strong("Method: "), "MAST test, LFC≥0.5, min.pct=0.25, min.diff.pct=0.2, padj<0.05"
-          ),
-          div(style = "height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;",
-            withSpinner(
-              DT::dataTableOutput(ns("cluster_markers_table"), height = "285px"),
-              type = 1,
-              color = "#3c8dbc",
-              size = 0.5
+          
+          # Dynamic UI for marker tabs
+          uiOutput(ns("marker_tabs_ui"))
+        )
+      )
+    })
+    
+    # Dynamic UI for marker tabs
+    output$marker_tabs_ui <- renderUI({
+      req(input$cluster_selector)
+      
+      tabs <- list(
+        # Always show cluster markers tab
+        tabPanel(
+          "Cluster Markers",
+          value = "cluster_tab",
+          tags$div(style = "margin-top: 10px;",
+            tags$div(style = "font-size: 11px; color: #666; margin-bottom: 8px;",
+              tags$strong("Method: "), "MAST test, LFC≥0.5, min.pct=0.25, min.diff.pct=0.2, padj<0.05"
+            ),
+            tags$div(style = "font-size: 12px; margin-bottom: 8px;",
+              "Top marker genes for ", tags$strong(input$cluster_selector), " vs all other clusters"
+            ),
+            div(style = "height: 280px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;",
+              withSpinner(
+                DT::dataTableOutput(session$ns("cluster_markers_table"), height = "265px"),
+                type = 1,
+                color = "#3c8dbc",
+                size = 0.5
+              )
             )
           )
         )
       )
+      
+      # Add group comparisons tab if data is available
+      if (!is.null(values$group_markers)) {
+        tabs <- append(tabs, list(
+          tabPanel(
+            "Group Comparisons",
+            value = "group_tab",
+            tags$div(style = "margin-top: 10px;",
+              selectInput(session$ns("group_comparison_type"),
+                         "Select Comparison:",
+                         choices = c(
+                           "iSCORE-PD: Mutants vs eWT" = "iSCORE_mutants_vs_eWT",
+                           "CRISPRi: Perturbed vs Control" = "CRISPRi_perturbed_vs_control",
+                           "Cross-method: PerturbSeq vs iSCORE" = "PerturbSeq_vs_iSCORE"
+                         ),
+                         width = "100%"),
+              tags$div(style = "font-size: 11px; color: #666; margin-bottom: 8px;",
+                tags$strong("Method: "), "MAST test, LFC≥0.25, min.pct=0.1"
+              ),
+              div(style = "height: 240px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;",
+                withSpinner(
+                  DT::dataTableOutput(session$ns("group_markers_table"), height = "225px"),
+                  type = 1,
+                  color = "#3c8dbc",
+                  size = 0.5
+                )
+              )
+            )
+          )
+        ))
+      }
+      
+      do.call(tabsetPanel, c(list(id = session$ns("marker_tabs")), tabs))
     })
     
     # Render cluster markers table (replicated from Overview page)
     output$cluster_markers_table <- DT::renderDataTable({
       req(input$cluster_selector)
-      req(values$umap_data_obj$markers)
+      req(values$cluster_markers)
       
       # Filter markers for selected cluster
-      cluster_markers <- values$umap_data_obj$markers %>%
+      cluster_markers <- values$cluster_markers %>%
         filter(cluster == input$cluster_selector) %>%
         arrange(desc(avg_log2FC)) %>%
         head(20) %>%  # Show top 20 markers to fit in smaller space
@@ -1108,6 +1233,56 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         DT::formatStyle(
           'avg_log2FC',
           background = DT::styleColorBar(cluster_markers$avg_log2FC, 'lightblue'),
+          backgroundSize = '100% 90%',
+          backgroundRepeat = 'no-repeat',
+          backgroundPosition = 'center'
+        )
+    })
+    
+    # Render group markers table
+    output$group_markers_table <- DT::renderDataTable({
+      req(input$group_comparison_type)
+      req(values$group_markers)
+      
+      # Filter markers for selected comparison
+      group_markers <- values$group_markers %>%
+        filter(comparison == input$group_comparison_type) %>%
+        arrange(desc(avg_log2FC)) %>%
+        head(50) %>%  # Show top 50 markers
+        select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
+        mutate(
+          avg_log2FC = round(avg_log2FC, 2),
+          p_val_adj = format(p_val_adj, scientific = TRUE, digits = 2),
+          pct.1 = round(pct.1 * 100, 1),
+          pct.2 = round(pct.2 * 100, 1)
+        )
+      
+      # Create DataTable with compact settings
+      DT::datatable(
+        group_markers,
+        options = list(
+          pageLength = 10,
+          dom = 'tip',
+          scrollY = '200px',
+          scrollCollapse = TRUE,
+          ordering = TRUE,
+          order = list(list(1, 'desc')),
+          autoWidth = FALSE,
+          columnDefs = list(
+            list(width = '100px', targets = 0),
+            list(width = '60px', targets = 1:4),
+            list(className = 'dt-center', targets = 1:4)
+          )
+        ),
+        rownames = FALSE,
+        colnames = c('Gene', 'Log2FC', 'P-adj', '% Group1', '% Group2')
+      ) %>%
+        DT::formatStyle(
+          'avg_log2FC',
+          background = DT::styleColorBar(
+            range(c(group_markers$avg_log2FC, -group_markers$avg_log2FC)),
+            color = ifelse(group_markers$avg_log2FC > 0, 'lightgreen', 'lightcoral')
+          ),
           backgroundSize = '100% 90%',
           backgroundRepeat = 'no-repeat',
           backgroundPosition = 'center'
