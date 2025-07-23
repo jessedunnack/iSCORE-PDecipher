@@ -219,24 +219,12 @@ landingPageWithUmapUI <- function(id) {
                   selectizeInput(ns("gene_search"),
                                label = NULL,
                                choices = NULL,
-                               selected = NULL,
+                               selected = "",
                                multiple = FALSE,
                                options = list(
                                  placeholder = "Type gene name...",
-                                 maxOptions = 10,
-                                 create = FALSE,
-                                 searchField = "label",
-                                 labelField = "label",
-                                 valueField = "value",
-                                 render = I('{
-                                   option: function(item, escape) {
-                                     return "<div>" + 
-                                            "<strong>" + escape(item.label) + "</strong>" +
-                                            "<span style=\\"color: #666; font-size: 11px; margin-left: 10px;\\">" + 
-                                            escape(item.type) + "</span>" +
-                                            "</div>";
-                                   }
-                                 }')
+                                 maxOptions = 20,
+                                 create = FALSE
                                ),
                                width = "100%")
                 )
@@ -886,21 +874,15 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       isolate({
         info <- gene_info()
         
-        # Create choices with type information
-        gene_choices <- lapply(1:nrow(info), function(i) {
-          list(
-            value = info$gene[i],
-            label = info$gene[i],
-            type = ifelse(info$is_key_gene[i], "PD/Cell Type", "Cluster Marker")
-          )
-        })
+        # Create simple named vector for choices
+        gene_choices <- setNames(info$gene, info$gene)
         
-        # Update selectize with server-side processing for performance
+        # Update selectize with proper choices
         updateSelectizeInput(
           session, "gene_search",
           choices = gene_choices,
-          selected = NULL,
-          server = TRUE
+          selected = "",
+          server = FALSE
         )
       })
     })
