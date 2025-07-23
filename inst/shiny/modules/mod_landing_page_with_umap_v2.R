@@ -246,8 +246,8 @@ landingPageWithUmapUI <- function(id) {
           div(class = "box-body", style = "padding: 5px; text-align: center;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
-                        height = "720px",     # Increased to align with right column
-                        width = "950px"),     # Explicit width for 1.36:1 ratio (950/720)
+                        height = "720px",     # Fixed height
+                        width = "100%"),      # Responsive width instead of fixed
               type = 4,
               color = "#3c8dbc"
             )
@@ -684,7 +684,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         var = plot_var(),
         type = plot_type()
       )
-    }) %>% debounce(300)  # 300ms debounce
+    }) %>% debounce(500)  # Increased to 500ms debounce for stability
     
     # Render UMAP plot
     output$umap_plot <- renderPlot({
@@ -894,8 +894,9 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       gene <- input$gene_search
       
       if (is.null(gene) || gene == "") {
-        # Reset to metadata view
-        plot_var(input$umap_color_by)
+        # Reset to metadata view - use current selection or default to clusters
+        current_metadata <- input$umap_color_by
+        plot_var(ifelse(is.null(current_metadata), "seurat_clusters", current_metadata))
         plot_type("metadata")
       } else {
         # Gene was selected from dropdown
