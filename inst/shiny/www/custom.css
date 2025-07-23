@@ -329,7 +329,16 @@
 /* Stabilize plot container */
 #landing_page-umap_plot {
   min-height: 720px;
-  background-color: #f5f5f5;
+  width: 100% !important;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Ensure the plot image fills the container */
+#landing_page-umap_plot img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: none !important;
 }
 
 /* Responsive improvements */

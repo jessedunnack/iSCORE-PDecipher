@@ -231,11 +231,11 @@ landingPageWithUmapUI <- function(id) {
               )
             )
           ),
-          div(class = "box-body", style = "padding: 5px; text-align: center;",
+          div(class = "box-body", style = "padding: 15px;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
                         height = "720px",     # Fixed height
-                        width = "100%"),      # Responsive width instead of fixed
+                        width = "100%"),      # Responsive width
               type = 4,
               color = "#3c8dbc"
             )
@@ -797,8 +797,8 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         # Maximize plot to fill the entire container space
         p <- p + 
           theme(
-            # MAXIMIZE plot area - remove all margins
-            plot.margin = margin(0, 0, 0, 0, "pt"),  # Zero margins
+            # Adjust margins for better space usage
+            plot.margin = margin(10, 10, 10, 10, "pt"),
             # Larger legend text positioned close to plot
             legend.text = element_text(size = 16),
             legend.title = element_text(size = 18),
@@ -815,10 +815,12 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             panel.grid.major = element_line(color = "grey96", size = 0.3),
             panel.grid.minor = element_blank(),
             # Remove axis ticks to save space
-            axis.ticks = element_blank()
+            axis.ticks = element_blank(),
+            # Ensure square aspect ratio for UMAP
+            aspect.ratio = 1
           ) +
-          # Let plot fill the explicit container dimensions without restrictions
-          coord_cartesian(expand = FALSE)
+          # Let plot fill the container with proper expansion
+          coord_fixed(ratio = 1, expand = TRUE)
         
         return(p)
       }, error = function(e) {
