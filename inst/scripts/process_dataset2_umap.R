@@ -25,7 +25,9 @@ option_list <- list(
   make_option(c("-s", "--save-all-pc"), type="logical", default=FALSE,
               help="Save UMAP for all PC counts (30, 50, 100) (default: FALSE)"),
   make_option(c("-c", "--max-cells"), type="integer", default=500,
-              help="Max cells per cluster for marker calculation (default: 500, use -1 for all cells)")
+              help="Max cells per cluster for marker calculation (default: 500, use -1 for all cells)"),
+  make_option(c("-g", "--group-markers"), type="logical", default=FALSE,
+              help="Calculate group comparison markers (eWT vs mutants, etc.) (default: FALSE)")
 )
 
 opt_parser <- OptionParser(option_list=option_list,
@@ -44,6 +46,7 @@ cat(sprintf("Calculate markers: %s\n", opt$markers))
 cat(sprintf("Force overwrite: %s\n", opt$force))
 cat(sprintf("Save all PC versions: %s\n", opt$`save-all-pc`))
 cat(sprintf("Max cells per cluster: %s\n", ifelse(opt$`max-cells` == -1, "all", opt$`max-cells`)))
+cat(sprintf("Calculate group markers: %s\n", opt$`group-markers`))
 cat("\n")
 
 # Check if output directory exists
@@ -176,6 +179,172 @@ calculate_markers_with_progress <- function(seurat_obj, top_n = 10, max_cells = 
   return(combined_markers)
 }
 
+# Function to calculate group comparison markers
+calculate_group_markers <- function(seurat_obj, max_cells = 500) {
+  cat("\n=== Calculating Group Comparison Markers ===\n")
+  
+  group_markers <- list()
+  
+  # 1. iSCORE-PD: eWT vs all mutants
+  if ("mutation_tidy" %in% colnames(seurat_obj@meta.data)) {
+    cat("\n1. iSCORE-PD comparison: eWT vs all mutants\n")
+    
+    # Create grouping
+    seurat_obj@meta.data$iscore_group <- ifelse(
+      seurat_obj@meta.data$mutation_tidy == "eWT", "eWT", "mutant"
+    )
+    
+    # Check cell counts
+    ewt_cells <- sum(seurat_obj@meta.data$iscore_group == "eWT")
+    mut_cells <- sum(seurat_obj@meta.data$iscore_group == "mutant")
+    cat(sprintf("   - eWT cells: %d\n", ewt_cells))
+    cat(sprintf("   - Mutant cells: %d\n", mut_cells))
+    
+    if (ewt_cells > 10 && mut_cells > 10) {
+      Idents(seurat_obj) <- "iscore_group"
+      
+      markers_ewt_vs_mut <- tryCatch({
+        FindMarkers(seurat_obj,
+                   ident.1 = "mutant",
+                   ident.2 = "eWT",
+                   test.use = "MAST",
+                   logfc.threshold = 0.25,
+                   min.pct = 0.1,
+                   max.cells.per.ident = ifelse(max_cells == -1, Inf, max_cells),
+                   verbose = FALSE)
+      }, error = function(e) {
+        warning(sprintf("Failed to find eWT vs mutant markers: %s", e$message))
+        return(NULL)
+      })
+      
+      if (!is.null(markers_ewt_vs_mut)) {
+        markers_ewt_vs_mut$gene <- rownames(markers_ewt_vs_mut)
+        markers_ewt_vs_mut$comparison <- "iSCORE_mutants_vs_eWT"
+        group_markers[["iSCORE_mutants_vs_eWT"]] <- markers_ewt_vs_mut
+        
+        # Show top markers
+        top_up <- head(markers_ewt_vs_mut[markers_ewt_vs_mut$avg_log2FC > 0, "gene"], 5)
+        top_down <- head(markers_ewt_vs_mut[markers_ewt_vs_mut$avg_log2FC < 0, "gene"], 5)
+        cat(sprintf("   - Top upregulated in mutants: %s\n", paste(top_up, collapse=", ")))
+        cat(sprintf("   - Top downregulated in mutants: %s\n", paste(top_down, collapse=", ")))
+      }
+    } else {
+      cat("   - Skipping: insufficient cells in one or both groups\n")
+    }
+  }
+  
+  # 2. CRISPRi: Non-targeting vs perturbed
+  if ("scMAGeCK_gene_assignment" %in% colnames(seurat_obj@meta.data)) {
+    cat("\n2. CRISPRi comparison: Non-targeting vs perturbed cells\n")
+    
+    # Create grouping
+    seurat_obj@meta.data$crispr_group <- ifelse(
+      seurat_obj@meta.data$scMAGeCK_gene_assignment == "Non-Targeting", 
+      "control", "perturbed"
+    )
+    
+    # Check cell counts
+    ctrl_cells <- sum(seurat_obj@meta.data$crispr_group == "control")
+    pert_cells <- sum(seurat_obj@meta.data$crispr_group == "perturbed")
+    cat(sprintf("   - Control cells: %d\n", ctrl_cells))
+    cat(sprintf("   - Perturbed cells: %d\n", pert_cells))
+    
+    if (ctrl_cells > 10 && pert_cells > 10) {
+      Idents(seurat_obj) <- "crispr_group"
+      
+      markers_ctrl_vs_pert <- tryCatch({
+        FindMarkers(seurat_obj,
+                   ident.1 = "perturbed",
+                   ident.2 = "control",
+                   test.use = "MAST",
+                   logfc.threshold = 0.25,
+                   min.pct = 0.1,
+                   max.cells.per.ident = ifelse(max_cells == -1, Inf, max_cells),
+                   verbose = FALSE)
+      }, error = function(e) {
+        warning(sprintf("Failed to find control vs perturbed markers: %s", e$message))
+        return(NULL)
+      })
+      
+      if (!is.null(markers_ctrl_vs_pert)) {
+        markers_ctrl_vs_pert$gene <- rownames(markers_ctrl_vs_pert)
+        markers_ctrl_vs_pert$comparison <- "CRISPRi_perturbed_vs_control"
+        group_markers[["CRISPRi_perturbed_vs_control"]] <- markers_ctrl_vs_pert
+        
+        # Show top markers
+        top_up <- head(markers_ctrl_vs_pert[markers_ctrl_vs_pert$avg_log2FC > 0, "gene"], 5)
+        top_down <- head(markers_ctrl_vs_pert[markers_ctrl_vs_pert$avg_log2FC < 0, "gene"], 5)
+        cat(sprintf("   - Top upregulated in perturbed: %s\n", paste(top_up, collapse=", ")))
+        cat(sprintf("   - Top downregulated in perturbed: %s\n", paste(top_down, collapse=", ")))
+      }
+    } else {
+      cat("   - Skipping: insufficient cells in one or both groups\n")
+    }
+  }
+  
+  # 3. Cross-method: iSCORE-PD vs PerturbSeq
+  if ("mutation_tidy" %in% colnames(seurat_obj@meta.data) && 
+      "scMAGeCK_gene_assignment" %in% colnames(seurat_obj@meta.data)) {
+    cat("\n3. Cross-method comparison: iSCORE-PD vs PerturbSeq cells\n")
+    
+    # Create grouping based on which metadata is present
+    seurat_obj@meta.data$method_group <- ifelse(
+      !is.na(seurat_obj@meta.data$mutation_tidy), "iSCORE",
+      ifelse(!is.na(seurat_obj@meta.data$scMAGeCK_gene_assignment), "PerturbSeq", NA)
+    )
+    
+    # Check cell counts
+    iscore_cells <- sum(seurat_obj@meta.data$method_group == "iSCORE", na.rm = TRUE)
+    perturb_cells <- sum(seurat_obj@meta.data$method_group == "PerturbSeq", na.rm = TRUE)
+    cat(sprintf("   - iSCORE cells: %d\n", iscore_cells))
+    cat(sprintf("   - PerturbSeq cells: %d\n", perturb_cells))
+    
+    if (iscore_cells > 10 && perturb_cells > 10) {
+      # Remove NA cells for this comparison
+      valid_cells <- !is.na(seurat_obj@meta.data$method_group)
+      seurat_subset <- seurat_obj[, valid_cells]
+      
+      Idents(seurat_subset) <- "method_group"
+      
+      markers_method <- tryCatch({
+        FindMarkers(seurat_subset,
+                   ident.1 = "PerturbSeq",
+                   ident.2 = "iSCORE",
+                   test.use = "MAST",
+                   logfc.threshold = 0.25,
+                   min.pct = 0.1,
+                   max.cells.per.ident = ifelse(max_cells == -1, Inf, max_cells),
+                   verbose = FALSE)
+      }, error = function(e) {
+        warning(sprintf("Failed to find method comparison markers: %s", e$message))
+        return(NULL)
+      })
+      
+      if (!is.null(markers_method)) {
+        markers_method$gene <- rownames(markers_method)
+        markers_method$comparison <- "PerturbSeq_vs_iSCORE"
+        group_markers[["PerturbSeq_vs_iSCORE"]] <- markers_method
+        
+        # Show top markers
+        top_up <- head(markers_method[markers_method$avg_log2FC > 0, "gene"], 5)
+        top_down <- head(markers_method[markers_method$avg_log2FC < 0, "gene"], 5)
+        cat(sprintf("   - Top upregulated in PerturbSeq: %s\n", paste(top_up, collapse=", ")))
+        cat(sprintf("   - Top downregulated in PerturbSeq: %s\n", paste(top_down, collapse=", ")))
+      }
+    } else {
+      cat("   - Skipping: insufficient cells in one or both groups\n")
+    }
+  }
+  
+  # Combine all group markers
+  if (length(group_markers) > 0) {
+    combined_group_markers <- do.call(rbind, group_markers)
+    return(combined_group_markers)
+  } else {
+    return(NULL)
+  }
+}
+
 # Main processing
 tryCatch({
   # Check if Seurat file exists
@@ -256,7 +425,7 @@ tryCatch({
       if (!is.null(markers)) {
         saveRDS(markers, markers_file)
         saved_files <- c(saved_files, markers_file)
-        cat(sprintf("\nSaved markers to: %s\n", basename(markers_file)))
+        cat(sprintf("\nSaved cluster markers to: %s\n", basename(markers_file)))
         
         # Update SCE objects with marker info
         for (file in saved_files) {
@@ -264,6 +433,43 @@ tryCatch({
             sce <- readRDS(file)
             metadata(sce)$has_markers <- TRUE
             metadata(sce)$markers_file <- markers_file
+            saveRDS(sce, file)
+          }
+        }
+      }
+    }
+  }
+  
+  # Calculate group comparison markers if requested
+  if (opt$`group-markers`) {
+    group_markers_file <- file.path(OUTPUT_DIR, sprintf("%s_group_comparison_markers.rds", DATASET_NAME))
+    
+    if (check_overwrite(group_markers_file, opt$force)) {
+      group_markers <- calculate_group_markers(seurat_obj, opt$`max-cells`)
+      
+      if (!is.null(group_markers)) {
+        saveRDS(group_markers, group_markers_file)
+        saved_files <- c(saved_files, group_markers_file)
+        cat(sprintf("\nSaved group comparison markers to: %s\n", basename(group_markers_file)))
+        
+        # Also save a combined markers object with both cluster and group markers
+        combined_markers_file <- file.path(OUTPUT_DIR, sprintf("%s_all_markers_combined.rds", DATASET_NAME))
+        if (check_overwrite(combined_markers_file, opt$force)) {
+          all_markers <- list(
+            cluster_markers = if(exists("markers")) markers else NULL,
+            group_markers = group_markers
+          )
+          saveRDS(all_markers, combined_markers_file)
+          saved_files <- c(saved_files, combined_markers_file)
+          cat(sprintf("Saved combined markers to: %s\n", basename(combined_markers_file)))
+        }
+        
+        # Update SCE objects with group marker info
+        for (file in saved_files) {
+          if (grepl("umap_data", file)) {
+            sce <- readRDS(file)
+            metadata(sce)$has_group_markers <- TRUE
+            metadata(sce)$group_markers_file <- group_markers_file
             saveRDS(sce, file)
           }
         }
