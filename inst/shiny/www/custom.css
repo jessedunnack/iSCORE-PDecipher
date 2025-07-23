@@ -258,26 +258,39 @@
   justify-content: center;
 }
 
-/* Gene search input styling */
-#landing_page-gene_search {
-  border: 2px solid #3c8dbc;
-  border-radius: 4px;
-  padding-left: 35px;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%233c8dbc" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>');
-  background-repeat: no-repeat;
-  background-position: 10px center;
-  background-size: 16px 16px;
-  height: 34px;
+/* Gene search selectize styling */
+#landing_page-gene_search + .selectize-control {
+  margin-bottom: 0;
 }
 
-#landing_page-gene_search:focus {
+#landing_page-gene_search + .selectize-control .selectize-input {
+  border: 2px solid #3c8dbc;
+  border-radius: 4px;
+  height: 34px;
+  line-height: 30px;
+  font-size: 14px;
+}
+
+#landing_page-gene_search + .selectize-control .selectize-input.focus {
   border-color: #357ca5;
   box-shadow: 0 0 0 0.2rem rgba(60, 141, 188, 0.25);
 }
 
-#landing_page-gene_search::placeholder {
-  color: #999;
-  font-style: italic;
+#landing_page-gene_search + .selectize-control .selectize-dropdown {
+  margin-top: 2px;
+  border: 1px solid #3c8dbc;
+  border-radius: 4px;
+}
+
+#landing_page-gene_search + .selectize-control .selectize-dropdown-content {
+  max-height: 200px;
+}
+
+/* Style the gene type labels in dropdown */
+.selectize-dropdown .option span {
+  float: right;
+  font-size: 11px;
+  color: #666;
 }
 
 /* UMAP control styling */

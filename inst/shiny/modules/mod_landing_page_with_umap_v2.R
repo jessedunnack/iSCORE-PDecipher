@@ -213,18 +213,32 @@ landingPageWithUmapUI <- function(id) {
                 ),
                 # OR text
                 div(style = "flex: 0 0 auto; color: #666; font-weight: bold; padding: 0 5px;", "OR"),
-                # Gene search with help button
+                # Gene search with autocomplete
                 div(style = "flex: 0 1 250px; min-width: 180px;",
-                  div(style = "display: flex; align-items: center; gap: 5px; margin-bottom: 2px;",
-                    span(style = "font-size: 11px; color: #666;", "Gene expression:"),
-                    actionButton(ns("gene_help"), "?", 
-                                class = "btn-xs",
-                                style = "padding: 0px 5px; font-size: 10px; line-height: 1;")
-                  ),
-                  textInput(ns("gene_search"),
-                           label = NULL,
-                           placeholder = "Search gene (e.g., LRRK2)...",
-                           width = "100%")
+                  div(style = "font-size: 11px; color: #666; margin-bottom: 2px;", "Gene expression:"),
+                  selectizeInput(ns("gene_search"),
+                               label = NULL,
+                               choices = NULL,
+                               selected = NULL,
+                               multiple = FALSE,
+                               options = list(
+                                 placeholder = "Type gene name...",
+                                 maxOptions = 10,
+                                 create = FALSE,
+                                 searchField = "label",
+                                 labelField = "label",
+                                 valueField = "value",
+                                 render = I('{
+                                   option: function(item, escape) {
+                                     return "<div>" + 
+                                            "<strong>" + escape(item.label) + "</strong>" +
+                                            "<span style=\\"color: #666; font-size: 11px; margin-left: 10px;\\">" + 
+                                            escape(item.type) + "</span>" +
+                                            "</div>";
+                                   }
+                                 }')
+                               ),
+                               width = "100%")
                 )
               )
             )
@@ -831,156 +845,54 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       })
     })
     
-    # Handle gene search with debouncing
-    gene_search_debounced <- debounce(reactive(input$gene_search), 500)
-    
-    observeEvent(gene_search_debounced(), {
-      gene <- trimws(gene_search_debounced())
+    # Update gene choices for selectize when expression data is loaded
+    observe({
+      req(gene_info())
       
-      if (gene == "") {
+      isolate({
+        info <- gene_info()
+        
+        # Create choices with type information
+        gene_choices <- lapply(1:nrow(info), function(i) {
+          list(
+            value = info$gene[i],
+            label = info$gene[i],
+            type = ifelse(info$is_key_gene[i], "PD/Cell Type", "Cluster Marker")
+          )
+        })
+        
+        # Update selectize with server-side processing for performance
+        updateSelectizeInput(
+          session, "gene_search",
+          choices = gene_choices,
+          selected = NULL,
+          server = TRUE
+        )
+      })
+    })
+    
+    # Handle gene search selection
+    observeEvent(input$gene_search, {
+      gene <- input$gene_search
+      
+      if (is.null(gene) || gene == "") {
         # Reset to metadata view
         plot_var(input$umap_color_by)
         plot_type("metadata")
       } else {
-        req(gene_expr_matrix())
-        
-        # Check if gene exists in expression matrix (case-insensitive)
-        available_genes <- rownames(gene_expr_matrix())
-        gene_match <- available_genes[toupper(available_genes) == toupper(gene)]
-        
-        if (length(gene_match) > 0) {
-          plot_var(gene_match[1])  # Use first match
-          plot_type("gene")
-        } else if (nchar(gene) > 2) {
-          # Check gene info for more informative message
-          info <- gene_info()
-          if (!is.null(info)) {
-            all_genes <- info$gene
-            gene_check <- all_genes[toupper(all_genes) == toupper(gene)]
-            if (length(gene_check) > 0) {
-              showNotification(
-                sprintf("Gene '%s' is not available in the expression data. Only key marker and PD genes are included.", gene),
-                type = "warning",
-                duration = 5
-              )
-            } else {
-              showNotification(
-                sprintf("Gene '%s' not found. Expression data includes %d cluster markers and key PD genes.", 
-                        gene, nrow(gene_expr_matrix())),
-                type = "message",
-                duration = 5
-              )
-            }
-          } else {
-            showNotification(
-              sprintf("Gene expression data not available. Only metadata visualization is supported.", gene),
-              type = "warning",
-              duration = 5
-            )
-          }
-        }
+        # Gene was selected from dropdown
+        plot_var(gene)
+        plot_type("gene")
       }
-    })
+    }, ignoreInit = TRUE)
     
     # Handle metadata dropdown changes
     observeEvent(input$umap_color_by, {
       # Clear gene search when metadata is selected
-      updateTextInput(session, "gene_search", value = "")
+      updateSelectizeInput(session, "gene_search", selected = "")
       plot_var(input$umap_color_by)
       plot_type("metadata")
     }, ignoreInit = TRUE)
-    
-    # Handle gene help button
-    observeEvent(input$gene_help, {
-      info <- gene_info()
-      if (!is.null(info)) {
-        # Get some example genes from different categories
-        pd_genes <- head(info$gene[info$is_key_gene], 10)
-        marker_genes <- head(info$gene[info$is_marker & !info$is_key_gene], 10)
-        
-        help_text <- HTML(sprintf(
-          "<div style='max-height: 400px; overflow-y: auto;'>
-          <p><strong>%d genes available for visualization</strong></p>
-          
-          <p><strong>Example PD/cell type genes:</strong><br/>
-          %s</p>
-          
-          <p><strong>Example cluster markers:</strong><br/>
-          %s</p>
-          
-          <p><em>Type any gene name to visualize its expression. 
-          The search is case-insensitive.</em></p>
-          </div>",
-          nrow(info),
-          paste(pd_genes, collapse = ", "),
-          paste(marker_genes, collapse = ", ")
-        ))
-        
-        showModal(modalDialog(
-          title = "Available Genes for Expression Visualization",
-          help_text,
-          footer = tagList(
-            actionButton(session$ns("show_all_genes"), "Show All Genes"),
-            modalButton("Close")
-          ),
-          size = "m"
-        ))
-      } else {
-        showNotification(
-          "Gene expression data not loaded yet. Please wait...",
-          type = "warning",
-          duration = 3
-        )
-      }
-    })
-    
-    # Show all genes in a searchable table
-    observeEvent(input$show_all_genes, {
-      info <- gene_info()
-      if (!is.null(info)) {
-        showModal(modalDialog(
-          title = "All Available Genes",
-          div(style = "margin-bottom: 10px;",
-              "Click on any gene to search for it:"
-          ),
-          DT::dataTableOutput(session$ns("all_genes_table")),
-          footer = modalButton("Close"),
-          size = "l"
-        ))
-      }
-    })
-    
-    # Render the genes table
-    output$all_genes_table <- DT::renderDataTable({
-      info <- gene_info()
-      req(info)
-      
-      # Add gene type column
-      info$type <- ifelse(info$is_key_gene, "Key Gene",
-                         ifelse(info$is_marker, "Cluster Marker", "Other"))
-      
-      DT::datatable(
-        info[, c("gene", "type")],
-        options = list(
-          pageLength = 20,
-          scrollY = "400px",
-          scrollCollapse = TRUE,
-          dom = 'ftip'
-        ),
-        selection = 'single',
-        rownames = FALSE
-      )
-    })
-    
-    # Handle gene selection from table
-    observeEvent(input$all_genes_table_rows_selected, {
-      info <- gene_info()
-      req(info, input$all_genes_table_rows_selected)
-      
-      selected_gene <- info$gene[input$all_genes_table_rows_selected]
-      updateTextInput(session, "gene_search", value = selected_gene)
-      removeModal()
-    })
     
     # Update cluster choices when UMAP data is loaded
     observeEvent(umap_data$loaded, {
