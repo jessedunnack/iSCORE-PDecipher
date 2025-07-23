@@ -920,7 +920,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           title = "Available Genes for Expression Visualization",
           help_text,
           footer = tagList(
-            actionButton(ns("show_all_genes"), "Show All Genes"),
+            actionButton(session$ns("show_all_genes"), "Show All Genes"),
             modalButton("Close")
           ),
           size = "m"
@@ -943,7 +943,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           div(style = "margin-bottom: 10px;",
               "Click on any gene to search for it:"
           ),
-          DT::dataTableOutput(ns("all_genes_table")),
+          DT::dataTableOutput(session$ns("all_genes_table")),
           footer = modalButton("Close"),
           size = "l"
         ))
