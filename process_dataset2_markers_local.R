@@ -36,8 +36,8 @@ option_list <- list(
               help="Max cells per ident for FindAllMarkers, use -1 for Inf (default: 500)"),
   
   # FindMarkers parameters for group comparisons
-  make_option("--group-markers", type="logical", default=FALSE,
-              help="Calculate group comparison markers using FindMarkers (default: FALSE)"),
+  make_option("--group-markers", type="logical", default=TRUE,
+              help="Calculate group comparison markers using FindMarkers (default: TRUE)"),
   make_option("--group-test", type="character", default="MAST",
               help="Test to use for FindMarkers: MAST, wilcox, bimod, roc, t, negbinom, poisson, LR, DESeq2 (default: MAST)"),
   make_option("--group-logfc", type="numeric", default=0.25,
