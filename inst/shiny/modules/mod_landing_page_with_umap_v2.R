@@ -467,6 +467,14 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     plot_var <- reactiveVal("seurat_clusters")
     plot_type <- reactiveVal("metadata")  # "metadata" or "gene"
     
+    # Initialize plot variable properly when UMAP loads
+    observeEvent(umap_data$loaded, {
+      if (umap_data$loaded && is.null(isolate(plot_var()))) {
+        plot_var("seurat_clusters")
+        plot_type("metadata")
+      }
+    }, once = TRUE)
+    
     # Load gene expression matrix if available
     gene_expr_matrix <- reactiveVal(NULL)
     gene_info <- reactiveVal(NULL)
@@ -714,6 +722,14 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       # Create UMAP plot - OPTIMIZED FOR LARGER DISPLAY
       tryCatch({
         var_to_plot <- plot_var()
+        
+        # Ensure we have a valid variable to plot
+        if (is.null(var_to_plot) || var_to_plot == "") {
+          var_to_plot <- "seurat_clusters"
+          plot_var("seurat_clusters")
+          plot_type("metadata")
+        }
+        
         plot_title <- if (plot_type() == "gene") {
           sprintf("%s Expression", var_to_plot)
         } else {
