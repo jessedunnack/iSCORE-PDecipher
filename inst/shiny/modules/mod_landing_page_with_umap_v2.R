@@ -258,7 +258,7 @@ landingPageWithUmapUI <- function(id) {
               column(6,
                 div(style = "margin-top: 5px; font-size: 12px; color: #555; line-height: 1.4;",
                     strong("MAST test:"), " LFC≥0.5, min.pct=0.25, min.diff.pct=0.2", br(),
-                    strong("Filters:"), " padj<0.05, top 25 markers, both pos/neg")
+                    strong("Filters:"), " padj<0.05, top 50 markers, both pos/neg")
               )
             ),
             # Markers table - explicit height
@@ -744,7 +744,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         umap_data$markers %>%
           filter(cluster == cluster_to_find) %>%
           arrange(desc(avg_log2FC)) %>%
-          head(25) %>%  # Fixed to top 25 markers
+          head(50) %>%  # Show top 50 markers
           select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
           mutate(
             avg_log2FC = round(avg_log2FC, 3),
@@ -776,8 +776,8 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         DT::datatable(
           cluster_markers,
           options = list(
-          pageLength = 12,  # Show fewer rows to fit in compact space
-          scrollY = "360px",  # Increased to match new table height
+          pageLength = 25,  # Show 25 rows per page (can scroll for more)
+          scrollY = "360px",  # Scrollable area height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
           autoWidth = TRUE,  # Enable automatic width calculation
