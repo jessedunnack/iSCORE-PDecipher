@@ -919,7 +919,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         DT::datatable(
           cluster_markers,
           options = list(
-          pageLength = 25,  # Show 25 rows per page (can scroll for more)
+          pageLength = 50,  # Show 50 rows to match the head(50) limit
           scrollY = "360px",  # Scrollable area height
           scrollCollapse = TRUE,
           dom = 't',  # Only show table (no search/pagination)
