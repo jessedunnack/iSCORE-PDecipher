@@ -494,7 +494,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     })
     
     # Determine which UMAP dataset to load based on user selection or app data
-    observe({
+    observeEvent(data$data_loaded, {
       req(data$data_loaded)
       
       # Use provided dataset name if available, otherwise fallback to auto-detection
@@ -560,7 +560,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         load_umap_data(dataset_to_load, "30")
         update_flags$loading_umap <- FALSE
       }
-    })
+    }, once = TRUE)  # Only run once when data loads
     
     # Function to load UMAP data for specific PC count
     load_umap_data <- function(dataset_name, pc_count) {
@@ -596,7 +596,10 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
               cat("  [UMAP DEBUG] Cluster names:", paste(head(sort(unique(umap_data$sce$cluster)), 10), collapse=", "), "...\n")
             }
             
-            umap_data$loaded <- TRUE
+            # Use isolate to prevent reactive triggers during loading
+            isolate({
+              umap_data$loaded <- TRUE
+            })
             message("Loaded UMAP (", pc_count, " PCs) for ", dataset_name, " from: ", path)
             
             # Load markers if this is the first load
