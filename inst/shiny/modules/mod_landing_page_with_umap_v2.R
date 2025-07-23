@@ -2,6 +2,12 @@
 # Compact layout with UMAP on left, summary boxes on right
 # UMAP dataset determined by loaded data, not user selection
 
+# Ensure required packages are loaded
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  stop("dplyr package is required")
+}
+library(dplyr)
+
 # Source the UMAP viewer module
 source("modules/mod_umap_viewer.R")
 
@@ -256,13 +262,27 @@ landingPageWithUmapUI <- function(id) {
               )
             ),
             # Markers table - explicit height
-            div(style = "height: 400px; overflow-y: auto; margin-top: 10px;",
+            div(id = ns("markers_table_container"), 
+                style = "height: 400px; overflow-y: auto; margin-top: 10px; border: 1px solid #ddd; padding: 5px;",
+              p("Loading marker genes...", id = ns("markers_loading_text"), style = "color: #888; text-align: center;"),
               withSpinner(
                 DT::dataTableOutput(ns("markers_table"), height = "385px"),
                 type = 1,
                 color = "#3c8dbc"
               )
-            )
+            ),
+            # Debug info
+            tags$script(HTML(sprintf("
+              $(document).ready(function() {
+                console.log('Markers table container exists:', $('#%s').length > 0);
+                console.log('Markers table output exists:', $('#%s').length > 0);
+                
+                // Monitor for table updates
+                Shiny.addCustomMessageHandler('%s', function(message) {
+                  console.log('Markers table update:', message);
+                });
+              });
+            ", ns("markers_table_container"), ns("markers_table"), ns("markers_debug"))))
           )
         )
       )
@@ -394,6 +414,18 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       loaded = FALSE,
       markers = NULL
     )
+    
+    # Observer to monitor markers loading
+    observe({
+      if (!is.null(umap_data$markers)) {
+        cat("\n[MARKERS OBSERVER] Markers have been loaded!\n")
+        cat("[MARKERS OBSERVER] Total rows:", nrow(umap_data$markers), "\n")
+        cat("[MARKERS OBSERVER] Columns:", paste(colnames(umap_data$markers), collapse=", "), "\n")
+        cat("[MARKERS OBSERVER] Unique clusters:", paste(unique(umap_data$markers$cluster), collapse=", "), "\n\n")
+      } else {
+        cat("[MARKERS OBSERVER] Markers are NULL\n")
+      }
+    })
     
     # Welcome sticky note dismissal
     observeEvent(input$dismiss_welcome, {
@@ -656,13 +688,30 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       }
     })
     
+    # Test: Simple text output first
+    output$markers_test <- renderText({
+      paste("Test: Cluster", input$selected_cluster, "selected. Markers loaded:", !is.null(umap_data$markers))
+    })
+    
     # Render markers table
     output$markers_table <- DT::renderDataTable({
-      req(input$selected_cluster)
-      req(umap_data$markers)
+      cat("\n[MARKERS RENDER] Starting renderDataTable function\n")
+      
+      # Check if cluster is selected
+      if (is.null(input$selected_cluster)) {
+        cat("[MARKERS RENDER] No cluster selected\n")
+        return(NULL)
+      }
+      cat("[MARKERS RENDER] Selected cluster:", input$selected_cluster, "\n")
+      
+      # Check if markers are loaded
+      if (is.null(umap_data$markers)) {
+        cat("[MARKERS RENDER] No markers data loaded\n")
+        return(NULL)
+      }
+      cat("[MARKERS RENDER] Markers loaded with", nrow(umap_data$markers), "rows\n")
       
       # Debug logging
-      cat("[MARKERS DEBUG] Selected cluster:", input$selected_cluster, "\n")
       cat("[MARKERS DEBUG] Available clusters in markers:", 
           paste(unique(umap_data$markers$cluster), collapse=", "), "\n")
       
@@ -675,34 +724,46 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         if (cluster_with_prefix %in% umap_data$markers$cluster) {
           cluster_to_find <- cluster_with_prefix
           cat("[MARKERS DEBUG] Using prefixed cluster name:", cluster_to_find, "\n")
+        } else {
+          cat("[MARKERS DEBUG] ERROR: Cluster not found with or without prefix\n")
+          return(NULL)
         }
       }
       
       # Filter markers for selected cluster
-      cluster_markers <- umap_data$markers %>%
-        filter(cluster == cluster_to_find) %>%
-        arrange(desc(avg_log2FC)) %>%
-        head(25) %>%  # Fixed to top 25 markers
-        select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
-        mutate(
-          avg_log2FC = round(avg_log2FC, 3),
-          p_val_adj = formatC(p_val_adj, format = "e", digits = 2),
-          pct.1 = round(pct.1, 3),
-          pct.2 = round(pct.2, 3)
-        )
+      cat("[MARKERS DEBUG] Filtering for cluster:", cluster_to_find, "\n")
+      cluster_markers <- tryCatch({
+        umap_data$markers %>%
+          filter(cluster == cluster_to_find) %>%
+          arrange(desc(avg_log2FC)) %>%
+          head(25) %>%  # Fixed to top 25 markers
+          select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
+          mutate(
+            avg_log2FC = round(avg_log2FC, 3),
+            p_val_adj = formatC(p_val_adj, format = "e", digits = 2),
+            pct.1 = round(pct.1, 3),
+            pct.2 = round(pct.2, 3)
+          )
+      }, error = function(e) {
+        cat("[MARKERS DEBUG] ERROR in data processing:", e$message, "\n")
+        return(NULL)
+      })
       
       # Check if we have any markers for this cluster
-      if (nrow(cluster_markers) == 0) {
+      if (is.null(cluster_markers) || nrow(cluster_markers) == 0) {
         cat("[MARKERS DEBUG] No markers found for cluster:", cluster_to_find, "\n")
         return(NULL)
       }
       
       cat("[MARKERS DEBUG] Found", nrow(cluster_markers), "markers for display\n")
+      cat("[MARKERS DEBUG] First 3 genes:", paste(head(cluster_markers$gene, 3), collapse=", "), "\n")
       
-      # Create DataTable with settings optimized for compact right column
-      DT::datatable(
-        cluster_markers,
-        options = list(
+      # Try to create the table
+      cat("[MARKERS DEBUG] Creating DT::datatable...\n")
+      dt_result <- tryCatch({
+        DT::datatable(
+          cluster_markers,
+          options = list(
           pageLength = 12,  # Show fewer rows to fit in compact space
           scrollY = "360px",  # Increased to match new table height
           scrollCollapse = TRUE,
@@ -736,6 +797,13 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           backgroundRepeat = 'no-repeat',
           backgroundPosition = 'center'
         )
+      }, error = function(e) {
+        cat("[MARKERS DEBUG] ERROR creating DT::datatable:", e$message, "\n")
+        return(NULL)
+      })
+      
+      cat("[MARKERS DEBUG] DT::datatable creation complete\n")
+      return(dt_result)
     })
     
     # Cell count box
