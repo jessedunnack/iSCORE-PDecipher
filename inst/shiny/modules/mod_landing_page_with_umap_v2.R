@@ -183,17 +183,34 @@ landingPageWithUmapUI <- function(id) {
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             fluidRow(
-              column(9,
-                h3(class = "box-title", style = "margin: 0;",
-                   icon("chart-line"),
-                   "Dataset UMAP Visualization")
-              ),
-              column(3, style = "padding-top: 8px; text-align: right;",
-                selectInput(ns("pc_selection"), 
-                           label = NULL,
-                           choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
-                           selected = "30",  # Changed default to 30 PCs
-                           width = "100px")
+              column(12,
+                fluidRow(
+                  column(6,
+                    h3(class = "box-title", style = "margin: 0;",
+                       icon("chart-line"),
+                       "Dataset UMAP Visualization")
+                  ),
+                  column(2, style = "padding-top: 8px;",
+                    selectInput(ns("pc_selection"), 
+                               label = NULL,
+                               choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
+                               selected = "30",
+                               width = "100%")
+                  ),
+                  column(3, style = "padding-top: 8px;",
+                    selectInput(ns("umap_color_by"), 
+                               label = NULL,
+                               choices = c("Clusters" = "seurat_clusters"),
+                               selected = "seurat_clusters",
+                               width = "100%")
+                  ),
+                  column(3, style = "padding-top: 8px;",
+                    textInput(ns("gene_search"),
+                             label = NULL,
+                             placeholder = "Search gene (e.g., LRRK2)...",
+                             width = "100%")
+                  )
+                )
               )
             )
           ),
@@ -406,6 +423,9 @@ landingPageWithUmapUI <- function(id) {
 landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
   moduleServer(id, function(input, output, session) {
     
+    # Define %||% operator if not available
+    `%||%` <- function(a, b) if (is.null(a)) b else a
+    
     # Reactive values for UMAP data and markers
     umap_data <- reactiveValues(
       sce = NULL,
@@ -413,6 +433,10 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       loaded = FALSE,
       markers = NULL
     )
+    
+    # Track current plotting variable (metadata or gene)
+    plot_var <- reactiveVal("seurat_clusters")
+    plot_type <- reactiveVal("metadata")  # "metadata" or "gene"
     
     # Observer to monitor markers loading - use isolate to prevent loops
     observe({
@@ -614,23 +638,65 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       
       library(dittoSeq)
       
-      # Create UMAP plot colored by clusters - OPTIMIZED FOR LARGER DISPLAY
+      # Create UMAP plot - OPTIMIZED FOR LARGER DISPLAY
       tryCatch({
-        # Fix cluster ordering: ensure numeric order instead of alphabetical
-        sce_copy <- umap_data$sce
-        cluster_levels <- natural_sort_clusters(unique(sce_copy$seurat_clusters))
-        sce_copy$seurat_clusters <- factor(sce_copy$seurat_clusters, levels = cluster_levels)
+        var_to_plot <- plot_var()
+        plot_title <- if (plot_type() == "gene") {
+          sprintf("%s Expression", var_to_plot)
+        } else {
+          # Create nice title for metadata
+          title_map <- c(
+            "seurat_clusters" = "Cell Clusters",
+            "batch" = "Batch",
+            "experiment" = "Experiment",
+            "experiments" = "Experiments",
+            "sampleID" = "Sample ID",
+            "subcloneID" = "Subclone ID",
+            "mutation_tidy" = "Mutation",
+            "scMAGeCK_gene_assignment" = "CRISPR Target",
+            "orig.ident" = "Original Identity"
+          )
+          title_map[var_to_plot] %||% gsub("_", " ", tools::toTitleCase(var_to_plot))
+        }
         
-        p <- dittoDimPlot(
-          sce_copy,
-          var = "seurat_clusters",
-          reduction.use = "UMAP",
-          size = 0.7,  # Increased point size for better visibility
-          do.label = TRUE,
-          labels.size = 6,  # DOUBLED label size as requested
-          legend.show = TRUE,
-          main = ""  # No title to save space
-        )
+        # Fix cluster ordering if plotting clusters
+        sce_copy <- umap_data$sce
+        if (var_to_plot == "seurat_clusters") {
+          cluster_levels <- natural_sort_clusters(unique(sce_copy$seurat_clusters))
+          sce_copy$seurat_clusters <- factor(sce_copy$seurat_clusters, levels = cluster_levels)
+        }
+        
+        # Create the plot
+        if (plot_type() == "gene") {
+          # Gene expression plot
+          p <- dittoDimPlot(
+            sce_copy,
+            var = var_to_plot,
+            reduction.use = "UMAP",
+            size = 0.7,  # Increased point size for better visibility
+            do.label = FALSE,
+            legend.show = TRUE,
+            main = "",  # Title handled separately
+            min.color = "lightgrey",
+            max.color = "darkred"
+          )
+        } else {
+          # Metadata plot
+          # Check if variable is continuous or discrete
+          var_data <- colData(sce_copy)[[var_to_plot]]
+          is_continuous <- is.numeric(var_data) && length(unique(var_data)) > 20
+          
+          p <- dittoDimPlot(
+            sce_copy,
+            var = var_to_plot,
+            reduction.use = "UMAP",
+            size = 0.7,  # Increased point size for better visibility
+            do.label = !is_continuous && var_to_plot == "seurat_clusters",
+            labels.size = 6,  # DOUBLED label size as requested
+            legend.show = TRUE,
+            main = ""  # No title to save space
+          )
+        }
         
         # Maximize plot to fill the entire container space
         p <- p + 
@@ -665,6 +731,83 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
              cex = 1.2, col = "red")
       })
     })
+    
+    # Update metadata choices when UMAP data is loaded
+    observe({
+      req(umap_data$loaded)
+      req(umap_data$sce)
+      
+      isolate({
+        # Get available metadata columns
+        metadata_cols <- colnames(colData(umap_data$sce))
+        
+        # Define interesting metadata columns to show
+        interesting_cols <- c("seurat_clusters", "batch", "experiment", "experiments",
+                             "sampleID", "subcloneID", "mutation_tidy", 
+                             "scMAGeCK_gene_assignment", "orig.ident")
+        
+        # Filter to only available columns
+        available_cols <- intersect(interesting_cols, metadata_cols)
+        
+        # Create named list for choices with better display names
+        choice_names <- available_cols
+        choice_names[choice_names == "seurat_clusters"] <- "Clusters"
+        choice_names[choice_names == "batch"] <- "Batch"
+        choice_names[choice_names == "experiment"] <- "Experiment"
+        choice_names[choice_names == "experiments"] <- "Experiments"
+        choice_names[choice_names == "sampleID"] <- "Sample ID"
+        choice_names[choice_names == "subcloneID"] <- "Subclone ID"
+        choice_names[choice_names == "mutation_tidy"] <- "Mutation"
+        choice_names[choice_names == "scMAGeCK_gene_assignment"] <- "CRISPR Target"
+        choice_names[choice_names == "orig.ident"] <- "Original Identity"
+        
+        choices <- setNames(available_cols, choice_names)
+        
+        # Update dropdown
+        updateSelectInput(session, "umap_color_by", 
+                         choices = choices,
+                         selected = "seurat_clusters")
+      })
+    })
+    
+    # Handle gene search with debouncing
+    gene_search_debounced <- debounce(reactive(input$gene_search), 500)
+    
+    observeEvent(gene_search_debounced(), {
+      gene <- trimws(gene_search_debounced())
+      
+      if (gene == "") {
+        # Reset to metadata view
+        plot_var(input$umap_color_by)
+        plot_type("metadata")
+      } else {
+        req(umap_data$sce)
+        
+        # Check if gene exists in data (case-insensitive)
+        available_genes <- rownames(umap_data$sce)
+        gene_match <- available_genes[toupper(available_genes) == toupper(gene)]
+        
+        if (length(gene_match) > 0) {
+          plot_var(gene_match[1])  # Use first match
+          plot_type("gene")
+        } else if (nchar(gene) > 2) {
+          # Show notification if gene not found (only after typing a few chars)
+          showNotification(
+            sprintf("Gene '%s' not found in dataset", gene),
+            type = "warning",
+            duration = 3
+          )
+        }
+      }
+    })
+    
+    # Handle metadata dropdown changes
+    observeEvent(input$umap_color_by, {
+      # Clear gene search when metadata is selected
+      updateTextInput(session, "gene_search", value = "")
+      plot_var(input$umap_color_by)
+      plot_type("metadata")
+    }, ignoreInit = TRUE)
     
     # Update cluster choices when UMAP data is loaded
     observeEvent(umap_data$loaded, {

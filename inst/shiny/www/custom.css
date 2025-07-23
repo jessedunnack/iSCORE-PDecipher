@@ -258,6 +258,32 @@
   justify-content: center;
 }
 
+/* Gene search input styling */
+#landing_page-gene_search {
+  border: 2px solid #3c8dbc;
+  border-radius: 4px;
+  padding-left: 35px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%233c8dbc" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>');
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  background-size: 16px 16px;
+}
+
+#landing_page-gene_search:focus {
+  border-color: #357ca5;
+  box-shadow: 0 0 0 0.2rem rgba(60, 141, 188, 0.25);
+}
+
+#landing_page-gene_search::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+/* UMAP color dropdown styling */
+#landing_page-umap_color_by {
+  border: 1px solid #3c8dbc;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .main-sidebar {
