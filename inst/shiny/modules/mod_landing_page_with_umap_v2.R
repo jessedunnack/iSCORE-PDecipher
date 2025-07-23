@@ -798,12 +798,12 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         p <- p + 
           theme(
             # Adjust margins for better space usage
-            plot.margin = margin(10, 10, 10, 10, "pt"),
+            plot.margin = margin(20, 60, 20, 20, "pt"),  # Increased right margin for legend
             # Larger legend text positioned close to plot
             legend.text = element_text(size = 16),
             legend.title = element_text(size = 18),
             legend.position = "right",
-            legend.margin = margin(0, 0, 0, 5, "pt"),
+            legend.margin = margin(0, 0, 0, 10, "pt"),
             legend.key.size = unit(1.2, "lines"),
             # Larger axis text for the bigger plot
             axis.text = element_text(size = 14),
@@ -815,12 +815,10 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             panel.grid.major = element_line(color = "grey96", size = 0.3),
             panel.grid.minor = element_blank(),
             # Remove axis ticks to save space
-            axis.ticks = element_blank(),
-            # Ensure square aspect ratio for UMAP
-            aspect.ratio = 1
+            axis.ticks = element_blank()
           ) +
-          # Let plot fill the container with proper expansion
-          coord_fixed(ratio = 1, expand = TRUE)
+          # Use coord_equal to maintain 1:1 aspect ratio while filling space
+          coord_equal(ratio = 1)
         
         return(p)
       }, error = function(e) {
@@ -829,7 +827,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
              cex = 1.2, col = "red")
       })
       })  # Close isolate
-    })
+    }, width = "auto", height = 720)  # Auto width to fill container, fixed height
     
     # Update metadata choices when UMAP data is loaded
     observe({
