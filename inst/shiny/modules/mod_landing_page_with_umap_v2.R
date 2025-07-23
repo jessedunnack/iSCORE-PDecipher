@@ -514,9 +514,14 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             # Load markers if this is the first load
             if (is.null(umap_data$markers)) {
               markers_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers.rds"))
+              cat("[MARKERS LOAD DEBUG] Looking for markers at:", markers_path, "\n")
               if (file.exists(markers_path)) {
                 umap_data$markers <- readRDS(markers_path)
                 message("Loaded markers for ", dataset_name)
+                cat("[MARKERS LOAD DEBUG] Loaded", nrow(umap_data$markers), "total markers\n")
+                cat("[MARKERS LOAD DEBUG] Unique clusters:", paste(unique(umap_data$markers$cluster), collapse=", "), "\n")
+              } else {
+                cat("[MARKERS LOAD DEBUG] Markers file not found!\n")
               }
             }
             
@@ -656,9 +661,26 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       req(input$selected_cluster)
       req(umap_data$markers)
       
+      # Debug logging
+      cat("[MARKERS DEBUG] Selected cluster:", input$selected_cluster, "\n")
+      cat("[MARKERS DEBUG] Available clusters in markers:", 
+          paste(unique(umap_data$markers$cluster), collapse=", "), "\n")
+      
+      # Handle cluster name format mismatch
+      # If selected_cluster is "0" but markers have "cluster_0", adjust accordingly
+      cluster_to_find <- input$selected_cluster
+      if (!cluster_to_find %in% umap_data$markers$cluster) {
+        # Try with "cluster_" prefix
+        cluster_with_prefix <- paste0("cluster_", cluster_to_find)
+        if (cluster_with_prefix %in% umap_data$markers$cluster) {
+          cluster_to_find <- cluster_with_prefix
+          cat("[MARKERS DEBUG] Using prefixed cluster name:", cluster_to_find, "\n")
+        }
+      }
+      
       # Filter markers for selected cluster
       cluster_markers <- umap_data$markers %>%
-        filter(cluster == input$selected_cluster) %>%
+        filter(cluster == cluster_to_find) %>%
         arrange(desc(avg_log2FC)) %>%
         head(25) %>%  # Fixed to top 25 markers
         select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
@@ -668,6 +690,14 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           pct.1 = round(pct.1, 3),
           pct.2 = round(pct.2, 3)
         )
+      
+      # Check if we have any markers for this cluster
+      if (nrow(cluster_markers) == 0) {
+        cat("[MARKERS DEBUG] No markers found for cluster:", cluster_to_find, "\n")
+        return(NULL)
+      }
+      
+      cat("[MARKERS DEBUG] Found", nrow(cluster_markers), "markers for display\n")
       
       # Create DataTable with settings optimized for compact right column
       DT::datatable(

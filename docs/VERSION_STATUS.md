@@ -1,13 +1,13 @@
 # Version Status Summary
-**Date**: January 20, 2025
-**Current Version**: v0.3.3
-**Branch**: v0.2.9-fixes
+**Date**: July 22, 2025
+**Current Version**: v0.3.5
+**Branch**: main
 
 ## Current State
 
-We are on the `v0.2.9-fixes` branch, which has diverged from `main`. Our branch contains:
+We are on the `main` branch with the latest stable version. Current features include:
 
-### Major Features Added (v0.3.0 - v0.3.3):
+### Major Features Added (v0.3.0 - v0.3.5):
 1. **v0.3.0**: Comprehensive PD signature analysis suite
    - Full analysis of all 16 PD genes and 15 clusters
    - Created visualization pipeline for thesis committee
@@ -27,10 +27,21 @@ We are on the `v0.2.9-fixes` branch, which has diverged from `main`. Our branch 
    - Improved label visibility in convergence strength plot
    - Added metric recommendations documentation
 
-## Branch Divergence
+5. **v0.3.4**: Heatmap UI/UX enhancements (July 20, 2025)
+   - All collapsible panels start expanded by default
+   - Biological pathway categories enabled by default
+   - Auto color scale selection based on gene direction (UP→red, DOWN→blue)
+   - Improved workflow with fewer clicks
 
-- **Our branch (v0.2.9-fixes)**: Contains PD signature analysis features (v0.3.x)
-- **Main branch**: At v0.2.8 with different bug fixes
+6. **v0.3.5**: Enrichment type selection moved to visualization module (July 20, 2025)
+   - Moved enrichment database dropdown from global settings to visualization module
+   - Users can switch between GO_BP, GO_CC, GO_MF, KEGG, Reactome, WikiPathways, STRING, GSEA directly in visualizations
+   - Dynamic dropdown updates based on available data
+   - Better workflow - no need to leave visualization page
+
+## Current Status
+
+The main branch is now the default with all stable features from the stable-heatmap branch merged. Repository has been reorganized with proper folder structure.
 
 ## All Changes Since v0.2.9
 
@@ -60,10 +71,15 @@ We are on the `v0.2.9-fixes` branch, which has diverged from `main`. Our branch 
 
 ## Recommendation
 
-The v0.2.9-fixes branch contains all the PD signature analysis work and should be considered the latest version. The main branch has different bug fixes that may need to be evaluated separately.
+The main branch is now the default and contains all features. Users should install directly from GitHub:
 
-To consolidate:
-1. This branch (v0.2.9-fixes) has the complete analysis pipeline
-2. All visualizations are updated and corrected
-3. Documentation is comprehensive
-4. Version v0.3.3 represents the latest stable state
+```r
+remotes::install_github("jessedunnack/iSCORE-PDecipher")
+```
+
+Current stable version v0.3.5 includes:
+1. Complete PD signature analysis pipeline
+2. All visualization improvements and fixes
+3. Enhanced UI/UX for better workflow
+4. Comprehensive documentation
+5. Repository reorganization with proper folder structure

@@ -2,7 +2,7 @@
 
 # Standalone script to process UMAP and markers for dataset 2
 # Run this from: E:/scRNSeq/PerturbSeq/final/update_analysis_scripts/iSCORE-PDecipher
-# It will find the Seurat object in: ../iSCORE-PD_plus_CRISPRi
+# It will find the Seurat object in: ../../iSCORE-PD_plus_CRISPRi
 
 suppressPackageStartupMessages({
   library(Seurat)
@@ -64,7 +64,7 @@ opt <- parse_args(opt_parser)
 
 # Configuration
 DATASET_NAME <- "iSCORE_PD_CRISPRi"
-SEURAT_FILE <- "../iSCORE-PD_plus_CRISPRi/iSCORE-PD_plus_CRISPRi.rds"
+SEURAT_FILE <- "../../iSCORE-PD_plus_CRISPRi/iSCORE-PD_plus_CRISPRi.rds"
 OUTPUT_DIR <- opt$`output-dir`
 
 cat("\n=== UMAP & Marker Processing for Dataset 2 ===\n")
