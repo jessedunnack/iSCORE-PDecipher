@@ -171,10 +171,10 @@ landingPageWithUmapUI <- function(id) {
     # Main content area with dynamic margin adjustment
     div(id = ns("main_content"), class = "main-content-with-note",
       # Main content area with two columns - OPTIMIZED LAYOUT
-      fluidRow(style = "min-height: 700px;", # Use explicit minimum height
-      # Left column - UMAP visualization (expanded width)
-      column(9,  # Increased from 8 to 9 for maximum width
-        div(class = "box box-primary", style = "margin-top: 0;",
+      fluidRow(style = "min-height: 900px;", # Increased to accommodate larger UMAP
+      # Left column - UMAP visualization (fit to content)
+      column(7,  # Reduced to fit the square UMAP tightly
+        div(class = "box box-primary", style = "margin-top: 0; padding: 0;",
           div(class = "box-header with-border",
             fluidRow(
               column(6,
@@ -198,11 +198,11 @@ landingPageWithUmapUI <- function(id) {
               )
             )
           ),
-          div(class = "box-body", style = "padding: 10px; overflow: hidden;",
+          div(class = "box-body", style = "padding: 5px; overflow: hidden;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
-                        height = "800px",     # Fixed height
-                        width = "800px"),     # Fixed width to match height
+                        height = "900px",     # Even larger
+                        width = "900px"),     # Match height for square
               type = 4,
               color = "#3c8dbc"
             ),
@@ -211,8 +211,8 @@ landingPageWithUmapUI <- function(id) {
         )
       ),
       
-      # Right column - Summary statistics + Cluster Markers (reduced width)
-      column(3,  # Reduced from 4 to 3 to give UMAP maximum space
+      # Right column - Summary statistics + Cluster Markers (expanded)
+      column(5,  # Increased to use the space freed by tighter UMAP column
         # Summary statistics cards in a grid (top half) - Compact layout
         div(class = "value-box-compact",
           fluidRow(
@@ -731,8 +731,17 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       cat("[MARKERS DEBUG] Total rows in markers_data:", nrow(markers_data), "\n")
       
       # Filter markers for selected cluster
+      # Handle cluster name mismatch - be flexible with cluster_ prefix
+      cluster_to_match <- gsub("^cluster_", "", input$selected_cluster)
+      cluster_with_prefix <- paste0("cluster_", cluster_to_match)
+      
+      # Try both with and without prefix
       cluster_markers <- markers_data %>%
-        filter(cluster == input$selected_cluster) %>%
+        filter(cluster == cluster_to_match | 
+               cluster == input$selected_cluster | 
+               cluster == cluster_with_prefix |
+               as.character(cluster) == as.character(cluster_to_match) |
+               as.character(cluster) == as.character(input$selected_cluster)) %>%
         arrange(desc(avg_log2FC)) %>%
         head(25) %>%  # Fixed to top 25 markers
         select(gene, avg_log2FC, p_val_adj, pct.1, pct.2) %>%
