@@ -654,8 +654,8 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             # Remove axis ticks to save space
             axis.ticks = element_blank()
           ) +
-          # Let plot fill the explicit container dimensions without restrictions
-          coord_cartesian(expand = FALSE)
+          # Force equal aspect ratio to prevent squashing
+          coord_fixed(ratio = 1, expand = FALSE)
         
         return(p)
       }, error = function(e) {
@@ -720,6 +720,12 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       
       req(markers_data)
       
+      # Debug: Check what's in the data
+      cat("\n[MARKERS DEBUG] Selected cluster:", input$selected_cluster, "\n")
+      cat("[MARKERS DEBUG] Available clusters in markers:", 
+          paste(head(unique(markers_data$cluster), 10), collapse=", "), "\n")
+      cat("[MARKERS DEBUG] Total rows in markers_data:", nrow(markers_data), "\n")
+      
       # Filter markers for selected cluster
       cluster_markers <- markers_data %>%
         filter(cluster == input$selected_cluster) %>%
@@ -732,6 +738,8 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
           pct.1 = round(pct.1, 3),
           pct.2 = round(pct.2, 3)
         )
+      
+      cat("[MARKERS DEBUG] Filtered markers rows:", nrow(cluster_markers), "\n")
       
       # Create DataTable with settings optimized for compact right column
       DT::datatable(
