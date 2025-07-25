@@ -198,14 +198,15 @@ landingPageWithUmapUI <- function(id) {
               )
             )
           ),
-          div(class = "box-body", style = "padding: 10px; text-align: center;",
+          div(class = "box-body", style = "padding: 10px; overflow: hidden;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
-                        height = "850px",     # Increased height for better visibility
-                        width = "100%"),      # Make width responsive to fill container
+                        height = "800px",     # Fixed height
+                        width = "800px"),     # Fixed width to match height
               type = 4,
               color = "#3c8dbc"
-            )
+            ),
+            style = "display: flex; justify-content: center;"  # Center the plot
           )
         )
       ),
@@ -654,8 +655,11 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             # Remove axis ticks to save space
             axis.ticks = element_blank()
           ) +
-          # Force equal aspect ratio to prevent squashing
-          coord_fixed(ratio = 1, expand = FALSE)
+          # Use coord_equal to maintain aspect ratio while filling space
+          coord_equal(expand = TRUE) +
+          # Force the plot to fill the entire plotting area
+          scale_x_continuous(expand = c(0.05, 0.05)) +
+          scale_y_continuous(expand = c(0.05, 0.05))
         
         return(p)
       }, error = function(e) {
