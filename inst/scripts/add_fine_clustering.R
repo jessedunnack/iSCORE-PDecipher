@@ -21,7 +21,10 @@ add_fine_clustering_to_sce <- function(sce_path, seurat_path, output_path = NULL
   
   # Check if fine clustering already exists
   if ("seurat_clusters_fine" %in% colnames(colData(sce))) {
-    message("Fine clustering already exists in this file. Skipping...")
+    message("Fine clustering already exists in this file.")
+    fine_cluster_counts <- table(sce$seurat_clusters_fine)
+    message("Fine cluster distribution:")
+    print(fine_cluster_counts)
     return(sce)
   }
   
@@ -143,23 +146,37 @@ main <- function() {
     # Load Seurat object once
     seurat_obj <- readRDS(seurat_path)
     
-    # Process first SCE file and calculate markers
+    # Always check for markers first (before processing SCE files)
+    fine_markers_path <- file.path(umap_data_dir, 
+                                  paste0(dataset$name, "_cluster_markers.rds"))
+    coarse_markers_path <- file.path(umap_data_dir, 
+                                    paste0(dataset$name, "_cluster_markers_coarse_clusters.rds"))
+    
+    message("\nChecking for existing marker files...")
+    message("Fine markers path: ", fine_markers_path)
+    message("Fine markers exist: ", file.exists(fine_markers_path))
+    message("Coarse markers path: ", coarse_markers_path) 
+    message("Coarse markers exist: ", file.exists(coarse_markers_path))
+    
+    if (file.exists(fine_markers_path)) {
+      message("\n!!! FINE MARKERS ALREADY EXIST - SKIPPING MAST CALCULATION !!!")
+      message("The app will use the existing fine markers from: ", fine_markers_path)
+      
+      # Quick check of the markers
+      markers <- readRDS(fine_markers_path)
+      message("Fine markers have ", nrow(markers), " rows for ", 
+              length(unique(markers$cluster)), " clusters")
+      message("Cluster names in markers: ", paste(head(unique(markers$cluster), 5), collapse=", "), "...")
+    }
+    
+    # Process SCE files
     sce_updated <- NULL
     for (i in seq_along(sce_files)) {
       sce_file <- sce_files[i]
       
       if (i == 1) {
-        # First file: add clustering and calculate markers
+        # First file: add clustering (or return existing)
         sce_updated <- add_fine_clustering_to_sce(sce_file, seurat_path)
-        
-        # Calculate markers for fine clustering
-        markers_fine <- calculate_fine_markers(seurat_obj, sce_updated)
-        
-        # Save markers
-        markers_output <- file.path(umap_data_dir, 
-                                   paste0(dataset$name, "_cluster_markers_fine.rds"))
-        message("\nSaving fine clustering markers to: ", markers_output)
-        saveRDS(markers_fine, markers_output)
         
       } else {
         # For other PC versions, just add the same fine clustering

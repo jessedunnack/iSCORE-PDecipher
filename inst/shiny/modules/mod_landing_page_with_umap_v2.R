@@ -706,10 +706,16 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       req(input$selected_cluster, input$clustering_resolution)
       
       # Select appropriate markers based on clustering resolution
+      # Note: In your case, the "fine" markers are in the main file, and coarse might not exist
       markers_data <- if (input$clustering_resolution == "fine" && !is.null(umap_data$markers_fine)) {
         umap_data$markers_fine
-      } else {
+      } else if (input$clustering_resolution == "coarse" && !is.null(umap_data$markers_coarse)) {
         umap_data$markers_coarse
+      } else if (!is.null(umap_data$markers_fine)) {
+        # Fallback to fine markers if coarse don't exist
+        umap_data$markers_fine
+      } else {
+        NULL
       }
       
       req(markers_data)
