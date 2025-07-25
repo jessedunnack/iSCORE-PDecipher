@@ -173,14 +173,21 @@ landingPageWithUmapUI <- function(id) {
       # Main content area with two columns - OPTIMIZED LAYOUT
       fluidRow(style = "min-height: 700px;", # Use explicit minimum height
       # Left column - UMAP visualization (expanded width)
-      column(8,  # Increased from 7 to 8 for more width
+      column(9,  # Increased from 8 to 9 for maximum width
         div(class = "box box-primary", style = "margin-top: 0;",
           div(class = "box-header with-border",
             fluidRow(
-              column(9,
+              column(6,
                 h3(class = "box-title", style = "margin: 0;",
                    icon("chart-line"),
                    "Dataset UMAP Visualization")
+              ),
+              column(3, style = "padding-top: 8px; text-align: right;",
+                selectInput(ns("clustering_resolution"), 
+                           label = NULL,
+                           choices = c("Coarse Clusters" = "coarse", "Fine Clusters" = "fine"),
+                           selected = "coarse",
+                           width = "130px")
               ),
               column(3, style = "padding-top: 8px; text-align: right;",
                 selectInput(ns("pc_selection"), 
@@ -191,11 +198,11 @@ landingPageWithUmapUI <- function(id) {
               )
             )
           ),
-          div(class = "box-body", style = "padding: 5px; text-align: center;",
+          div(class = "box-body", style = "padding: 10px; text-align: center;",
             withSpinner(
               plotOutput(ns("umap_plot"), 
-                        height = "720px",     # Increased to align with right column
-                        width = "950px"),     # Explicit width for 1.36:1 ratio (950/720)
+                        height = "850px",     # Increased height for better visibility
+                        width = "100%"),      # Make width responsive to fill container
               type = 4,
               color = "#3c8dbc"
             )
@@ -204,7 +211,7 @@ landingPageWithUmapUI <- function(id) {
       ),
       
       # Right column - Summary statistics + Cluster Markers (reduced width)
-      column(4,  # Reduced from 5 to 4 to give UMAP more space
+      column(3,  # Reduced from 4 to 3 to give UMAP maximum space
         # Summary statistics cards in a grid (top half) - Compact layout
         div(class = "value-box-compact",
           fluidRow(
@@ -392,7 +399,9 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       sce = NULL,
       dataset_name = NULL,
       loaded = FALSE,
-      markers = NULL
+      markers_coarse = NULL,
+      markers_fine = NULL,
+      current_clustering = "coarse"
     )
     
     # Welcome sticky note dismissal
@@ -512,11 +521,19 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             message("Loaded UMAP (", pc_count, " PCs) for ", dataset_name, " from: ", path)
             
             # Load markers if this is the first load
-            if (is.null(umap_data$markers)) {
-              markers_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers.rds"))
-              if (file.exists(markers_path)) {
-                umap_data$markers <- readRDS(markers_path)
-                message("Loaded markers for ", dataset_name)
+            if (is.null(umap_data$markers_coarse)) {
+              # Load fine clustering markers (confusingly, the file without suffix is fine)
+              markers_fine_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers.rds"))
+              if (file.exists(markers_fine_path)) {
+                umap_data$markers_fine <- readRDS(markers_fine_path)
+                message("Loaded fine markers for ", dataset_name)
+              }
+              
+              # Load coarse clustering markers
+              markers_coarse_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers_coarse_clusters.rds"))
+              if (file.exists(markers_coarse_path)) {
+                umap_data$markers_coarse <- readRDS(markers_coarse_path)
+                message("Loaded coarse markers for ", dataset_name)
               }
             }
             
@@ -548,10 +565,28 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       }
     })
     
+    # React to clustering resolution changes
+    observeEvent(input$clustering_resolution, {
+      req(umap_data$loaded)
+      umap_data$current_clustering <- input$clustering_resolution
+      
+      # Check if fine clustering is available
+      if (input$clustering_resolution == "fine" && !("seurat_clusters_fine" %in% colnames(colData(umap_data$sce)))) {
+        showNotification(
+          "Fine clustering not available. Please run add_fine_clustering.R first.",
+          type = "warning",
+          duration = 5
+        )
+        # Reset to coarse
+        updateSelectInput(session, "clustering_resolution", selected = "coarse")
+        umap_data$current_clustering <- "coarse"
+      }
+    })
+    
     # Render UMAP plot
     output$umap_plot <- renderPlot({
-      # Add dependency on PC selection to trigger re-render
-      req(input$pc_selection)
+      # Add dependency on PC selection and clustering resolution to trigger re-render
+      req(input$pc_selection, input$clustering_resolution)
       
       if (!umap_data$loaded || is.null(umap_data$sce)) {
         # Placeholder when no data
@@ -573,18 +608,25 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       
       # Create UMAP plot colored by clusters - OPTIMIZED FOR LARGER DISPLAY
       tryCatch({
+        # Determine which clustering to use
+        cluster_var <- if (umap_data$current_clustering == "fine" && "seurat_clusters_fine" %in% colnames(colData(umap_data$sce))) {
+          "seurat_clusters_fine"
+        } else {
+          "seurat_clusters"
+        }
+        
         # Fix cluster ordering: ensure numeric order instead of alphabetical
         sce_copy <- umap_data$sce
-        cluster_levels <- natural_sort_clusters(unique(sce_copy$seurat_clusters))
-        sce_copy$seurat_clusters <- factor(sce_copy$seurat_clusters, levels = cluster_levels)
+        cluster_levels <- natural_sort_clusters(unique(sce_copy[[cluster_var]]))
+        sce_copy[[cluster_var]] <- factor(sce_copy[[cluster_var]], levels = cluster_levels)
         
         p <- dittoDimPlot(
           sce_copy,
-          var = "seurat_clusters",
+          var = cluster_var,
           reduction.use = "UMAP",
-          size = 0.7,  # Increased point size for better visibility
+          size = 1.2,  # Further increased point size for larger plot
           do.label = TRUE,
-          labels.size = 6,  # DOUBLED label size as requested
+          labels.size = 8,  # Increased label size for better readability
           legend.show = TRUE,
           main = ""  # No title to save space
         )
@@ -592,17 +634,17 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
         # Maximize plot to fill the entire container space
         p <- p + 
           theme(
-            # MAXIMIZE plot area - remove all margins
-            plot.margin = margin(0, 0, 0, 0, "pt"),  # Zero margins
+            # MAXIMIZE plot area - minimal margins
+            plot.margin = margin(5, 5, 5, 5, "pt"),  # Small margins for clarity
             # Larger legend text positioned close to plot
-            legend.text = element_text(size = 16),
-            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
             legend.position = "right",
-            legend.margin = margin(0, 0, 0, 5, "pt"),
-            legend.key.size = unit(1.2, "lines"),
+            legend.margin = margin(0, 0, 0, 10, "pt"),
+            legend.key.size = unit(1.5, "lines"),
             # Larger axis text for the bigger plot
-            axis.text = element_text(size = 14),
-            axis.title = element_text(size = 16),
+            axis.text = element_text(size = 16),
+            axis.title = element_text(size = 18),
             # Clean backgrounds
             panel.background = element_rect(fill = "white", color = NA),
             plot.background = element_rect(fill = "white", color = NA),
@@ -623,41 +665,57 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       })
     })
     
-    # Update cluster choices when UMAP data is loaded
+    # Update cluster choices when UMAP data is loaded or clustering resolution changes
     observe({
-      if (umap_data$loaded && !is.null(umap_data$sce)) {
-        clusters <- unique(SummarizedExperiment::colData(umap_data$sce)$seurat_clusters)
-        
-        # Sort clusters numerically using standardized function
-        clusters_sorted <- natural_sort_clusters(as.character(clusters))
-        
-        # Clean up cluster names: remove "cluster_" prefix and create clean display names
-        cluster_labels <- sapply(clusters_sorted, function(x) {
-          if (grepl("^cluster_", x)) {
-            # Extract number after "cluster_" and format as "Cluster X"
-            cluster_num <- gsub("^cluster_", "", x)
-            paste("Cluster", cluster_num)
-          } else {
-            # If not in "cluster_X" format, just add "Cluster" prefix
-            paste("Cluster", x)
-          }
-        })
-        
-        cluster_choices <- setNames(clusters_sorted, cluster_labels)
-        
-        updateSelectInput(session, "selected_cluster",
-                         choices = cluster_choices,
-                         selected = cluster_choices[1])
+      req(umap_data$loaded, !is.null(umap_data$sce))
+      req(input$clustering_resolution)  # Add dependency on clustering resolution
+      
+      # Determine which clustering to use
+      cluster_var <- if (input$clustering_resolution == "fine" && "seurat_clusters_fine" %in% colnames(colData(umap_data$sce))) {
+        "seurat_clusters_fine"
+      } else {
+        "seurat_clusters"
       }
+      
+      clusters <- unique(SummarizedExperiment::colData(umap_data$sce)[[cluster_var]])
+      
+      # Sort clusters numerically using standardized function
+      clusters_sorted <- natural_sort_clusters(as.character(clusters))
+      
+      # Clean up cluster names: remove "cluster_" prefix and create clean display names
+      cluster_labels <- sapply(clusters_sorted, function(x) {
+        if (grepl("^cluster_", x)) {
+          # Extract number after "cluster_" and format as "Cluster X"
+          cluster_num <- gsub("^cluster_", "", x)
+          paste("Cluster", cluster_num)
+        } else {
+          # If not in "cluster_X" format, just add "Cluster" prefix
+          paste("Cluster", x)
+        }
+      })
+      
+      cluster_choices <- setNames(clusters_sorted, cluster_labels)
+      
+      updateSelectInput(session, "selected_cluster",
+                       choices = cluster_choices,
+                       selected = cluster_choices[1])
     })
     
     # Render markers table
     output$markers_table <- DT::renderDataTable({
-      req(input$selected_cluster)
-      req(umap_data$markers)
+      req(input$selected_cluster, input$clustering_resolution)
+      
+      # Select appropriate markers based on clustering resolution
+      markers_data <- if (input$clustering_resolution == "fine" && !is.null(umap_data$markers_fine)) {
+        umap_data$markers_fine
+      } else {
+        umap_data$markers_coarse
+      }
+      
+      req(markers_data)
       
       # Filter markers for selected cluster
-      cluster_markers <- umap_data$markers %>%
+      cluster_markers <- markers_data %>%
         filter(cluster == input$selected_cluster) %>%
         arrange(desc(avg_log2FC)) %>%
         head(25) %>%  # Fixed to top 25 markers

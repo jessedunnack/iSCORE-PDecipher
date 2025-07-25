@@ -45,7 +45,8 @@
       "Bash(then echo \"EXISTS: $file\")",
       "Bash(else echo \"MISSING: $file\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git stash show:*)"
     ],
     "deny": []
   }
