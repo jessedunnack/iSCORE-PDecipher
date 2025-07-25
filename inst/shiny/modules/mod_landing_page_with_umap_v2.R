@@ -177,19 +177,53 @@ landingPageWithUmapUI <- function(id) {
         div(class = "box box-primary", style = "margin-top: 0; padding: 0;",
           div(class = "box-header with-border",
             fluidRow(
-              column(6,
+              column(3,
                 h3(class = "box-title", style = "margin: 0;",
                    icon("chart-line"),
                    "Dataset UMAP Visualization")
               ),
-              column(3, style = "padding-top: 8px; text-align: right;",
-                selectInput(ns("clustering_resolution"), 
+              column(2, style = "padding-top: 8px;",
+                selectInput(ns("color_by"), 
                            label = NULL,
-                           choices = c("Coarse Clusters" = "coarse", "Fine Clusters" = "fine"),
-                           selected = "coarse",
+                           choices = c("Clusters" = "clusters", 
+                                     "Gene Expression" = "gene", 
+                                     "Metadata" = "metadata"),
+                           selected = "clusters",
                            width = "130px")
               ),
-              column(3, style = "padding-top: 8px; text-align: right;",
+              column(2, style = "padding-top: 8px;",
+                conditionalPanel(
+                  condition = "input.color_by == 'clusters'",
+                  ns = ns,
+                  selectInput(ns("clustering_resolution"), 
+                             label = NULL,
+                             choices = c("Coarse Clusters" = "coarse", "Fine Clusters" = "fine"),
+                             selected = "coarse",
+                             width = "130px")
+                ),
+                conditionalPanel(
+                  condition = "input.color_by == 'gene'",
+                  ns = ns,
+                  selectInput(ns("gene_selection"),
+                             label = NULL,
+                             choices = NULL,  # Will be populated dynamically
+                             selected = NULL,
+                             width = "130px")
+                ),
+                conditionalPanel(
+                  condition = "input.color_by == 'metadata'",
+                  ns = ns,
+                  selectInput(ns("metadata_selection"),
+                             label = NULL,
+                             choices = c("Batch" = "batch",
+                                       "Mutation" = "mutation_tidy",
+                                       "Perturbation" = "scMAGeCK_gene_assignment",
+                                       "Experiment" = "experiments"),
+                             selected = "batch",
+                             width = "130px")
+                )
+              ),
+              column(2, style = "padding-top: 8px; text-align: right;",
                 selectInput(ns("pc_selection"), 
                            label = NULL,
                            choices = c("30 PCs" = "30", "50 PCs" = "50", "100 PCs" = "100"),
@@ -569,6 +603,7 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
     # React to clustering resolution changes
     observeEvent(input$clustering_resolution, {
       req(umap_data$loaded)
+      req(input$color_by == "clusters")  # Only react when coloring by clusters
       umap_data$current_clustering <- input$clustering_resolution
       
       # Check if fine clustering is available
@@ -584,10 +619,30 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       }
     })
     
+    # Populate gene dropdown when data is loaded
+    observe({
+      req(umap_data$loaded)
+      
+      # Get gene names from the SCE object (assumes logcounts assay exists)
+      if (!is.null(assays(umap_data$sce)$logcounts)) {
+        genes <- rownames(assays(umap_data$sce)$logcounts)
+        # Add some common PD genes at the top
+        pd_genes <- c("SNCA", "LRRK2", "PARK7", "PINK1", "PRKN", "ATP13A2", "VPS35", "GBA")
+        available_pd_genes <- intersect(pd_genes, genes)
+        other_genes <- setdiff(genes, pd_genes)
+        
+        gene_choices <- c(available_pd_genes, other_genes[1:min(200, length(other_genes))])
+        
+        updateSelectInput(session, "gene_selection",
+                         choices = gene_choices,
+                         selected = gene_choices[1])
+      }
+    })
+    
     # Render UMAP plot
     output$umap_plot <- renderPlot({
-      # Add dependency on PC selection and clustering resolution to trigger re-render
-      req(input$pc_selection, input$clustering_resolution)
+      # Add dependency on PC selection and color mode to trigger re-render
+      req(input$pc_selection, input$color_by)
       
       if (!umap_data$loaded || is.null(umap_data$sce)) {
         # Placeholder when no data
@@ -607,30 +662,96 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
       
       library(dittoSeq)
       
-      # Create UMAP plot colored by clusters - OPTIMIZED FOR LARGER DISPLAY
+      # Create UMAP plot with appropriate coloring
       tryCatch({
-        # Determine which clustering to use
-        cluster_var <- if (umap_data$current_clustering == "fine" && "seurat_clusters_fine" %in% colnames(colData(umap_data$sce))) {
-          "seurat_clusters_fine"
-        } else {
-          "seurat_clusters"
-        }
-        
-        # Fix cluster ordering: ensure numeric order instead of alphabetical
         sce_copy <- umap_data$sce
-        cluster_levels <- natural_sort_clusters(unique(sce_copy[[cluster_var]]))
-        sce_copy[[cluster_var]] <- factor(sce_copy[[cluster_var]], levels = cluster_levels)
         
-        p <- dittoDimPlot(
-          sce_copy,
-          var = cluster_var,
-          reduction.use = "UMAP",
-          size = 1.2,  # Further increased point size for larger plot
-          do.label = TRUE,
-          labels.size = 8,  # Increased label size for better readability
-          legend.show = TRUE,
-          main = ""  # No title to save space
-        )
+        # Determine what to color by
+        if (input$color_by == "clusters") {
+          # Clustering mode
+          cluster_var <- if (input$clustering_resolution == "fine" && "seurat_clusters_fine" %in% colnames(colData(sce_copy))) {
+            "seurat_clusters_fine"
+          } else {
+            "seurat_clusters"
+          }
+          
+          # Fix cluster ordering
+          cluster_levels <- natural_sort_clusters(unique(sce_copy[[cluster_var]]))
+          sce_copy[[cluster_var]] <- factor(sce_copy[[cluster_var]], levels = cluster_levels)
+          
+          # Adjust label size based on clustering resolution
+          label_size <- if (cluster_var == "seurat_clusters_fine") 5 else 8
+          
+          p <- dittoDimPlot(
+            sce_copy,
+            var = cluster_var,
+            reduction.use = "UMAP",
+            size = 1.2,
+            do.label = TRUE,
+            labels.size = label_size,
+            legend.show = TRUE,
+            main = ""
+          )
+          
+          # Remove "cluster_" prefix from labels if fine clustering
+          if (cluster_var == "seurat_clusters_fine") {
+            p <- p + scale_color_discrete(labels = function(x) gsub("^cluster_", "", x))
+          }
+          
+        } else if (input$color_by == "gene" && !is.null(input$gene_selection)) {
+          # Gene expression mode
+          p <- dittoDimPlot(
+            sce_copy,
+            var = input$gene_selection,
+            assay = "logcounts",
+            reduction.use = "UMAP",
+            size = 1.2,
+            do.label = FALSE,
+            legend.show = TRUE,
+            main = paste0(input$gene_selection, " Expression")
+          )
+          
+        } else if (input$color_by == "metadata" && !is.null(input$metadata_selection)) {
+          # Metadata mode
+          metadata_var <- input$metadata_selection
+          
+          # Check if metadata exists
+          if (metadata_var %in% colnames(colData(sce_copy))) {
+            p <- dittoDimPlot(
+              sce_copy,
+              var = metadata_var,
+              reduction.use = "UMAP",
+              size = 1.2,
+              do.label = FALSE,
+              legend.show = TRUE,
+              main = ""
+            )
+          } else {
+            # Fallback to clusters if metadata not found
+            p <- dittoDimPlot(
+              sce_copy,
+              var = "seurat_clusters",
+              reduction.use = "UMAP",
+              size = 1.2,
+              do.label = TRUE,
+              labels.size = 8,
+              legend.show = TRUE,
+              main = paste0("(", metadata_var, " not found - showing clusters)")
+            )
+          }
+        } else {
+          # Default fallback
+          p <- dittoDimPlot(
+            sce_copy,
+            var = "seurat_clusters",
+            reduction.use = "UMAP",
+            size = 1.2,
+            do.label = TRUE,
+            labels.size = 8,
+            legend.show = TRUE,
+            main = ""
+          )
+        }
         
         # Maximize plot to fill the entire container space
         p <- p + 
