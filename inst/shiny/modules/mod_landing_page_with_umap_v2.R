@@ -522,18 +522,18 @@ landingPageWithUmapServer <- function(id, data, selected_dataset = NULL) {
             
             # Load markers if this is the first load
             if (is.null(umap_data$markers_coarse)) {
-              # Load fine clustering markers (confusingly, the file without suffix is fine)
-              markers_fine_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers.rds"))
-              if (file.exists(markers_fine_path)) {
-                umap_data$markers_fine <- readRDS(markers_fine_path)
-                message("Loaded fine markers for ", dataset_name)
-              }
-              
-              # Load coarse clustering markers
-              markers_coarse_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers_coarse_clusters.rds"))
+              # Load coarse clustering markers (15 clusters - default)
+              markers_coarse_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers_coarse.rds"))
               if (file.exists(markers_coarse_path)) {
                 umap_data$markers_coarse <- readRDS(markers_coarse_path)
-                message("Loaded coarse markers for ", dataset_name)
+                message("Loaded coarse markers (15 clusters) for ", dataset_name)
+              }
+              
+              # Load fine clustering markers (36 clusters)
+              markers_fine_path <- file.path(dirname(path), paste0(dataset_name, "_cluster_markers_fine.rds"))
+              if (file.exists(markers_fine_path)) {
+                umap_data$markers_fine <- readRDS(markers_fine_path)
+                message("Loaded fine markers (36 clusters) for ", dataset_name)
               }
             }
             
