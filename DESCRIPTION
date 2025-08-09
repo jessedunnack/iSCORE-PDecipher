@@ -1,6 +1,6 @@
 Package: iSCORE.PDecipher
 Title: Integrated Analysis of Parkinson's Disease Mutations and Perturbations
-Version: 0.3.5
+Version: 0.4.0
 Authors@R: 
     person("Jesse", "Dunnack", , c("jessedunnack@berkeley.edu", "jessedunnack@gmail.com"), role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0387-0090"))

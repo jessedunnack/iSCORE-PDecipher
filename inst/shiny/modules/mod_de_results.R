@@ -1,5 +1,15 @@
 # Module for DE Results page with interactive UMAP and volcano plots
 # Allows clicking on UMAP clusters to update volcano plots
+# Enhanced with UMAP plot caching for 230K+ cell performance
+
+# Initialize UMAP cache for performance optimization
+if (file.exists("modules/umap_cache_integration.R")) {
+  umap_cache_functions <- source("modules/umap_cache_integration.R", local = TRUE)$value
+  GLOBAL_UMAP_CACHE <- umap_cache_functions$init_cache()
+} else if (file.exists("R/cache_manager.R")) {
+  source("R/cache_manager.R")
+  GLOBAL_UMAP_CACHE <- CacheManager$new(max_size = 50, ttl_minutes = 120, verbose = FALSE)
+}
 
 # Load required packages conditionally
 if (requireNamespace("SingleCellExperiment", quietly = TRUE)) {
@@ -318,6 +328,24 @@ mod_de_results_ui <- function(id) {
             color = "#3c8dbc"
           ),
           
+          # Cache controls (only show in development mode)
+          conditionalPanel(
+            condition = "false",  # Set to "true" for development
+            div(
+              class = "cache-controls",
+              style = "margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px;",
+              fluidRow(
+                column(6,
+                  actionButton(ns("clear_umap_cache"), "Clear Cache", 
+                              icon = icon("trash"), class = "btn-sm btn-warning")
+                ),
+                column(6,
+                  textOutput(ns("cache_status"), inline = TRUE)
+                )
+              )
+            )
+          ),
+          
           # Selected cluster info box
           conditionalPanel(
             condition = "input.cluster_selector != ''",
@@ -534,11 +562,34 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       umap_data = NULL,
       sce_list = NULL,
       cluster_markers = NULL,
-      group_markers = NULL
+      group_markers = NULL,
+      cache_cleared = 0  # Trigger for cache clear
     )
     
     # Store dataset name for PC switching
     dataset_name <- reactiveVal(NULL)
+    
+    # Cache control handlers
+    observeEvent(input$clear_umap_cache, {
+      if (exists("GLOBAL_UMAP_CACHE") && !is.null(GLOBAL_UMAP_CACHE)) {
+        GLOBAL_UMAP_CACHE$clear()
+        values$cache_cleared <- values$cache_cleared + 1
+        showNotification("UMAP cache cleared", type = "info", duration = 2)
+        cat("[UMAP Cache] Cache manually cleared by user\n")
+      }
+    })
+    
+    # Cache status display
+    output$cache_status <- renderText({
+      values$cache_cleared  # Create dependency
+      
+      if (exists("GLOBAL_UMAP_CACHE") && !is.null(GLOBAL_UMAP_CACHE)) {
+        stats <- GLOBAL_UMAP_CACHE$stats()
+        paste0("Cache: ", stats$size, "/", stats$max_size, " plots")
+      } else {
+        "Cache: Not initialized"
+      }
+    })
     
     # Function to load markers for a dataset
     load_markers_for_dataset <- function(dataset_name) {
@@ -928,9 +979,31 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       }
     })
     
-    # Render UMAP plot with ggplot2
+    # Render UMAP plot with ggplot2 (with caching for 230K+ cells)
     output$umap_plot <- renderPlot({
       req(values$umap_data)
+      
+      # Generate cache key for this plot configuration
+      cache_key <- NULL
+      if (exists("GLOBAL_UMAP_CACHE") && !is.null(GLOBAL_UMAP_CACHE)) {
+        cache_key <- paste(
+          dataset_name(),
+          input$pc_selection %||% "30",
+          input$cluster_selector %||% "all",
+          "600x600",  # Plot dimensions
+          sep = "_"
+        )
+        
+        # Try to get cached plot
+        cached_plot <- GLOBAL_UMAP_CACHE$get(cache_key)
+        if (!is.null(cached_plot)) {
+          cat("[UMAP] Using cached plot for:", cache_key, "\n")
+          return(cached_plot)
+        }
+      }
+      
+      # Start plot generation timer
+      plot_start_time <- Sys.time()
       
       # Get cluster colors with proper ordering
       clusters <- natural_sort_clusters(unique(values$umap_data$cluster))
@@ -1039,6 +1112,14 @@ mod_de_results_server <- function(id, global_selection, app_data) {
             fill = "white",
             alpha = 0.8
           )
+      }
+      
+      # Cache the generated plot for future use
+      if (!is.null(cache_key) && exists("GLOBAL_UMAP_CACHE") && !is.null(GLOBAL_UMAP_CACHE)) {
+        GLOBAL_UMAP_CACHE$set(cache_key, p)
+        plot_end_time <- Sys.time()
+        generation_time <- as.numeric(difftime(plot_end_time, plot_start_time, units = "secs"))
+        cat("[UMAP] Plot generated and cached in", round(generation_time, 2), "seconds\n")
       }
       
       p

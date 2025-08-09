@@ -4,6 +4,7 @@
 #'
 #' @param file_path The full path to a results file
 #' @return String: the extracted cluster ID
+#' @export
 extract_cluster_id <- function(file_path) {
   # Extract from patterns like "clust_0" in the filename
   filename <- basename(file_path)
@@ -25,6 +26,7 @@ extract_cluster_id <- function(file_path) {
 #'
 #' @param input_dir Directory containing MAST result files
 #' @return List of structured MAST results
+#' @export
 import_mast_data <- function(input_dir) {
   # Get list of RDS files
   files <- list.files(input_dir, pattern = "\\.rds$", full.names = TRUE)
@@ -102,6 +104,7 @@ import_mast_data <- function(input_dir) {
 #' @param input_dir Directory containing MixScale result files
 #' @param modality Optional: specify "CRISPRi" or "CRISPRa" to import only one modality
 #' @return List of structured MixScale results
+#' @export
 import_mixscale_data <- function(input_dir, modality = NULL) {
   # Find all DEG results files
   rds_files <- list.files(input_dir, pattern = "\\DEGs.rds$", full.names = TRUE, recursive = TRUE)
