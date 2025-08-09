@@ -1,0 +1,17 @@
+FINAL CELL TYPE REFINEMENT SUMMARY
+==================================
+
+Total cells: 219109 
+Total clusters: 36 
+
+Vulnerability Assessment:
+
+ Resilient    Unknown Vulnerable 
+      5698     205915       7496 
+
+Dopaminergic Subtypes:
+
+DA (unspecified) 
+           10766 
+
+Refined Classifications:

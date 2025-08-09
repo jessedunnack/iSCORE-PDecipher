@@ -1,0 +1,234 @@
+=================================================================
+DEEP CLUSTER INVESTIGATION - ALL MARKERS
+=================================================================
+
+Searching for key markers across all coarse clusters...
+
+
+========== COARSE CLUSTER 0 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+NEURONAL_SUBTYPES: Found 1 genes
+  - TAC1: FC=3.28, pct.1=0.727, p_adj=1.31e-64
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 1 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+FLOOR_PLATE_EXTENDED: Found 3 genes
+  - CORIN: FC=2.62, pct.1=0.499, p_adj=1.38e-49
+  - ARX: FC=2.51, pct.1=0.704, p_adj=2.18e-68
+  - NTN1: FC=2.29, pct.1=0.684, p_adj=1.72e-65
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 2 ==========
+Total significant markers (p_adj < 0.05): 40
+
+--- SEARCHING KEY MARKER SETS ---
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 3 ==========
+Total significant markers (p_adj < 0.05): 49
+
+--- SEARCHING KEY MARKER SETS ---
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 4 ==========
+Total significant markers (p_adj < 0.05): 39
+
+--- SEARCHING KEY MARKER SETS ---
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 5 ==========
+Total significant markers (p_adj < 0.05): 49
+
+--- SEARCHING KEY MARKER SETS ---
+
+CHOROID_PLEXUS_ALL: Found 1 genes
+  - AQP1: FC=2.54, pct.1=0.150, p_adj=1.74e-06
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 6 ==========
+Total significant markers (p_adj < 0.05): 23
+
+--- SEARCHING KEY MARKER SETS ---
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 7 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+CHOROID_PLEXUS_ALL: Found 7 genes
+  - TTR: FC=5.28, pct.1=0.977, p_adj=8.48e-232
+  - KCNJ13: FC=5.04, pct.1=0.422, p_adj=1.09e-68
+  - FOLR1: FC=4.68, pct.1=0.528, p_adj=2.10e-78
+  - SLC13A4: FC=4.60, pct.1=0.343, p_adj=2.76e-53
+  - CLIC6: FC=4.54, pct.1=0.485, p_adj=5.64e-71
+  - HTR2C: FC=4.39, pct.1=0.564, p_adj=1.63e-90
+  - TRPM3: FC=3.72, pct.1=0.729, p_adj=9.82e-108
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 8 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+DA_ALL: Found 2 genes
+  - LRRK2: FC=2.95, pct.1=0.183, p_adj=1.22e-09
+  - DRD1: FC=2.06, pct.1=0.105, p_adj=1.31e-02
+
+FLOOR_PLATE_EXTENDED: Found 2 genes
+  - SHH: FC=2.41, pct.1=0.578, p_adj=1.10e-45
+  - NTN1: FC=2.02, pct.1=0.725, p_adj=1.08e-52
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 9 ==========
+Total significant markers (p_adj < 0.05): 39
+
+--- SEARCHING KEY MARKER SETS ---
+
+CHOROID_PLEXUS_ALL: Found 1 genes
+  - FOLR1: FC=1.31, pct.1=0.153, p_adj=5.60e-03
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 10 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 11 ==========
+Total significant markers (p_adj < 0.05): 43
+
+--- SEARCHING KEY MARKER SETS ---
+
+DA_ALL: Found 2 genes
+  - SNCG: FC=1.87, pct.1=0.326, p_adj=4.53e-12
+  - TH: FC=1.87, pct.1=0.123, p_adj=1.00e+00
+
+NEURONAL_SUBTYPES: Found 2 genes
+  - SNCG: FC=1.87, pct.1=0.326, p_adj=4.53e-12
+  - SST: FC=1.68, pct.1=0.109, p_adj=1.00e+00
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 12 ==========
+Total significant markers (p_adj < 0.05): 50
+
+--- SEARCHING KEY MARKER SETS ---
+
+DA_ALL: Found 3 genes
+  - SLC18A2: FC=4.14, pct.1=0.158, p_adj=1.58e-15
+  - TH: FC=2.48, pct.1=0.165, p_adj=1.56e-02
+  - KCNJ6: FC=2.11, pct.1=0.306, p_adj=2.76e-13
+
+NEURONAL_SUBTYPES: Found 1 genes
+  - SST: FC=4.82, pct.1=0.280, p_adj=5.64e-28
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+# A tibble: 2 × 4
+  gene    avg_log2FC pct.1 p_val_adj
+  <chr>        <dbl> <dbl>     <dbl>
+1 SLC18A2       4.14 0.158  1.58e-15
+2 TH            2.48 0.165  1.56e- 2
+
+========== COARSE CLUSTER 13 ==========
+Total significant markers (p_adj < 0.05): 47
+
+--- SEARCHING KEY MARKER SETS ---
+
+FLOOR_PLATE_EXTENDED: Found 1 genes
+  - ARX: FC=1.63, pct.1=0.535, p_adj=6.77e-19
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+========== COARSE CLUSTER 14 ==========
+Total significant markers (p_adj < 0.05): 48
+
+--- SEARCHING KEY MARKER SETS ---
+
+FLOOR_PLATE_EXTENDED: Found 1 genes
+  - CXCL12: FC=1.93, pct.1=0.229, p_adj=2.58e-11
+
+--- MARKERS RANKED 31-60 ---
+
+--- DA-RELATED IN TOP 200 ---
+None found
+
+
+=== SPECIAL INVESTIGATION: WHERE IS TH? ===
+
+TH expression across all clusters:
+# A tibble: 2 × 7
+        p_val avg_log2FC pct.1 pct.2 p_val_adj cluster gene 
+        <dbl>      <dbl> <dbl> <dbl>     <dbl> <chr>   <chr>
+1 0.000000540       2.48 0.165 0.053    0.0156 12      TH   
+2 0.00678           1.87 0.123 0.053    1      11      TH   
+
+
+=== CLUSTERS WITH MULTIPLE DA MARKERS ===
+
+Cluster 12 has 2 DA markers:
+# A tibble: 2 × 3
+  gene    avg_log2FC pct.1
+  <chr>        <dbl> <dbl>
+1 SLC18A2       4.14 0.158
+2 TH            2.48 0.165
+

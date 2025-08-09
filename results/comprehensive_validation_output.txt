@@ -1,0 +1,397 @@
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+=================================================================
+COMPREHENSIVE CELL TYPE VALIDATION USING REFERENCE DATASETS
+iPSC-derived midbrain neurons (Kim 2021 protocol)
+=================================================================
+
+Loading marker data...
+
+ANALYZING ALL 36 CLUSTERS:
+==========================
+
+
+=== CLUSTER 0 ===
+Top 10 markers: SNCB, TAC1, RIT2, C22orf42, FXYD7, C2orf80, JAKMIP1, CREG2, STMN2, AC010247.2 
+
+NEURONS (type unclear)
+
+Marker Scores:
+  DA vulnerable (A9): 3.35
+  Neuronal (early): 3.19
+  Neuronal (mature): 11.74
+
+=== CLUSTER 1 ===
+Top 10 markers: AL138899.1, PTPRC, MS4A6A, LINC02838, NNMT, F13A1, TMC5, AMY2B, TMEM190, GPD1 
+
+
+Marker Scores:
+
+=== CLUSTER 2 ===
+Top 10 markers: GDA, TMC5, FGF7, LEFTY2, COL9A3, PDK4, ELN, PCSK1, CFC1, IGFBP7-AS1 
+
+
+Marker Scores:
+
+=== CLUSTER 3 ===
+Top 10 markers: DIO3, NDP, DLK1, FGF18, LRP2, PTPRZ1, PANTR1, SEMA5B, CLEC18B, SOX1 
+
+
+Marker Scores:
+  DA core: 1.83
+
+=== CLUSTER 4 ===
+Top 10 markers: ANKRD66, TTR, KCNJ13, FAM216B, SLC39A12, GSTA3, AC007906.2, C11orf97, RPE65, AL357093.2 
+
+CHOROID PLEXUS detected (TTR expression)
+
+Marker Scores:
+  Choroid plexus: 22.45
+
+=== CLUSTER 5 ===
+Top 10 markers: STMN4, DSCAM, VGF, C1QL1, TH, MIR7-3HG, SH2D3C, DUSP26, SNTG1, DMRTA2 
+
+
+Marker Scores:
+  DA core: 3.58
+
+=== CLUSTER 6 ===
+Top 10 markers: XIST, MALAT1, MTRNR2L12, MT-ATP6, MT-ND4, GOLGA8A, MT-ND6, MT-CO3, MT-ND5, MT-CO2 
+
+
+Marker Scores:
+
+=== CLUSTER 7 ===
+Top 10 markers: CH25H, PTGS2, TMEM119, FOXF2, PRRX1, PRRX2, COL6A3, TWIST2, COL1A1, RUNX2 
+
+
+Marker Scores:
+
+=== CLUSTER 8 ===
+Top 10 markers: NDP, PTN, GPC5-AS1, VCAM1, PTPRZ1, AC092957.1, SEL1L3, SEMA5B, FEZF1, PANTR1 
+
+
+Marker Scores:
+  Progenitor: 1.98
+
+=== CLUSTER 9 ===
+Top 10 markers: ESM1, AC002454.1, KCNMB1, LRTM1, TFPI2, RSPO2, GDF10, GRIK1, DDIT4L, PAMR1 
+
+
+Marker Scores:
+  DA resilient (A10): 1.43
+  Progenitor: 1.58
+  Choroid plexus: 2.64
+
+=== CLUSTER 10 ===
+Top 10 markers: AC003092.1, AC006378.1, TMEM158, RSPO3, MSX1, PAPPA2, RPRML, IFITM1, STK26, SSTR1 
+
+
+Marker Scores:
+  Choroid plexus: 2.70
+
+=== CLUSTER 11 ===
+Top 10 markers: PRSS56, CHRND, SP9, GACAT2, LINC00689, RTL1, NTS, ECEL1, ADPRHL1, UTS2 
+
+
+Marker Scores:
+
+=== CLUSTER 12 ===
+Top 10 markers: CRABP1, MIR217HG, ST8SIA6, AC017050.1, DCC, THSD7B, SP9, RASGEF1B, HECW1, PTH2 
+
+
+Marker Scores:
+  DA core: 1.85
+  DA vulnerable (A9): 1.94
+  Neuronal (mature): 1.77
+
+=== CLUSTER 13 ===
+Top 10 markers: DCN, PLSCR5, FGL2, WFDC1, MATN3, GABRA4, CCDC198, AQP4, CA2, LRRK2 
+
+
+Marker Scores:
+
+=== CLUSTER 14 ===
+Top 10 markers: DCT, TYRP1, MLANA, BCAN, PMEL, EGFL6, RAB38, IGF1, CAPN3, EMX2 
+
+
+Marker Scores:
+  DA core: 1.85
+
+=== CLUSTER 15 ===
+Top 10 markers: PTGDS, LCNL1, CRYAB, ELN, F5, ANGPTL2, AQP4, LRRC17, MAFB, NUPR1 
+
+
+Marker Scores:
+
+=== CLUSTER 16 ===
+Top 10 markers: NMU, RGCC, USH1C, HAPLN1, AC095030.1, PI15, CCBE1, AC074387.1, RPH3AL, COL27A1 
+
+
+Marker Scores:
+
+=== CLUSTER 17 ===
+Top 10 markers: AC069228.1, AC093879.1, CSMD1, DSCAM, SCN1A-AS1, CNTNAP5, ADARB2, MDGA2, NRG3, SNTG1 
+
+
+Marker Scores:
+
+=== CLUSTER 18 ===
+Top 10 markers: LRRC53, TMPRSS15, PRDM6, PRPH, EVX2, C1QL4, HS3ST6, MAB21L1, PTH2, CALB1 
+
+
+Marker Scores:
+  DA resilient (A10): 7.07
+  Neuronal (early): 2.30
+
+=== CLUSTER 19 ===
+Top 10 markers: MPZ, CDH19, GFRA3, APLNR, SOX10, OLFML2A, CAPN3, COL5A3, ERBB3, MIA 
+
+
+Marker Scores:
+
+=== CLUSTER 20 ===
+Top 10 markers: PLCG2, TTN, NEAT1, XIST, GOLGA8A, MALAT1, SEC31B, AC003681.1, GOLGA8B, TNFRSF25 
+
+
+Marker Scores:
+
+=== CLUSTER 21 ===
+Top 10 markers: COL1A2, COL12A1, COL1A1, COL8A1, COL6A3, HMCN1, COL11A1, ISLR, EMILIN1, EDNRA 
+
+
+Marker Scores:
+
+=== CLUSTER 22 ===
+Top 10 markers: UBE2C, MKI67, KIF20A, HIST1H3B, HIST1H1B, NDC80, PIMREG, SPC25, TOP2A, HJURP 
+
+
+Marker Scores:
+
+=== CLUSTER 23 ===
+Top 10 markers: LINC02539, AC095030.1, LINC01266, AQP1, RGCC, GDF7, GACAT2, LINC00689, SRPX, RTL1 
+
+
+Marker Scores:
+  Choroid plexus: 3.36
+
+=== CLUSTER 24 ===
+Top 10 markers: GDF15, ATF5, DDIT3, TRIB3, SRXN1, NIBAN1, ATF3, GPNMB, PLCG2, GADD45A 
+
+
+Marker Scores:
+
+=== CLUSTER 25 ===
+Top 10 markers: CPXM2, MEOX1, PRDM16-DT, IGFBP3, HPD, SLCO1B3, GNRH2, WFIKKN2, TSPAN8, PRDM16 
+
+
+Marker Scores:
+  Choroid plexus: 5.79
+
+=== CLUSTER 26 ===
+Top 10 markers: TPM2, NEXN, MEF2C, NES, TTR, ZNF106, TPM1, PRDX6, PALMD, SNHG5 
+
+
+Marker Scores:
+  Progenitor: 1.33
+  Choroid plexus: 1.09
+
+=== CLUSTER 27 ===
+Top 10 markers: TAGLN, ACTA2, ACTG2, KRT17, MYL9, CNN1, GBP1, MYLK, MYOCD, CAV1 
+
+VASCULAR CELLS
+
+Marker Scores:
+
+=== CLUSTER 28 ===
+Top 10 markers: CGA, SST, GP2, CALCA, SMIM22, CALCB, CLDN7, C2CD4A, CHGA, RAB25 
+
+
+Marker Scores:
+  DA core: 11.88
+
+=== CLUSTER 29 ===
+Top 10 markers: PENK, HOXD11, HOXD10, COL21A1, AL450352.1, CALB1, PI16, CFHR1, SFRP2, HOXD9 
+
+
+Marker Scores:
+  DA resilient (A10): 3.81
+  MEIS network genes: HOXA10 
+
+=== CLUSTER 30 ===
+Top 10 markers: ATOH1, NHLH1, RASD2, TLX3, MFNG, GNG8, ST18, INSM1, GCK, HES6 
+
+
+Marker Scores:
+
+=== CLUSTER 31 ===
+Top 10 markers: RBP4, FFAR4, AL450352.1, AC092142.1, SLC22A8, SPAG4, HOTAIRM1, HOXB9, HOXB-AS3, RASD1 
+
+
+Marker Scores:
+  Choroid plexus: 1.50
+  MEIS network genes: HOXA9, HOXA10 
+
+=== CLUSTER 32 ===
+Top 10 markers: CDC20B, SNTN, CCNO, C11orf16, ZNF295-AS1, AL356805.1, C20orf85, FAM216B, LINC01513, CDHR4 
+
+
+Marker Scores:
+
+=== CLUSTER 33 ===
+Top 10 markers: CRYAB, PRG4, PRSS12, COLGALT2, R3HDML, CILP, CFHR1, S100A4, TNC, MUC5AC 
+
+
+Marker Scores:
+
+=== CLUSTER 34 ===
+Top 10 markers: H19, IGF2, LEFTY2, RPH3AL, AC022140.1, MUC5AC, KLHL41, CILP, ITGB8, NDST4 
+
+
+Marker Scores:
+
+=== CLUSTER 35 ===
+Top 10 markers: HIST1H2BH, HIST1H3B, HIST1H3G, ASF1B, RRM2, SPC24, HIST1H3F, E2F8, CDK1, BIRC5 
+
+
+Marker Scores:
+
+
+=== FINAL CLUSTER ASSIGNMENTS ===
+=================================
+
+   cluster             cell_type subtype confidence vulnerability
+1        0 Neurons (unspecified)             Medium       Unknown
+2        1               Unknown                Low       Unknown
+3        2               Unknown                Low       Unknown
+4        3               Unknown                Low       Unknown
+5        4        Choroid Plexus               High       Unknown
+6        5               Unknown                Low       Unknown
+7        6               Unknown                Low       Unknown
+8        7               Unknown                Low       Unknown
+9        8               Unknown                Low       Unknown
+10       9               Unknown                Low       Unknown
+11      10               Unknown                Low       Unknown
+12      11               Unknown                Low       Unknown
+13      12               Unknown                Low       Unknown
+14      13               Unknown                Low       Unknown
+15      14               Unknown                Low       Unknown
+16      15               Unknown                Low       Unknown
+17      16               Unknown                Low       Unknown
+18      17               Unknown                Low       Unknown
+19      18               Unknown                Low       Unknown
+20      19               Unknown                Low       Unknown
+21      20               Unknown                Low       Unknown
+22      21               Unknown                Low       Unknown
+23      22               Unknown                Low       Unknown
+24      23               Unknown                Low       Unknown
+25      24               Unknown                Low       Unknown
+26      25               Unknown                Low       Unknown
+27      26               Unknown                Low       Unknown
+28      27        Vascular Cells             Medium       Unknown
+29      28               Unknown                Low       Unknown
+30      29               Unknown                Low       Unknown
+31      30               Unknown                Low       Unknown
+32      31               Unknown                Low       Unknown
+33      32               Unknown                Low       Unknown
+34      33               Unknown                Low       Unknown
+35      34               Unknown                Low       Unknown
+36      35               Unknown                Low       Unknown
+                                       top_markers
+1                SNCB, TAC1, RIT2, C22orf42, FXYD7
+2       AL138899.1, PTPRC, MS4A6A, LINC02838, NNMT
+3                  GDA, TMC5, FGF7, LEFTY2, COL9A3
+4                     DIO3, NDP, DLK1, FGF18, LRP2
+5          ANKRD66, TTR, KCNJ13, FAM216B, SLC39A12
+6                     STMN4, DSCAM, VGF, C1QL1, TH
+7         XIST, MALAT1, MTRNR2L12, MT-ATP6, MT-ND4
+8              CH25H, PTGS2, TMEM119, FOXF2, PRRX1
+9                NDP, PTN, GPC5-AS1, VCAM1, PTPRZ1
+10          ESM1, AC002454.1, KCNMB1, LRTM1, TFPI2
+11    AC003092.1, AC006378.1, TMEM158, RSPO3, MSX1
+12           PRSS56, CHRND, SP9, GACAT2, LINC00689
+13      CRABP1, MIR217HG, ST8SIA6, AC017050.1, DCC
+14                 DCN, PLSCR5, FGL2, WFDC1, MATN3
+15                   DCT, TYRP1, MLANA, BCAN, PMEL
+16                    PTGDS, LCNL1, CRYAB, ELN, F5
+17            NMU, RGCC, USH1C, HAPLN1, AC095030.1
+18 AC069228.1, AC093879.1, CSMD1, DSCAM, SCN1A-AS1
+19             LRRC53, TMPRSS15, PRDM6, PRPH, EVX2
+20                 MPZ, CDH19, GFRA3, APLNR, SOX10
+21                PLCG2, TTN, NEAT1, XIST, GOLGA8A
+22         COL1A2, COL12A1, COL1A1, COL8A1, COL6A3
+23        UBE2C, MKI67, KIF20A, HIST1H3B, HIST1H1B
+24    LINC02539, AC095030.1, LINC01266, AQP1, RGCC
+25                GDF15, ATF5, DDIT3, TRIB3, SRXN1
+26            CPXM2, MEOX1, PRDM16-DT, IGFBP3, HPD
+27                     TPM2, NEXN, MEF2C, NES, TTR
+28                TAGLN, ACTA2, ACTG2, KRT17, MYL9
+29                    CGA, SST, GP2, CALCA, SMIM22
+30       PENK, HOXD11, HOXD10, COL21A1, AL450352.1
+31                 ATOH1, NHLH1, RASD2, TLX3, MFNG
+32    RBP4, FFAR4, AL450352.1, AC092142.1, SLC22A8
+33        CDC20B, SNTN, CCNO, C11orf16, ZNF295-AS1
+34           CRYAB, PRG4, PRSS12, COLGALT2, R3HDML
+35           H19, IGF2, LEFTY2, RPH3AL, AC022140.1
+36      HIST1H2BH, HIST1H3B, HIST1H3G, ASF1B, RRM2
+
+
+SUMMARY STATISTICS:
+===================
+
+       Choroid Plexus Neurons (unspecified)               Unknown 
+                    1                     1                    33 
+       Vascular Cells 
+                    1 
+
+
+Dopaminergic neuron subtypes:
+
+
+Clusters requiring attention:
+   cluster cell_type                                     top_markers
+2        1   Unknown      AL138899.1, PTPRC, MS4A6A, LINC02838, NNMT
+3        2   Unknown                 GDA, TMC5, FGF7, LEFTY2, COL9A3
+4        3   Unknown                    DIO3, NDP, DLK1, FGF18, LRP2
+6        5   Unknown                    STMN4, DSCAM, VGF, C1QL1, TH
+7        6   Unknown        XIST, MALAT1, MTRNR2L12, MT-ATP6, MT-ND4
+8        7   Unknown             CH25H, PTGS2, TMEM119, FOXF2, PRRX1
+9        8   Unknown               NDP, PTN, GPC5-AS1, VCAM1, PTPRZ1
+10       9   Unknown          ESM1, AC002454.1, KCNMB1, LRTM1, TFPI2
+11      10   Unknown    AC003092.1, AC006378.1, TMEM158, RSPO3, MSX1
+12      11   Unknown           PRSS56, CHRND, SP9, GACAT2, LINC00689
+13      12   Unknown      CRABP1, MIR217HG, ST8SIA6, AC017050.1, DCC
+14      13   Unknown                 DCN, PLSCR5, FGL2, WFDC1, MATN3
+15      14   Unknown                   DCT, TYRP1, MLANA, BCAN, PMEL
+16      15   Unknown                    PTGDS, LCNL1, CRYAB, ELN, F5
+17      16   Unknown            NMU, RGCC, USH1C, HAPLN1, AC095030.1
+18      17   Unknown AC069228.1, AC093879.1, CSMD1, DSCAM, SCN1A-AS1
+19      18   Unknown             LRRC53, TMPRSS15, PRDM6, PRPH, EVX2
+20      19   Unknown                 MPZ, CDH19, GFRA3, APLNR, SOX10
+21      20   Unknown                PLCG2, TTN, NEAT1, XIST, GOLGA8A
+22      21   Unknown         COL1A2, COL12A1, COL1A1, COL8A1, COL6A3
+23      22   Unknown        UBE2C, MKI67, KIF20A, HIST1H3B, HIST1H1B
+24      23   Unknown    LINC02539, AC095030.1, LINC01266, AQP1, RGCC
+25      24   Unknown                GDF15, ATF5, DDIT3, TRIB3, SRXN1
+26      25   Unknown            CPXM2, MEOX1, PRDM16-DT, IGFBP3, HPD
+27      26   Unknown                     TPM2, NEXN, MEF2C, NES, TTR
+29      28   Unknown                    CGA, SST, GP2, CALCA, SMIM22
+30      29   Unknown       PENK, HOXD11, HOXD10, COL21A1, AL450352.1
+31      30   Unknown                 ATOH1, NHLH1, RASD2, TLX3, MFNG
+32      31   Unknown    RBP4, FFAR4, AL450352.1, AC092142.1, SLC22A8
+33      32   Unknown        CDC20B, SNTN, CCNO, C11orf16, ZNF295-AS1
+34      33   Unknown           CRYAB, PRG4, PRSS12, COLGALT2, R3HDML
+35      34   Unknown           H19, IGF2, LEFTY2, RPH3AL, AC022140.1
+36      35   Unknown      HIST1H2BH, HIST1H3B, HIST1H3G, ASF1B, RRM2
+
+
+Analysis complete! Results saved to results/comprehensive_validation/

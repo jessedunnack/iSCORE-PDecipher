@@ -1,0 +1,93 @@
+=================================================================
+QUICK SEURAT EXPRESSION CHECK
+Direct analysis without FindMarkers
+=================================================================
+
+1. Loading Seurat object...
+ERROR: Seurat object not found at: E:\scRNASeq\PerturbSeq\final\iSCORE-PD_plus_CRISPRi\iSCORE-PD_plus_CRISPRi.rds 
+Trying alternative path...
+Seurat object loaded successfully
+Number of cells: 219109 
+Default assay set to: SCT 
+
+Available cluster columns:
+seurat_clusters, seurat_clusters_fine, seurat_clusters_coarse, seurat_clusters_medium, unintegrated_clusters, cca_clusters, rpca_clusters, harmony_clusters, cca_sct_integrated_clusters 
+
+
+2. CHECKING TH EXPRESSION IN ALL CLUSTERS
+==========================================
+
+Checking expression of 1 genes across seurat_clusters_coarse...
+
+TH expression by coarse cluster:
+     cluster   mean_expr pct_expressing n_cells gene
+TH.2       1 0.133373676     16.5674603    3024   TH
+TH.6       5 0.117339837     11.4529915    1755   TH
+TH.7       6 0.062501482      8.4260731    1258   TH
+TH.8       7 0.008157757      1.0395010     962   TH
+TH.1       0 0.007508276      0.9253731    3350   TH
+TH.4       3 0.007502201      0.9224319    2385   TH
+TH.5       4 0.006821924      0.8314856    1804   TH
+TH.3       2 0.006419425      0.7013658    2709   TH
+TH.9       8 0.000000000      0.0000000     183   TH
+
+*** CLUSTER 0 TH EXPRESSION: mean=0.008, pct_cells=0.9% ***
+
+
+3. CHECKING ALL DOPAMINERGIC MARKERS
+=====================================
+
+Checking expression of 17 genes across seurat_clusters_coarse...
+
+Clusters with DA marker expression:
+# A tibble: 9 × 4
+  cluster n_da_markers markers                                           avg_pct
+  <chr>          <int> <chr>                                               <dbl>
+1 1                 12 TH, DDC, SLC18A2, DRD2, KCNJ6, LMX1A, NR4A2, EN1…    20.6
+2 6                  9 TH, SLC18A2, DRD2, KCNJ6, NR4A2, EN1, SOX6, SNCG…    18.1
+3 5                  8 TH, DDC, KCNJ6, EN1, SOX6, CALB1, SNCG, ATP13A2      15.8
+4 7                  7 LMX1A, NR4A2, EN1, SOX6, CALB1, SNCG, ATP13A2        13.7
+5 8                  7 SLC18A2, FOXA2, EN1, SOX6, CALB1, SNCG, ATP13A2      17.3
+6 0                  6 FOXA2, EN1, SOX6, CALB1, SNCG, ATP13A2               15.4
+7 3                  6 LMX1A, FOXA2, EN1, SOX6, CALB1, ATP13A2              28.6
+8 2                  4 SLC18A2, SOX6, SNCG, ATP13A2                         22.5
+9 4                  4 EN1, SOX6, SNCG, ATP13A2                             18.1
+
+
+4. VERIFYING KNOWN CLUSTER IDENTITIES
+======================================
+
+Cluster 7 - Expected: Choroid Plexus
+
+Checking expression of 6 genes across seurat_clusters_coarse...
+         cluster   mean_expr pct_expressing n_cells   gene
+TTR.8          7 0.113774708      7.9002079     962    TTR
+FOLR1.8        7 0.002882109      0.4158004     962  FOLR1
+CLIC6.8        7 0.009366854      1.3513514     962  CLIC6
+HTR2C.8        7 0.049716378      7.1725572     962  HTR2C
+AQP1.8         7 0.108698670     11.4345114     962   AQP1
+KCNJ13.8       7 0.007205272      1.0395010     962 KCNJ13
+
+
+Cluster 10 - Expected: Proliferating cells
+
+Checking expression of 5 genes across seurat_clusters_coarse...
+[1] cluster        mean_expr      pct_expressing n_cells        gene          
+<0 rows> (or 0-length row.names)
+
+
+5. DETAILED ANALYSIS OF CLUSTER 0
+==================================
+
+Checking expression of 16 genes across seurat_clusters_coarse...
+
+Genes expressed in >10% of cluster 0 cells:
+         cluster  mean_expr pct_expressing n_cells   gene
+MAP2.1         0 1.13982328       73.85075    3350   MAP2
+TUBB3.1        0 0.20472248       22.56716    3350  TUBB3
+STMN2.1        0 0.15103934       14.59701    3350  STMN2
+SNAP25.1       0 0.09806022       12.68657    3350 SNAP25
+
+
+Results saved to: results/quick_expression_check_results.rds
+

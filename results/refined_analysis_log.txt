@@ -1,0 +1,340 @@
+=================================================================
+REFINED CLUSTER ANALYSIS WITH GRADUATED SCORING
+Investigating low dopaminergic neuron detection
+=================================================================
+
+1. Loading data...
+
+2. Analyzing all 36 fine clusters with graduated scoring...
+=========================================================
+
+
+--- FINE CLUSTER 0 ---
+Coarse cluster: 1 
+Top 10 markers: SNCB, TAC1, RIT2, C22orf42, FXYD7, C2orf80, JAKMIP1, CREG2, STMN2, AC010247.2 
+
+Marker set scores (weighted):
+  DA_VULNERABLE: 3.35 (n=1, 16.7% coverage)
+  NEURONAL_GENERAL: 12.23 (n=2, 28.6% coverage)
+  FLOOR_PLATE: 5.84 (n=1, 12.5% coverage)
+
+--- FINE CLUSTER 1 ---
+Coarse cluster: 0 
+Top 10 markers: AL138899.1, PTPRC, MS4A6A, LINC02838, NNMT, F13A1, TMC5, AMY2B, TMEM190, GPD1 
+
+Marker set scores (weighted):
+  FLOOR_PLATE: 9.77 (n=2, 25.0% coverage)
+
+--- FINE CLUSTER 2 ---
+Coarse cluster: 2 
+Top 10 markers: GDA, TMC5, FGF7, LEFTY2, COL9A3, PDK4, ELN, PCSK1, CFC1, IGFBP7-AS1 
+
+Marker set scores (weighted):
+  FLOOR_PLATE: 2.70 (n=1, 12.5% coverage)
+
+--- FINE CLUSTER 3 ---
+Coarse cluster: 4 
+Top 10 markers: DIO3, NDP, DLK1, FGF18, LRP2, PTPRZ1, PANTR1, SEMA5B, CLEC18B, SOX1 
+
+Marker set scores (weighted):
+  DA_TRANSCRIPTION: 2.74 (n=1, 16.7% coverage)
+
+--- FINE CLUSTER 4 ---
+Coarse cluster: 2 
+Top 10 markers: ANKRD66, TTR, KCNJ13, FAM216B, SLC39A12, GSTA3, AC007906.2, C11orf97, RPE65, AL357093.2 
+
+Marker set scores (weighted):
+  CHOROID_PLEXUS: 67.36 (n=5, 71.4% coverage)
+
+--- FINE CLUSTER 5 ---
+Coarse cluster: 7 
+Top 10 markers: STMN4, DSCAM, VGF, C1QL1, TH, MIR7-3HG, SH2D3C, DUSP26, SNTG1, DMRTA2 
+
+Marker set scores (weighted):
+  DA_ESSENTIAL: 10.74 (n=2, 100.0% coverage)
+
+--- FINE CLUSTER 6 ---
+Coarse cluster: 4 
+Top 10 markers: XIST, MALAT1, MTRNR2L12, MT-ATP6, MT-ND4, GOLGA8A, MT-ND6, MT-CO3, MT-ND5, MT-CO2 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 7 ---
+Coarse cluster: 3 
+Top 10 markers: CH25H, PTGS2, TMEM119, FOXF2, PRRX1, PRRX2, COL6A3, TWIST2, COL1A1, RUNX2 
+
+Marker set scores (weighted):
+  OLIGODENDROCYTE: 8.06 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 8 ---
+Coarse cluster: 9 
+Top 10 markers: NDP, PTN, GPC5-AS1, VCAM1, PTPRZ1, AC092957.1, SEL1L3, SEMA5B, FEZF1, PANTR1 
+
+Marker set scores (weighted):
+  PROGENITOR: 3.95 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 9 ---
+Coarse cluster: 8 
+Top 10 markers: ESM1, AC002454.1, KCNMB1, LRTM1, TFPI2, RSPO2, GDF10, GRIK1, DDIT4L, PAMR1 
+
+Marker set scores (weighted):
+  DA_RESILIENT: 1.43 (n=1, 20.0% coverage)
+  FLOOR_PLATE: 2.47 (n=1, 12.5% coverage)
+  PROGENITOR: 3.15 (n=1, 14.3% coverage)
+  RADIAL_GLIA: 1.86 (n=1, 16.7% coverage)
+  CHOROID_PLEXUS: 4.22 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 10 ---
+Coarse cluster: 5 
+Top 10 markers: AC003092.1, AC006378.1, TMEM158, RSPO3, MSX1, PAPPA2, RPRML, IFITM1, STK26, SSTR1 
+
+Marker set scores (weighted):
+  FLOOR_PLATE: 5.41 (n=1, 12.5% coverage)
+
+--- FINE CLUSTER 11 ---
+Coarse cluster: 5 
+Top 10 markers: PRSS56, CHRND, SP9, GACAT2, LINC00689, RTL1, NTS, ECEL1, ADPRHL1, UTS2 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 12 ---
+Coarse cluster: 12 
+Top 10 markers: CRABP1, MIR217HG, ST8SIA6, AC017050.1, DCC, THSD7B, SP9, RASGEF1B, HECW1, PTH2 
+
+Marker set scores (weighted):
+  DA_ESSENTIAL: 5.56 (n=1, 50.0% coverage)
+  DA_VULNERABLE: 1.94 (n=1, 16.7% coverage)
+
+--- FINE CLUSTER 13 ---
+Coarse cluster: 10 
+Top 10 markers: DCN, PLSCR5, FGL2, WFDC1, MATN3, GABRA4, CCDC198, AQP4, CA2, LRRK2 
+
+Marker set scores (weighted):
+  FLOOR_PLATE: 4.98 (n=1, 12.5% coverage)
+  RADIAL_GLIA: 4.46 (n=1, 16.7% coverage)
+
+--- FINE CLUSTER 14 ---
+Coarse cluster: 1 
+Top 10 markers: DCT, TYRP1, MLANA, BCAN, PMEL, EGFL6, RAB38, IGF1, CAPN3, EMX2 
+
+Marker set scores (weighted):
+  DA_MATURE: 3.70 (n=1, 25.0% coverage)
+
+--- FINE CLUSTER 15 ---
+Coarse cluster: 11 
+Top 10 markers: PTGDS, LCNL1, CRYAB, ELN, F5, ANGPTL2, AQP4, LRRC17, MAFB, NUPR1 
+
+Marker set scores (weighted):
+  RADIAL_GLIA: 5.02 (n=2, 33.3% coverage)
+
+--- FINE CLUSTER 16 ---
+Coarse cluster: 2 
+Top 10 markers: NMU, RGCC, USH1C, HAPLN1, AC095030.1, PI15, CCBE1, AC074387.1, RPH3AL, COL27A1 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 17 ---
+Coarse cluster: 6 
+Top 10 markers: AC069228.1, AC093879.1, CSMD1, DSCAM, SCN1A-AS1, CNTNAP5, ADARB2, MDGA2, NRG3, SNTG1 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 18 ---
+Coarse cluster: 0 
+Top 10 markers: LRRC53, TMPRSS15, PRDM6, PRPH, EVX2, C1QL4, HS3ST6, MAB21L1, PTH2, CALB1 
+
+Marker set scores (weighted):
+  DA_TRANSCRIPTION: 3.47 (n=1, 16.7% coverage)
+  DA_RESILIENT: 7.07 (n=2, 40.0% coverage)
+  GLUTAMATERGIC: 4.71 (n=1, 20.0% coverage)
+
+--- FINE CLUSTER 19 ---
+Coarse cluster: 6 
+Top 10 markers: MPZ, CDH19, GFRA3, APLNR, SOX10, OLFML2A, CAPN3, COL5A3, ERBB3, MIA 
+
+Marker set scores (weighted):
+  OLIGODENDROCYTE: 25.14 (n=3, 42.9% coverage)
+
+--- FINE CLUSTER 20 ---
+Coarse cluster: 3 
+Top 10 markers: PLCG2, TTN, NEAT1, XIST, GOLGA8A, MALAT1, SEC31B, AC003681.1, GOLGA8B, TNFRSF25 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 21 ---
+Coarse cluster: 6 
+Top 10 markers: COL1A2, COL12A1, COL1A1, COL8A1, COL6A3, HMCN1, COL11A1, ISLR, EMILIN1, EDNRA 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 22 ---
+Coarse cluster: 2 
+Top 10 markers: UBE2C, MKI67, KIF20A, HIST1H3B, HIST1H1B, NDC80, PIMREG, SPC25, TOP2A, HJURP 
+
+Marker set scores (weighted):
+  PROLIFERATING: 107.16 (n=5, 83.3% coverage)
+
+--- FINE CLUSTER 23 ---
+Coarse cluster: 2 
+Top 10 markers: LINC02539, AC095030.1, LINC01266, AQP1, RGCC, GDF7, GACAT2, LINC00689, SRPX, RTL1 
+
+Marker set scores (weighted):
+  CHOROID_PLEXUS: 10.08 (n=1, 14.3% coverage)
+  VASCULAR: 4.96 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 24 ---
+Coarse cluster: 3 
+Top 10 markers: GDF15, ATF5, DDIT3, TRIB3, SRXN1, NIBAN1, ATF3, GPNMB, PLCG2, GADD45A 
+
+Marker set scores (weighted):
+  STRESS_RESPONSE: 7.01 (n=2, 33.3% coverage)
+
+--- FINE CLUSTER 25 ---
+Coarse cluster: 0 
+Top 10 markers: CPXM2, MEOX1, PRDM16-DT, IGFBP3, HPD, SLCO1B3, GNRH2, WFIKKN2, TSPAN8, PRDM16 
+
+Marker set scores (weighted):
+  CHOROID_PLEXUS: 17.36 (n=2, 28.6% coverage)
+
+--- FINE CLUSTER 26 ---
+Coarse cluster: 0 
+Top 10 markers: TPM2, NEXN, MEF2C, NES, TTR, ZNF106, TPM1, PRDX6, PALMD, SNHG5 
+
+Marker set scores (weighted):
+  PROGENITOR: 2.65 (n=1, 14.3% coverage)
+  CHOROID_PLEXUS: 3.28 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 27 ---
+Coarse cluster: 2 
+Top 10 markers: TAGLN, ACTA2, ACTG2, KRT17, MYL9, CNN1, GBP1, MYLK, MYOCD, CAV1 
+
+Marker set scores (weighted):
+  VASCULAR: 33.84 (n=3, 42.9% coverage)
+
+--- FINE CLUSTER 28 ---
+Coarse cluster: 8 
+Top 10 markers: CGA, SST, GP2, CALCA, SMIM22, CALCB, CLDN7, C2CD4A, CHGA, RAB25 
+
+Marker set scores (weighted):
+  DA_ESSENTIAL: 5.84 (n=1, 50.0% coverage)
+  DA_MATURE: 12.19 (n=2, 50.0% coverage)
+
+--- FINE CLUSTER 29 ---
+Coarse cluster: 1 
+Top 10 markers: PENK, HOXD11, HOXD10, COL21A1, AL450352.1, CALB1, PI16, CFHR1, SFRP2, HOXD9 
+
+Marker set scores (weighted):
+  DA_RESILIENT: 3.81 (n=1, 20.0% coverage)
+  MEIS_NETWORK: 3.82 (n=1, 16.7% coverage)
+  FLOOR_PLATE: 3.65 (n=1, 12.5% coverage)
+  OLIGODENDROCYTE: 4.01 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 30 ---
+Coarse cluster: 5 
+Top 10 markers: ATOH1, NHLH1, RASD2, TLX3, MFNG, GNG8, ST18, INSM1, GCK, HES6 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 31 ---
+Coarse cluster: 13 
+Top 10 markers: RBP4, FFAR4, AL450352.1, AC092142.1, SLC22A8, SPAG4, HOTAIRM1, HOXB9, HOXB-AS3, RASD1 
+
+Marker set scores (weighted):
+  MEIS_NETWORK: 4.77 (n=2, 33.3% coverage)
+  CHOROID_PLEXUS: 4.49 (n=1, 14.3% coverage)
+
+--- FINE CLUSTER 32 ---
+Coarse cluster: 3 
+Top 10 markers: CDC20B, SNTN, CCNO, C11orf16, ZNF295-AS1, AL356805.1, C20orf85, FAM216B, LINC01513, CDHR4 
+
+Marker set scores (weighted):
+
+--- FINE CLUSTER 33 ---
+Coarse cluster: 0 
+Top 10 markers: CRYAB, PRG4, PRSS12, COLGALT2, R3HDML, CILP, CFHR1, S100A4, TNC, MUC5AC 
+
+Marker set scores (weighted):
+  RADIAL_GLIA: 5.01 (n=1, 16.7% coverage)
+
+--- FINE CLUSTER 34 ---
+Coarse cluster: 14 
+Top 10 markers: H19, IGF2, LEFTY2, RPH3AL, AC022140.1, MUC5AC, KLHL41, CILP, ITGB8, NDST4 
+
+Marker set scores (weighted):
+  FLOOR_PLATE: 3.07 (n=1, 12.5% coverage)
+
+--- FINE CLUSTER 35 ---
+Coarse cluster: 12 
+Top 10 markers: HIST1H2BH, HIST1H3B, HIST1H3G, ASF1B, RRM2, SPC24, HIST1H3F, E2F8, CDK1, BIRC5 
+
+Marker set scores (weighted):
+  PROLIFERATING: 71.88 (n=5, 83.3% coverage)
+
+
+3. Creating score matrix for visualization...
+
+4. Investigating dopaminergic neuron detection...
+================================================
+
+Potential dopaminergic clusters:
+  cluster da_essential da_mature   da_tf  da_total neuronal progenitor has_TH
+1      28     5.837036 12.192789 0.00000 18.029824        0          0   TRUE
+2       5    10.736178  0.000000 0.00000 10.736178        0          0   TRUE
+3      12     5.562806  0.000000 0.00000  5.562806        0          0   TRUE
+4      14     0.000000  3.696645 0.00000  3.696645        0          0  FALSE
+5      18     0.000000  0.000000 3.46740  3.467400        0          0  FALSE
+6       3     0.000000  0.000000 2.74166  2.741660        0          0  FALSE
+  has_DDC coarse_cluster
+1   FALSE              8
+2    TRUE              7
+3   FALSE             12
+4   FALSE              1
+5   FALSE              0
+6   FALSE              4
+
+
+Clusters with ANY dopaminergic markers:
+  cluster da_essential da_mature   da_tf  da_total coarse_cluster
+1      28     5.837036 12.192789 0.00000 18.029824              8
+2       5    10.736178  0.000000 0.00000 10.736178              7
+3      12     5.562806  0.000000 0.00000  5.562806             12
+4      14     0.000000  3.696645 0.00000  3.696645              1
+5      18     0.000000  0.000000 3.46740  3.467400              0
+6       3     0.000000  0.000000 2.74166  2.741660              4
+
+
+5. Creating refined cluster classifications...
+===========================================
+
+
+6. SUMMARY STATISTICS
+=====================
+
+Cell type distribution:
+
+         Choroid Plexus    Dopaminergic Neurons                 Neurons 
+                      3                       3                       1 
+Oligodendrocyte Lineage     Proliferating Cells  Stressed/Damaged Cells 
+                      2                       2                       1 
+                Unknown          Vascular Cells 
+                     23                       1 
+
+
+Dopaminergic-related clusters:
+  fine_cluster coarse_cluster            cell_type              subtype
+1            5              7 Dopaminergic Neurons                     
+2           12             12 Dopaminergic Neurons A9-like (vulnerable)
+3           28              8 Dopaminergic Neurons                     
+  confidence  da_score
+1  Very High 10.736178
+2       High  5.562806
+3  Very High 18.029824
+
+
+Confidence distribution:
+
+     High       Low    Medium Very High 
+        5        23         1         7 
+
+7. Creating visualizations...
+

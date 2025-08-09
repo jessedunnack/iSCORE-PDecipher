@@ -1,0 +1,9 @@
+CELL TYPE VALIDATION REPORT
+===========================
+
+KEY FINDINGS:
+1. Neuronal and progenitor markers are MUTUALLY EXCLUSIVE
+2. Clusters with TUBB3/STMN2/GAP43 are NEURONS, not progenitors
+3. Choroid plexus can contain TH-expressing neurons
+
+CLUSTERS REQUIRING IMMEDIATE RECLASSIFICATION:
