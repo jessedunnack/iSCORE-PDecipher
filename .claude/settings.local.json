@@ -75,7 +75,9 @@
       "mcp__memory-wsl__search_nodes",
       "mcp__serena__find_file",
       "Bash(conda activate:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(git restore:*)",
+      "Bash(tar:*)"
     ],
     "deny": []
   }

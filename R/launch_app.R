@@ -201,5 +201,25 @@ select_dataset_directory <- function() {
   }
 }
 
-# Create alias for backward compatibility (not exported)
-launch_app <- launch_iscore_app
+#' Launch iSCORE-PDecipher Shiny Application (Simple)
+#' 
+#' Simplified launcher for use in RStudio on any platform.
+#' This is an alias for launch_iscore_app() for convenience.
+#' 
+#' @param data_dir Path to the dataset directory. If NULL, shows interactive selection.
+#' @param ... Additional arguments passed to launch_iscore_app()
+#' 
+#' @return Launches the Shiny application
+#' @export
+#' 
+#' @examples
+#' \dontrun{
+#' # Launch with interactive dataset selection (recommended for first-time users)
+#' launch_app()
+#' 
+#' # Launch on Windows with specific path
+#' launch_app("E:/ASAP/scRNASeq/PerturbSeq/final/iSCORE-PD_plus_CRISPRi/")
+#' }
+launch_app <- function(data_dir = NULL, ...) {
+  launch_iscore_app(data_dir = data_dir, ...)
+}

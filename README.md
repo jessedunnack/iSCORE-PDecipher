@@ -2,7 +2,7 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0.0-blue.svg)](https://www.r-project.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.3.5-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
+[![Version](https://img.shields.io/badge/Version-0.4.0-brightgreen.svg)](https://github.com/jessedunnack/iSCORE-PDecipher)
 
 **Integrated Analysis of Parkinson's Disease Mutations and Perturbations**
 
@@ -81,6 +81,22 @@ if (!require("remotes", quietly = TRUE))
 
 # Install iSCORE-PDecipher (works on Windows, Mac, Linux)
 remotes::install_github("jessedunnack/iSCORE-PDecipher")
+```
+
+### Windows Users
+For detailed Windows installation instructions, see [WINDOWS_INSTALLATION.md](WINDOWS_INSTALLATION.md).
+
+Quick Windows setup:
+```r
+# 1. Install from GitHub
+devtools::install_github("jessedunnack/iSCORE-PDecipher")
+
+# 2. Load and configure
+library(iSCORE.PDecipher)
+set_parent_data_dir("E:/ASAP/scRNASeq/PerturbSeq/final")
+
+# 3. Launch with interactive dataset selection
+launch_app()
 ```
 
 **Platform Requirements:**

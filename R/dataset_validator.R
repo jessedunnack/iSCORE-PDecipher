@@ -97,6 +97,7 @@ check_missing_files <- function(data_dir) {
 #'
 #' @param data_dir Path to dataset directory
 #' @return List with validation results
+#' @export
 validate_dataset_directory <- function(data_dir) {
   if (!dir.exists(data_dir)) {
     return(list(
@@ -150,6 +151,7 @@ validate_dataset_directory <- function(data_dir) {
 #' Get pre-configured dataset options
 #'
 #' @return Named list of dataset paths
+#' @export
 get_dataset_options <- function() {
   # Get parent directory from config
   parent_dir <- get_parent_data_dir()

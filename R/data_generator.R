@@ -6,6 +6,7 @@
 #' @param data_dir Path to dataset directory
 #' @param missing Vector of missing file types
 #' @return TRUE if successful, FALSE otherwise
+#' @export
 generate_missing_files <- function(data_dir, missing) {
   success <- TRUE
   
@@ -186,6 +187,7 @@ generate_missing_files <- function(data_dir, missing) {
 #' Check if required packages are installed
 #'
 #' @return TRUE if all packages available, FALSE otherwise
+#' @export
 check_required_packages <- function() {
   required_packages <- c(
     # For data import
