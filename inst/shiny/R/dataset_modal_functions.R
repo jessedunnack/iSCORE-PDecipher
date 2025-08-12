@@ -248,21 +248,6 @@ get_default_datasets <- function() {
       has_de = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi", "full_DE_results.rds")),
       has_enrichment = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi", "all_enrichment_padj005_complete_with_direction.rds")),
       has_seurat = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi", "iSCORE-PD_plus_CRISPRi_final.rds"))
-    ),
-    
-    iscore_pd_plus_all = list(
-      name = "iSCORE-PD + CRISPRi/a (Full)",
-      description = "Complete dataset with mutations, CRISPRi, and CRISPRa perturbations",
-      path = file.path(base_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa"),
-      stats = list(
-        n_cells = 250000,  # Estimate
-        n_genes = 36601,
-        n_clusters = 16,
-        has_crispr = TRUE
-      ),
-      has_de = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa", "full_DE_results.rds")),
-      has_enrichment = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa", "all_enrichment_padj005_complete_with_direction.rds")),
-      has_seurat = file.exists(file.path(base_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa", "iSCORE-PD_plus_CRISPRi_and_CRISPRa_final.rds"))
     )
   )
   

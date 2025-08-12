@@ -167,10 +167,10 @@ get_dataset_options <- function() {
   }
   
   # Build dataset paths using configured parent directory
+  # NOTE: Only iSCORE-PD and iSCORE-PD_plus_CRISPRi are supported (no CRISPRa)
   dataset_paths <- list(
     "iSCORE-PD only" = file.path(parent_dir, "iSCORE-PD"),
-    "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi"),
-    "iSCORE-PD + CRISPRi + CRISPRa" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi_and_CRISPRa")
+    "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi")
   )
   
   # Filter to only return datasets that actually exist

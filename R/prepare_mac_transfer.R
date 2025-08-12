@@ -43,7 +43,6 @@ check_dataset_files <- function(dataset_dir) {
   umap_pattern <- switch(dataset_name,
     "iSCORE-PD" = "iSCORE_PD_umap_data",
     "iSCORE-PD_plus_CRISPRi" = "iSCORE_PD_CRISPRi_umap_data",
-    "iSCORE-PD_plus_CRISPRi_and_CRISPRa" = "Full_Dataset_umap_data",
     "unknown_pattern"
   )
   

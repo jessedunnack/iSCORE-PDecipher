@@ -96,7 +96,6 @@ prompt_for_parent_dir <- function() {
   cat("This directory should contain the following subdirectories:\n")
   cat("  - iSCORE-PD/\n")
   cat("  - iSCORE-PD_plus_CRISPRi/\n")
-  cat("  - iSCORE-PD_plus_CRISPRi_plus_CRISPRa/\n")
   cat("\n")
   
   if (interactive()) {
@@ -151,8 +150,7 @@ validate_parent_dir <- function(parent_dir) {
   
   required_folders <- c(
     "iSCORE-PD",
-    "iSCORE-PD_plus_CRISPRi", 
-    "iSCORE-PD_plus_CRISPRi_plus_CRISPRa"
+    "iSCORE-PD_plus_CRISPRi"
   )
   
   existing_folders <- character(0)
