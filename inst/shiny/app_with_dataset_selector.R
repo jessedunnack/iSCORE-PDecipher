@@ -345,23 +345,24 @@ server <- function(input, output, session) {
   })
   
   # Call modules (only if they exist)
+  # Updated to use direct module calls instead of deprecated callModule
   if (exists("mod_landing_page_server")) {
-    callModule(mod_landing_page_server, "landing_page", 
+    mod_landing_page_server("landing_page",
               reactive(values$enrichment_data))
   }
-  
+
   if (exists("mod_de_results_server")) {
-    callModule(mod_de_results_server, "de_results",
+    mod_de_results_server("de_results",
               reactive(values$de_data))
   }
-  
+
   if (exists("mod_enrichment_analysis_server")) {
-    callModule(mod_enrichment_analysis_server, "enrichment",
+    mod_enrichment_analysis_server("enrichment",
               reactive(values$enrichment_data))
   }
-  
+
   if (exists("mod_heatmap_server")) {
-    callModule(mod_heatmap_server, "heatmap",
+    mod_heatmap_server("heatmap",
               reactive(values$enrichment_data))
   }
 }
