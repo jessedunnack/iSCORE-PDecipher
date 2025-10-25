@@ -27,9 +27,9 @@ source("modules/mod_perturbseq_only.R")            # NEW v0.5.0: Perturb-seq onl
 mod_landing_page_ui <- landingPageWithUmapUI
 mod_landing_page_server <- landingPageWithUmapServer
 
-# Create function aliases for enrichment module
-mod_enrichment_analysis_ui <- enrichmentGeneDisplayUI
-mod_enrichment_analysis_server <- enrichmentGeneDisplayServer
+# Create function aliases for enrichment module (already named correctly in v2)
+mod_enrichment_analysis_ui <- mod_enrichment_gene_display_ui
+mod_enrichment_analysis_server <- mod_enrichment_gene_display_server
 
 # Initialize startup configuration
 startup_config <- create_startup_config()
