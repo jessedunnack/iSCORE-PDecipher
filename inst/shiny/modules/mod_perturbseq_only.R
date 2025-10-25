@@ -163,12 +163,12 @@ mod_perturbseq_only_server <- function(id) {
 
         tryCatch({
           # Determine directory based on dataset type
-          base_dir <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/"
+          base_dir <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper"
 
           if (input$dataset_type == "FPD") {
-            mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_FPD_no_multiplets_noExptSplit/")
+            mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_FPD_no_multiplets_noExptSplit")
           } else {
-            mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit/")
+            mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit")
           }
 
           incProgress(0.3, detail = "Loading data files...")
