@@ -8,6 +8,29 @@ source("R/dataset_modal_functions.R")
 source("R/startup_config.R")
 source("R/data_manager.R")
 
+# Load Shiny modules
+source("modules/mod_landing_page_with_umap_v2.R")  # Landing page with UMAP
+source("modules/mod_precomputed_reactive.R")       # Precomputed data handling
+source("modules/mod_enrichment_gene_display_v2.R") # Enrichment gene display
+source("modules/mod_comparison.R")                 # Method comparison
+source("modules/mod_de_results.R")                 # DE Results with volcano plots
+source("modules/mod_heatmap.R")                    # Heatmap module
+source("modules/mod_pathview.R")                   # Pathview module
+source("modules/mod_export.R")                     # Export module
+source("modules/mod_de_analysis.R")                # Cross-condition DE analysis
+source("modules/mod_de_heatmap.R")                 # Interactive DE heatmaps
+source("modules/mod_signature_nomination.R")       # Signature nomination
+source("modules/mod_signature_trends.R")           # Signature trends
+source("modules/mod_perturbseq_only.R")            # NEW v0.5.0: Perturb-seq only
+
+# Create function aliases for landingPageWithUmap module
+mod_landing_page_ui <- landingPageWithUmapUI
+mod_landing_page_server <- landingPageWithUmapServer
+
+# Create function aliases for enrichment module
+mod_enrichment_analysis_ui <- enrichmentGeneDisplayUI
+mod_enrichment_analysis_server <- enrichmentGeneDisplayServer
+
 # Initialize startup configuration
 startup_config <- create_startup_config()
 
