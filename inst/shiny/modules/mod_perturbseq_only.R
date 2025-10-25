@@ -164,7 +164,8 @@ mod_perturbseq_only_server <- function(id) {
         tryCatch({
           # Determine directory based on dataset type
           # NEW SHORT PATH (under Windows 260 char limit)
-          base_dir <- "/mnt/e/THESIS/scRNASeq/mixscale"
+          # Use Windows format (E:/) which also works in WSL
+          base_dir <- "E:/THESIS/scRNASeq/mixscale"
 
           if (input$dataset_type == "FPD") {
             mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_FPD_no_multiplets_noExptSplit")

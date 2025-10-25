@@ -275,7 +275,7 @@ extract_cluster_id <- function(file_path) {
 #' )
 #' }
 import_enrichment_with_correction <- function(
-  base_dir = "/mnt/e/THESIS/scRNASeq/mixscale",
+  base_dir = "E:/THESIS/scRNASeq/mixscale",
   dataset,
   pval_correction = "BH"
 ) {
