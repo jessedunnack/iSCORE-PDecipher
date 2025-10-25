@@ -301,7 +301,7 @@ mod_perturbseq_only_server <- function(id) {
         display_cols <- c("gene_ID", "log2FC", pval_col)
         display_results <- sig_results[, display_cols, drop = FALSE]
 
-        DT::datatable(
+        dt <- DT::datatable(
           display_results,
           options = list(
             pageLength = 25,
@@ -309,8 +309,8 @@ mod_perturbseq_only_server <- function(id) {
             order = list(list(3, 'asc'))  # Sort by p-value
           ),
           rownames = FALSE
-        ) %>%
-          DT::formatRound(c("log2FC", pval_col), digits = 4)
+        )
+        DT::formatRound(dt, c("log2FC", pval_col), digits = 4)
       } else {
         NULL
       }
