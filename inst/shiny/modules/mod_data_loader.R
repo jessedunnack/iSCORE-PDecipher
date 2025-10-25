@@ -1,6 +1,7 @@
 #' Data Loader Module for Shiny App
 #'
 #' Handles loading of large datasets with preview mode option
+#' Updated: October 24, 2025 - Adding FDR-corrected pooled data support
 #'
 #' @author Claude
 

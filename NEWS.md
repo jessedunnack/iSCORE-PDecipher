@@ -1,3 +1,56 @@
+# iSCORE.PDecipher 0.5.0
+
+## FDR-Corrected Pooled MixScale Data Support (2025-10-24)
+
+### 🎯 **New Features**
+- **Pooled MixScale Import**: Support for FDR-corrected Perturb-seq-only datasets
+  - `import_pooled_mixscale_data()`: Load pooled MixScale data with p-value selection
+  - `detect_mixscale_format()`: Auto-detect pooled vs experiment-split structure
+  - `import_enrichment_with_correction()`: Load enrichment by p-value correction type
+
+- **Three P-value Correction Options**:
+  - `p_weight`: Original uncorrected p-values (maximum sensitivity)
+  - `p_weight_BH`: Benjamini-Hochberg FDR correction (RECOMMENDED)
+  - `p_weight_bonferroni`: Bonferroni correction (most conservative)
+
+- **New Perturb-seq Only Module** (`mod_perturbseq_only`):
+  - Clean interface for Perturb-seq data without mutation controls
+  - Dataset selector: FPD or CRISPRi
+  - P-value correction comparison tools
+  - Interactive DE results visualization
+  - Perturbation summary tables
+
+- **Enhanced Data Manager**:
+  - `get_pooled_mixscale_data()`: Load and cache pooled MixScale data
+  - `get_pooled_enrichment_data()`: Load enrichment by correction type
+  - `set_pval_correction()` / `get_pval_correction()`: Manage correction preferences
+  - `set_dataset_type()` / `get_dataset_type()`: Manage dataset selection
+
+### 📊 **Datasets Supported**
+- **FPD Dataset**: 41 perturbations across 7 clusters
+- **CRISPRi Dataset**: 340 perturbations across 6 clusters
+- All datasets include three p-value correction variants
+
+### ✅ **Validation**
+- All 13 RDS files successfully tested (6 CRISPRi + 7 FPD)
+- Data integrity validated: 6/6 tests passed
+- Format detection working correctly
+- Backward compatible with existing experiment-split data
+
+### 🔧 **Technical Details**
+- Simple column structure: `gene_ID`, `log2FC`, `p_weight`, `p_weight_BH`, `p_weight_bonferroni`
+- Compatible with existing app module structure
+- Metadata includes: dataset type, modality, p-value column used, file paths
+- Background genes properly extracted for enrichment analysis
+
+### 📚 **Documentation**
+- Comprehensive CLAUDE.md implementation guide
+- FILE_LOCATIONS.md with all data file paths
+- Example workflows for each p-value correction type
+- Test suite with validation reports
+
+---
+
 # iSCORE.PDecipher 0.4.0
 
 ## Major Performance Optimizations for 230K+ Cells (2025-08-09)

@@ -9,6 +9,9 @@
 init_data_manager <- function() {
   .data_cache$enrichment_data <- NULL
   .data_cache$de_data <- NULL
+  .data_cache$pooled_mixscale_data <- NULL
+  .data_cache$pval_correction_type <- "p_weight_BH"  # Default to BH correction
+  .data_cache$dataset_type <- NULL  # FPD or CRISPRi
   .data_cache$loading_status <- "not_loaded"
   .data_cache$load_time <- NULL
 }
@@ -139,6 +142,194 @@ get_data_summary <- function() {
     enrichment_types = length(unique(data$enrichment_type)),
     load_time = .data_cache$load_time
   ))
+}
+
+#' ==============================================================================
+#' POOLED MIXSCALE DATA FUNCTIONS (Added October 24, 2025)
+#' ==============================================================================
+
+#' Load pooled MixScale import functions
+load_pooled_mixscale_functions <- function() {
+  # Source the pooled MixScale import functions
+  import_file <- "../../R/import_pooled_mixscale_functions.R"
+  if (file.exists(import_file)) {
+    source(import_file)
+    return(TRUE)
+  } else {
+    # Try alternative path
+    alt_import_file <- "R/import_pooled_mixscale_functions.R"
+    if (file.exists(alt_import_file)) {
+      source(alt_import_file)
+      return(TRUE)
+    }
+  }
+  warning("Could not load pooled MixScale import functions")
+  return(FALSE)
+}
+
+#' Get Pooled MixScale Data with FDR Correction
+#' @param mixscale_dir Directory containing pooled MixScale RDS files
+#' @param pval_column Which p-value column: "p_weight", "p_weight_BH", or "p_weight_bonferroni"
+#' @param dataset_type "FPD" or "CRISPRi"
+#' @param force_reload Force reload even if cached
+#' @return Pooled MixScale data
+get_pooled_mixscale_data <- function(
+  mixscale_dir = NULL,
+  pval_column = "p_weight_BH",
+  dataset_type = NULL,
+  force_reload = FALSE
+) {
+
+  # Check if we should use cached data
+  cache_key <- paste(mixscale_dir, pval_column, dataset_type, sep = "_")
+
+  if (!force_reload &&
+      !is.null(.data_cache$pooled_mixscale_data) &&
+      identical(.data_cache$pval_correction_type, pval_column) &&
+      identical(.data_cache$dataset_type, dataset_type)) {
+    return(.data_cache$pooled_mixscale_data)
+  }
+
+  # Load import functions if not already loaded
+  if (!exists("import_pooled_mixscale_data")) {
+    if (!load_pooled_mixscale_functions()) {
+      stop("Could not load pooled MixScale import functions")
+    }
+  }
+
+  # Use environment variable if directory not specified
+  if (is.null(mixscale_dir)) {
+    mixscale_dir <- Sys.getenv("ISCORE_POOLED_MIXSCALE_DIR", "")
+    if (mixscale_dir == "") {
+      stop("mixscale_dir not provided and ISCORE_POOLED_MIXSCALE_DIR not set")
+    }
+  }
+
+  # Auto-detect dataset type if not specified
+  if (is.null(dataset_type)) {
+    dataset_type <- Sys.getenv("ISCORE_DATASET_TYPE", "")
+    if (dataset_type == "") {
+      # Try to detect from directory name
+      if (grepl("FPD", mixscale_dir)) {
+        dataset_type <- "FPD"
+      } else if (grepl("CRISPRi", mixscale_dir)) {
+        dataset_type <- "CRISPRi"
+      } else {
+        warning("Could not detect dataset type, defaulting to FPD")
+        dataset_type <- "FPD"
+      }
+    }
+  }
+
+  cat("Loading pooled MixScale data...\n")
+  cat("  Directory:", mixscale_dir, "\n")
+  cat("  P-value column:", pval_column, "\n")
+  cat("  Dataset type:", dataset_type, "\n")
+
+  tryCatch({
+    data <- import_pooled_mixscale_data(
+      mixscale_dir = mixscale_dir,
+      pval_column = pval_column,
+      dataset_type = dataset_type
+    )
+
+    # Cache the data
+    .data_cache$pooled_mixscale_data <- data
+    .data_cache$pval_correction_type <- pval_column
+    .data_cache$dataset_type <- dataset_type
+    .data_cache$load_time <- Sys.time()
+
+    cat("Successfully loaded and cached pooled MixScale data\n")
+
+    return(data)
+
+  }, error = function(e) {
+    cat("Error loading pooled MixScale data:", e$message, "\n")
+    return(NULL)
+  })
+}
+
+#' Get Pooled Enrichment Data with FDR Correction
+#' @param dataset "FPD" or "CRISPRi"
+#' @param pval_correction "none", "BH", or "bonferroni"
+#' @param force_reload Force reload even if cached
+#' @return Enrichment data
+get_pooled_enrichment_data <- function(
+  dataset = NULL,
+  pval_correction = "BH",
+  force_reload = FALSE
+) {
+
+  # Load import functions if not already loaded
+  if (!exists("import_enrichment_with_correction")) {
+    if (!load_pooled_mixscale_functions()) {
+      stop("Could not load pooled MixScale import functions")
+    }
+  }
+
+  # Use cached dataset type if not specified
+  if (is.null(dataset)) {
+    dataset <- .data_cache$dataset_type
+    if (is.null(dataset)) {
+      dataset <- Sys.getenv("ISCORE_DATASET_TYPE", "FPD")
+    }
+  }
+
+  cat("Loading pooled enrichment data...\n")
+  cat("  Dataset:", dataset, "\n")
+  cat("  P-value correction:", pval_correction, "\n")
+
+  tryCatch({
+    data <- import_enrichment_with_correction(
+      dataset = dataset,
+      pval_correction = pval_correction
+    )
+
+    return(data)
+
+  }, error = function(e) {
+    cat("Error loading pooled enrichment data:", e$message, "\n")
+    return(NULL)
+  })
+}
+
+#' Set P-value Correction Type
+#' @param pval_type "p_weight", "p_weight_BH", or "p_weight_bonferroni"
+set_pval_correction <- function(pval_type) {
+  valid_types <- c("p_weight", "p_weight_BH", "p_weight_bonferroni")
+  if (!pval_type %in% valid_types) {
+    stop("Invalid p-value type. Must be one of: ", paste(valid_types, collapse = ", "))
+  }
+  .data_cache$pval_correction_type <- pval_type
+  cat("P-value correction type set to:", pval_type, "\n")
+}
+
+#' Get Current P-value Correction Type
+#' @return Current p-value correction type
+get_pval_correction <- function() {
+  if (is.null(.data_cache$pval_correction_type)) {
+    return("p_weight_BH")  # Default
+  }
+  return(.data_cache$pval_correction_type)
+}
+
+#' Set Dataset Type
+#' @param dataset_type "FPD" or "CRISPRi"
+set_dataset_type <- function(dataset_type) {
+  if (!dataset_type %in% c("FPD", "CRISPRi")) {
+    stop("Invalid dataset type. Must be 'FPD' or 'CRISPRi'")
+  }
+  .data_cache$dataset_type <- dataset_type
+  cat("Dataset type set to:", dataset_type, "\n")
+}
+
+#' Get Current Dataset Type
+#' @return Current dataset type
+get_dataset_type <- function() {
+  if (is.null(.data_cache$dataset_type)) {
+    return(Sys.getenv("ISCORE_DATASET_TYPE", "FPD"))  # Default
+  }
+  return(.data_cache$dataset_type)
 }
 
 # Initialize the data manager
