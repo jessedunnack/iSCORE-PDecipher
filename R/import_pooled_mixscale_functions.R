@@ -275,7 +275,7 @@ extract_cluster_id <- function(file_path) {
 #' )
 #' }
 import_enrichment_with_correction <- function(
-  base_dir = "/mnt/e/ASAP/scRNASeq/PerturbSeq/final",
+  base_dir = "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper",
   dataset,
   pval_correction = "BH"
 ) {
@@ -313,7 +313,51 @@ import_enrichment_with_correction <- function(
     ))
   }
 
-  message("Loading enrichment results from: ", enrich_dir)
+  # NEW: Check for consolidated enrichment file first (MUCH FASTER!)
+  consolidated_file <- file.path(enrich_dir, "all_enrichment_padj005_complete_with_direction.rds")
+
+  if (file.exists(consolidated_file)) {
+    message("Loading consolidated enrichment file: ", basename(consolidated_file))
+
+    enrichment_data <- tryCatch({
+      readRDS(consolidated_file)
+    }, error = function(e) {
+      warning("Failed to load consolidated file: ", e$message)
+      warning("Falling back to individual file loading...")
+      return(NULL)
+    })
+
+    if (!is.null(enrichment_data) && is.data.frame(enrichment_data)) {
+      # Validate expected columns
+      required_cols <- c("mutation_perturbation", "cluster", "enrichment_type", "direction", "p.adjust")
+      missing_cols <- setdiff(required_cols, colnames(enrichment_data))
+
+      if (length(missing_cols) == 0) {
+        # Add metadata
+        attr(enrichment_data, "dataset") <- dataset
+        attr(enrichment_data, "pval_correction") <- pval_correction
+        attr(enrichment_data, "import_date") <- Sys.Date()
+        attr(enrichment_data, "source_file") <- consolidated_file
+        attr(enrichment_data, "is_consolidated") <- TRUE
+
+        message("Successfully loaded ", nrow(enrichment_data), " enrichment terms")
+        message("  Perturbations: ", length(unique(enrichment_data$mutation_perturbation)))
+        message("  Clusters: ", paste(sort(unique(enrichment_data$cluster)), collapse = ", "))
+        message("  Enrichment types: ", paste(unique(enrichment_data$enrichment_type), collapse = ", "))
+
+        return(enrichment_data)
+      } else {
+        warning("Consolidated file missing required columns: ", paste(missing_cols, collapse = ", "))
+        warning("Falling back to individual file loading...")
+      }
+    }
+  } else {
+    message("Consolidated file not found: ", basename(consolidated_file))
+    message("Falling back to individual file loading...")
+  }
+
+  # FALLBACK: Load individual enrichment files (backward compatibility)
+  message("Loading individual enrichment files from: ", enrich_dir)
 
   # Find all enrichment RDS files
   enrich_files <- list.files(
@@ -339,6 +383,11 @@ import_enrichment_with_correction <- function(
 
   # Load each file
   for (file_path in enrich_files) {
+    # Skip the consolidated file if present
+    if (basename(file_path) == "all_enrichment_padj005_complete_with_direction.rds") {
+      next
+    }
+
     # Extract perturbation and cluster info from path
     # Expected structure: enrichment_results_*/cluster_X/perturbation_enrichment.rds
 
@@ -392,6 +441,7 @@ import_enrichment_with_correction <- function(
   attr(enrichment_results, "pval_correction") <- pval_correction
   attr(enrichment_results, "import_date") <- Sys.Date()
   attr(enrichment_results, "source_directory") <- enrich_dir
+  attr(enrichment_results, "is_consolidated") <- FALSE
 
   return(enrichment_results)
 }
