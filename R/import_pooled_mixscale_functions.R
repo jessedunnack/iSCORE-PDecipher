@@ -275,7 +275,7 @@ extract_cluster_id <- function(file_path) {
 #' )
 #' }
 import_enrichment_with_correction <- function(
-  base_dir = "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper",
+  base_dir = "/mnt/e/THESIS/scRNASeq/mixscale",
   dataset,
   pval_correction = "BH"
 ) {

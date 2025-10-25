@@ -163,7 +163,8 @@ mod_perturbseq_only_server <- function(id) {
 
         tryCatch({
           # Determine directory based on dataset type
-          base_dir <- "/mnt/e/ASAP/scRNASeq/PerturbSeq/final/final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper"
+          # NEW SHORT PATH (under Windows 260 char limit)
+          base_dir <- "/mnt/e/THESIS/scRNASeq/mixscale"
 
           if (input$dataset_type == "FPD") {
             mixscale_dir <- file.path(base_dir, "CRISPRi_PerturbSeq_Reports_all_FPD_no_multiplets_noExptSplit")
