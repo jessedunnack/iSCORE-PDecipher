@@ -51,6 +51,12 @@ run_app <- function(app_type = "main",
   if (app_type == "perturbseq") {
     message("Launching Perturb-seq Only Module (v0.5.0)...")
 
+    # Load required packages
+    if (!requireNamespace("shiny", quietly = TRUE)) {
+      stop("Package 'shiny' is required but not installed.")
+    }
+    library(shiny)
+
     # Get package installation directory
     app_dir <- system.file("shiny", package = "iSCORE.PDecipher")
 
@@ -70,7 +76,7 @@ run_app <- function(app_type = "main",
     source(data_manager_file)
 
     # Create standalone app for the module
-    ui <- shiny::fluidPage(
+    ui <- fluidPage(
       title = "iSCORE-PDecipher: Perturb-seq Analysis",
       mod_perturbseq_only_ui("perturbseq")
     )
