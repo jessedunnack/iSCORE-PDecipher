@@ -826,11 +826,16 @@ mod_de_results_server <- function(id, global_selection, app_data) {
               
               # Extract MAST and MixScale data
               if ("iSCORE_PD_MAST" %in% names(de_results)) {
-                # Convert MAST data to volcano plot format
+                # Convert MAST data to volcano plot format (only if not NULL)
                 mast_data <- de_results$iSCORE_PD_MAST
-                values$de_data_mast <- process_mast_for_volcano(mast_data)
-                cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
-                cat("[DE Results] Available MAST genes:", paste(unique(values$de_data_mast$gene), collapse=", "), "\n")
+                if (!is.null(mast_data)) {
+                  values$de_data_mast <- process_mast_for_volcano(mast_data)
+                  cat("[DE Results] Processed MAST data:", nrow(values$de_data_mast), "rows\n")
+                  cat("[DE Results] Available MAST genes:", paste(unique(values$de_data_mast$gene), collapse=", "), "\n")
+                } else {
+                  cat("[DE Results] MAST data is NULL (Perturb-seq only dataset)\n")
+                  values$de_data_mast <- NULL
+                }
               }
               
               if ("CRISPRi_Mixscale" %in% names(de_results)) {
@@ -1416,13 +1421,23 @@ mod_de_results_server <- function(id, global_selection, app_data) {
       
       # Generate descriptive title with multi-line format for clarity
       if (analysis_type == "MAST") {
+        # Check if this is actually a mutation variant or a CRISPRi perturbation
+        is_mutation_variant <- !is.null(current_gene) && grepl("_[A-Z][0-9]+[A-Z]$", current_gene)
+
         if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-          plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n", 
-                              "MAST Analysis\n",
-                              "Cluster ", cluster_label)
+          if (is_mutation_variant) {
+            plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n",
+                                "MAST Analysis\n",
+                                "Cluster ", cluster_label)
+          } else {
+            # Not a mutation variant - likely CRISPRi data in MAST code path
+            plot_title <- paste0(current_gene, " perturbation vs non-targeting controls\n",
+                                "Differential Expression Analysis\n",
+                                "Cluster ", cluster_label)
+          }
         } else {
-          plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls\n",
-                              "All Genes\n", 
+          plot_title <- paste0("Differential expression analysis vs controls\n",
+                              "All Genes\n",
                               "Cluster ", cluster_label)
         }
       } else if (analysis_type == "MixScale") {
@@ -1676,13 +1691,23 @@ mod_de_results_server <- function(id, global_selection, app_data) {
         
         # Generate highly descriptive title with multi-line format
         if (analysis_type == "MAST") {
+          # Check if this is actually a mutation variant or a CRISPRi perturbation
+          is_mutation_variant <- !is.null(current_gene) && grepl("_[A-Z][0-9]+[A-Z]$", current_gene)
+
           if (!is.null(current_gene) && current_gene != "" && current_gene != "All") {
-            plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n", 
-                                "MAST Analysis\n",
-                                "Cluster ", cluster_label)
+            if (is_mutation_variant) {
+              plot_title <- paste0(current_gene, " mutation vs isogenic eWT controls\n",
+                                  "MAST Analysis\n",
+                                  "Cluster ", cluster_label)
+            } else {
+              # Not a mutation variant - likely CRISPRi data in MAST code path
+              plot_title <- paste0(current_gene, " perturbation vs non-targeting controls\n",
+                                  "Differential Expression Analysis\n",
+                                  "Cluster ", cluster_label)
+            }
           } else {
-            plot_title <- paste0("MAST mutation analysis vs isogenic eWT controls\n",
-                                "All Genes\n", 
+            plot_title <- paste0("Differential expression analysis vs controls\n",
+                                "All Genes\n",
                                 "Cluster ", cluster_label)
           }
         } else if (analysis_type == "MixScale") {

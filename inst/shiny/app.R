@@ -456,7 +456,7 @@ ui <- fluidPage(
                   width = "100%"),
       
       selectInput("global_gene",
-                  "Gene/Mutation",
+                  "Gene/Perturbation",  # Changed from "Gene/Mutation" for accuracy across all data types
                   choices = character(0),
                   width = "100%"),
       
