@@ -1,8 +1,135 @@
 # iSCORE-PDecipher Package Update Instructions
-## Integrating FDR-Corrected Pooled MixScale Datasets
+## Integrating FDR-Corrected Pooled MixScale Datasets with launch_app()
 
-**Last Updated**: October 23, 2025
+**Last Updated**: October 25, 2025
 **Agent Working Directory**: `/mnt/e/ASAP/scRNASeq/PerturbSeq/final/iSCORE-PDecipher/`
+
+---
+
+## 🚨 CURRENT ACTIVE PROJECT (October 25, 2025)
+
+### **MISSION: Enable launch_app() to Work with Pooled MixScale Data**
+
+**CRITICAL:** User wants to use the EXISTING full-featured app (launched via `launch_app()`) with the new pooled MixScale data. This is NOT about the rudimentary mod_perturbseq_only.R module. The existing app.R (48KB) has ALL the features the user wants:
+- DE Results with volcano plots
+- Heatmaps with extensive settings
+- Enrichment gene display
+- Signature nomination
+- UMAP viewer
+- And many more modules
+
+**APPROACH:** Convert pooled MixScale data to the format expected by the existing app, then add as new dataset options in the dataset selector.
+
+---
+
+## 📋 COMPREHENSIVE CONVERSION PLAN
+
+### **Goal**
+Create 6 new dataset directories that work with the existing `launch_app()` infrastructure:
+1. FPD_BH_dataset (BH-corrected - RECOMMENDED)
+2. FPD_uncorrected_dataset
+3. FPD_bonferroni_dataset
+4. CRISPRi_BH_dataset (BH-corrected - RECOMMENDED)
+5. CRISPRi_uncorrected_dataset
+6. CRISPRi_bonferroni_dataset
+
+Each directory will contain:
+- `full_DE_results.rds` (converted from cluster-specific RDS files)
+- `all_enrichment_padj005_complete_with_direction.rds` (copied from enrichment_results)
+
+### **Data Transformation Required**
+
+**INPUT (Current):** Cluster-organized RDS files
+```
+cluster_0_mixscale_DEGs.rds = list(
+  perturbation1 = dataframe(gene_ID, log2FC, p_weight, p_weight_BH, p_weight_bonferroni),
+  perturbation2 = dataframe(...),
+  ...
+)
+```
+
+**OUTPUT (Required by app):** Perturbation-organized structure
+```r
+full_DE_results.rds = list(
+  iSCORE_PD_MAST = NULL,  # No MAST data for pooled
+  CRISPRi_Mixscale = list(
+    perturbation1 = list(
+      cluster_0 = list(results = dataframe(gene_ID, log2FC, p_val_adj, ...)),
+      cluster_1 = list(results = dataframe(...)),
+      ...
+    )
+  )
+)
+```
+
+**Key Transformation:** INVERT NESTING from `cluster → perturbation` to `perturbation → cluster`
+
+### **Execution Phases**
+
+#### **PHASE 1: INVESTIGATION** (30 min) - Status: PENDING
+**Goal:** Understand exact structure requirements
+
+Tasks:
+1. Read existing full_DE_results.rds from iSCORE-PD_plus_CRISPRi directory
+2. Check what column names mod_de_results.R expects (grep analysis)
+3. Read one pooled cluster RDS to confirm current structure
+4. Document exact requirements
+
+**Critical:** Must see actual structure before proceeding!
+
+#### **PHASE 2: SINGLE DATASET CONVERSION** (1 hour) - Status: PENDING
+**Goal:** Create and test ONE dataset to prove format works
+
+Tasks:
+1. Create convert_pooled_to_full_de.R script with core functions
+2. Convert ONLY FPD + p_weight_BH first (test dataset)
+3. Create E:/THESIS/scRNASeq/mixscale/FPD_BH_dataset/
+4. Validate structure matches expected format
+
+**Why test one first?** If format is wrong, fix before creating all 6!
+
+#### **PHASE 3: TESTING** (30 min) - Status: PENDING
+**Goal:** Verify converted dataset works with app
+
+Test sequence:
+```r
+launch_app(data_dir = "E:/THESIS/scRNASeq/mixscale/FPD_BH_dataset/")
+# Check: volcano plots, heatmaps, enrichment displays
+```
+
+#### **PHASE 4: SCALE TO ALL 6 DATASETS** (30 min) - Status: PENDING
+**Goal:** Create remaining 5 datasets using proven method
+
+Use validated conversion script to create all remaining datasets.
+
+#### **PHASE 5: INTEGRATION** (15 min) - Status: PENDING
+**Goal:** Make datasets selectable in launch_app()
+
+Update R/dataset_validator.R → get_dataset_options() to add:
+- "Pooled FPD (BH-corrected)"
+- "Pooled FPD (Uncorrected)"
+- "Pooled FPD (Bonferroni)"
+- "Pooled CRISPRi (BH-corrected)"
+- "Pooled CRISPRi (Uncorrected)"
+- "Pooled CRISPRi (Bonferroni)"
+
+#### **PHASE 6: FINAL TESTING & COMMIT** (30 min) - Status: PENDING
+**Goal:** Ensure everything works end-to-end
+
+Test complete workflow with launch_app() dataset selector.
+
+### **Success Criteria**
+
+When complete:
+```r
+library(iSCORE.PDecipher)
+launch_app()  # Shows menu with all 8 options (2 original + 6 new)
+# Select "Pooled FPD (BH-corrected)"
+# App launches with FULL features for pooled data!
+```
+
+**ESTIMATED TIME:** 3 hours
+**CRITICAL REMINDER:** We are using launch_app() - the existing full-featured app!
 
 ---
 
