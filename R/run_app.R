@@ -47,15 +47,14 @@ run_app <- function(app_type = "main",
     "perturbseq" = NULL  # Special case handled below
   )
 
-  # Handle Perturb-seq module separately
+  # Handle Perturb-seq full app separately
   if (app_type == "perturbseq") {
-    message("Launching Perturb-seq Only Module (v0.5.0)...")
+    message("Launching Perturb-seq Full-Featured App (v0.5.0)...")
 
     # Load required packages
     if (!requireNamespace("shiny", quietly = TRUE)) {
       stop("Package 'shiny' is required but not installed.")
     }
-    library(shiny)
 
     # Get package installation directory
     app_dir <- system.file("shiny", package = "iSCORE.PDecipher")
@@ -64,30 +63,20 @@ run_app <- function(app_type = "main",
       stop("Could not find iSCORE.PDecipher installation directory")
     }
 
-    # Source required files
-    module_file <- file.path(app_dir, "modules/mod_perturbseq_only.R")
-    data_manager_file <- file.path(app_dir, "R/data_manager.R")
+    # Check for comprehensive app file
+    app_file <- file.path(app_dir, "app_perturbseq_full.R")
 
-    if (!file.exists(module_file)) {
-      stop("Perturb-seq module not found at: ", module_file)
+    if (!file.exists(app_file)) {
+      stop("Perturb-seq app not found at: ", app_file)
     }
 
-    source(module_file)
-    source(data_manager_file)
+    # Set working directory to app directory (required for sourcing files)
+    old_wd <- getwd()
+    on.exit(setwd(old_wd))
+    setwd(app_dir)
 
-    # Create standalone app for the module
-    ui <- fluidPage(
-      title = "iSCORE-PDecipher: Perturb-seq Analysis",
-      mod_perturbseq_only_ui("perturbseq")
-    )
-
-    server <- function(input, output, session) {
-      mod_perturbseq_only_server("perturbseq")
-    }
-
-    # Launch the app
-    app <- shiny::shinyApp(ui, server)
-    shiny::runApp(app,
+    # Run the comprehensive app
+    shiny::runApp(app_file,
                   launch.browser = launch.browser,
                   port = port,
                   host = host,
