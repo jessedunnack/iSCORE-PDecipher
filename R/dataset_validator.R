@@ -166,11 +166,29 @@ get_dataset_options <- function() {
     parent_dir <- base_path
   }
   
+  # Determine base path for pooled datasets
+  if (.Platform$OS.type == "windows") {
+    pooled_base <- "E:/THESIS/scRNASeq/mixscale"
+  } else {
+    pooled_base <- "/mnt/e/THESIS/scRNASeq/mixscale"
+  }
+
   # Build dataset paths using configured parent directory
-  # NOTE: Only iSCORE-PD and iSCORE-PD_plus_CRISPRi are supported (no CRISPRa)
+  # NOTE: Original datasets plus 6 new pooled MixScale datasets
   dataset_paths <- list(
+    # Original datasets (with both MAST + MixScale)
     "iSCORE-PD only" = file.path(parent_dir, "iSCORE-PD"),
-    "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi")
+    "iSCORE-PD + CRISPRi" = file.path(parent_dir, "iSCORE-PD_plus_CRISPRi"),
+
+    # Pooled FPD datasets (Perturb-seq only, 41 perturbations, 7 clusters)
+    "Pooled FPD (BH-corrected) - RECOMMENDED" = file.path(pooled_base, "FPD_BH_dataset"),
+    "Pooled FPD (Uncorrected p-values)" = file.path(pooled_base, "FPD_uncorrected_dataset"),
+    "Pooled FPD (Bonferroni-corrected)" = file.path(pooled_base, "FPD_bonferroni_dataset"),
+
+    # Pooled CRISPRi datasets (Perturb-seq only, 340 perturbations, 6 clusters)
+    "Pooled CRISPRi (BH-corrected) - RECOMMENDED" = file.path(pooled_base, "CRISPRi_BH_dataset"),
+    "Pooled CRISPRi (Uncorrected p-values)" = file.path(pooled_base, "CRISPRi_uncorrected_dataset"),
+    "Pooled CRISPRi (Bonferroni-corrected)" = file.path(pooled_base, "CRISPRi_bonferroni_dataset")
   )
   
   # Filter to only return datasets that actually exist
