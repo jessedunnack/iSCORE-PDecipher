@@ -50,7 +50,7 @@ mod_signature_nomination_ui <- function(id) {
           # Statistical explanation (collapsible)
           actionLink(ns("show_stats_info"), "Statistical Methods Explained", icon = icon("info-circle")),
           conditionalPanel(
-            condition = "input.show_stats_info % 2 == 1",
+            condition = "input['show_stats_info'] % 2 == 1",
             ns = ns,
             div(class = "alert alert-info", style = "margin-top: 10px; font-size: 11px;",
               h5("Cross-Method Comparison Statistics", style = "margin-top: 0; color: #2c3e50;"),
@@ -128,7 +128,7 @@ mod_signature_nomination_ui <- function(id) {
                       style = "font-size: 12px; color: #17a2b8;")
           ),
           conditionalPanel(
-            condition = "input.show_enhanced_info % 2 == 1",
+            condition = "input['show_enhanced_info'] % 2 == 1",
             ns = ns,
             div(class = "alert alert-info", style = "margin-top: 10px; font-size: 11px;",
               h5("Enhanced Direction-Aware Analysis (v0.2.6)", style = "margin-top: 0; color: #2c3e50;"),
@@ -168,9 +168,9 @@ mod_signature_nomination_ui <- function(id) {
                         class = "btn-link btn-sm",
                         icon = icon("cog"))
           ),
-          
+
           conditionalPanel(
-            condition = "input.show_advanced == true",
+            condition = "input['show_advanced'] == true",
             ns = ns,
             div(id = ns("advanced_panel"), style = "margin-top: 15px;",
               h5("Advanced Parameters", style = "color: #f39c12;"),
@@ -216,7 +216,7 @@ mod_signature_nomination_ui <- function(id) {
           # Progress and status
           div(id = ns("progress_section"), style = "margin-top: 20px;",
             conditionalPanel(
-              condition = "input.run_analysis > 0",
+              condition = "input['run_analysis'] > 0",
               ns = ns,
               div(
                 h5("Analysis Progress"),
@@ -332,9 +332,9 @@ mod_signature_nomination_ui <- function(id) {
                            icon = icon("info-circle"), class = "btn-info btn-sm",
                            style = "margin-bottom: 10px;")
               ),
-              
+
               conditionalPanel(
-                condition = "input.toggle_help % 2 == 1",
+                condition = "input['toggle_help'] % 2 == 1",
                 ns = ns,
                 div(class = "alert alert-info", style = "margin-bottom: 15px; font-size: 0.9em;",
                 p(

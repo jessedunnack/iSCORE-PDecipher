@@ -193,7 +193,7 @@ landingPageWithUmapUI <- function(id) {
               ),
               column(2, style = "padding-top: 8px;",
                 conditionalPanel(
-                  condition = "input.color_by == 'clusters'",
+                  condition = "input['color_by'] == 'clusters'",
                   ns = ns,
                   selectInput(ns("clustering_resolution"), 
                              label = NULL,
@@ -202,7 +202,7 @@ landingPageWithUmapUI <- function(id) {
                              width = "130px")
                 ),
                 conditionalPanel(
-                  condition = "input.color_by == 'gene'",
+                  condition = "input['color_by'] == 'gene'",
                   ns = ns,
                   selectInput(ns("gene_selection"),
                              label = NULL,
@@ -211,7 +211,7 @@ landingPageWithUmapUI <- function(id) {
                              width = "130px")
                 ),
                 conditionalPanel(
-                  condition = "input.color_by == 'metadata'",
+                  condition = "input['color_by'] == 'metadata'",
                   ns = ns,
                   selectInput(ns("metadata_selection"),
                              label = NULL,

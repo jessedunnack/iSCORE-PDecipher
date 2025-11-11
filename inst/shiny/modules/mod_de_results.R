@@ -345,10 +345,10 @@ mod_de_results_ui <- function(id) {
               )
             )
           ),
-          
+
           # Selected cluster info box
           conditionalPanel(
-            condition = "input.cluster_selector != ''",
+            condition = "input['cluster_selector'] != ''",
             ns = ns,
             div(class = "well well-sm", style = "margin-top: 15px; background-color: #f8f9fa;",
               h5("Cluster Information", style = "margin-top: 0;"),
@@ -374,10 +374,10 @@ mod_de_results_ui <- function(id) {
                         selected = "static",
                         inline = TRUE)
           ),
-          
+
           # Color options (only for interactive plots)
           conditionalPanel(
-            condition = "input.plot_type == 'interactive'",
+            condition = "input['plot_type'] == 'interactive'",
             ns = ns,
             div(style = "margin-bottom: 15px;",
               radioButtons(ns("color_by"),

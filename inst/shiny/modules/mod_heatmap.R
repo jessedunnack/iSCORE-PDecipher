@@ -94,7 +94,7 @@ mod_heatmap_ui <- function(id) {
                      icon = icon("chevron-down", class = "rotate-icon"),
                      style = "float: right;")),
         conditionalPanel(
-          condition = "output.show_filtering == true", ns = ns,
+          condition = "output['show_filtering'] == true", ns = ns,
           wellPanel(
             style = "margin-top: 10px;",
             
@@ -121,7 +121,7 @@ mod_heatmap_ui <- function(id) {
       
       # CRISPRi Options Panel (Collapsible, Conditional)
       conditionalPanel(
-        condition = "input.method_filter == 'all' || input.method_filter == 'MixScale' || input.method_filter == 'union'",
+        condition = "input['method_filter'] == 'all' || input['method_filter'] == 'MixScale' || input['method_filter'] == 'union'",
         ns = ns,
         div(
           h5("CRISPRi Options",
@@ -129,16 +129,16 @@ mod_heatmap_ui <- function(id) {
                        icon = icon("chevron-down", class = "rotate-icon"),
                        style = "float: right;")),
           conditionalPanel(
-            condition = "output.show_crispri == true", ns = ns,
+            condition = "output['show_crispri'] == true", ns = ns,
             wellPanel(
               style = "margin-top: 10px;",
               
               checkboxInput(ns("separate_crispri_experiments"),
                            "Plot individual CRISPRi experiments separately",
                            value = FALSE),
-              
+
               conditionalPanel(
-                condition = "input.separate_crispri_experiments == true",
+                condition = "input['separate_crispri_experiments'] == true",
                 ns = ns,
                 checkboxGroupInput(ns("crispri_experiments"),
                                   "Select Experiments:",
@@ -159,7 +159,7 @@ mod_heatmap_ui <- function(id) {
                      icon = icon("chevron-down", class = "rotate-icon"),
                      style = "float: right;")),
         conditionalPanel(
-          condition = "output.show_display == true", ns = ns,
+          condition = "output['show_display'] == true", ns = ns,
           wellPanel(
             style = "margin-top: 10px;",
             
@@ -173,7 +173,7 @@ mod_heatmap_ui <- function(id) {
                          "Show top N terms per gene",
                          value = FALSE),
             conditionalPanel(
-              condition = "input.top_n_per_gene == true",
+              condition = "input['top_n_per_gene'] == true",
               ns = ns,
               numericInput(ns("n_terms_per_gene"), 
                           "Terms per gene:",
@@ -195,7 +195,7 @@ mod_heatmap_ui <- function(id) {
                      icon = icon("chevron-down", class = "rotate-icon"),
                      style = "float: right;")),
         conditionalPanel(
-          condition = "output.show_advanced == true", ns = ns,
+          condition = "output['show_advanced'] == true", ns = ns,
           wellPanel(
             style = "margin-top: 10px;",
             
@@ -212,7 +212,7 @@ mod_heatmap_ui <- function(id) {
                          "Enable biological pathway categories",
                          value = TRUE),
             conditionalPanel(
-              condition = "input.show_bio_categories == true",
+              condition = "input['show_bio_categories'] == true",
               ns = ns,
               checkboxGroupInput(ns("bio_categories"),
                                 "Filter by Category:",
