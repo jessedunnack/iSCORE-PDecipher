@@ -1,0 +1,614 @@
+---
+title: "Getting Started with iSCORE-PDecipher"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with iSCORE-PDecipher}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Introduction
+
+**iSCORE-PDecipher** is an R package for integrated analysis of Parkinson's disease research data, combining:
+
+- **iSCORE-PD Genetic Mutations**: 13 PD-associated mutations across 14 cell clusters
+- **CRISPRi Gene Knockdowns**: 10 PD genes across multiple cell clusters (Perturb-seq)
+- **Comprehensive Enrichment**: ~663,000+ significant enrichment terms
+- **Interactive Visualization**: Shiny application for data exploration
+
+This vignette provides a complete guide to installing, configuring, and using iSCORE-PDecipher for your first analysis.
+
+## Installation
+
+### System Requirements
+
+- **R version**: ≥ 4.0.0
+- **Platform**: Windows, macOS, or Linux
+- **Memory**: At least 8GB RAM recommended (16GB+ for large datasets)
+
+### Platform-Specific Prerequisites
+
+**Windows:**
+- Install [RTools](https://cran.r-project.org/bin/windows/Rtools/)
+
+**macOS:**
+- Install Xcode command line tools: `xcode-select --install`
+
+**Linux:**
+- Install build-essential: `sudo apt-get install build-essential`
+
+### Install Required Bioconductor Packages
+
+```{r install-bioconductor}
+# Install BiocManager if needed
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+# Install required Bioconductor packages
+BiocManager::install(c(
+  "clusterProfiler",
+  "ReactomePA",
+  "DOSE",
+  "org.Hs.eg.db",
+  "pathview",
+  "SingleCellExperiment",
+  "dittoSeq",
+  "enrichplot",
+  "ComplexHeatmap"
+))
+```
+
+### Install CRAN Packages
+
+```{r install-cran}
+# Install CRAN packages
+install.packages(c(
+  "heatmaply",
+  "colourpicker",
+  "shinyWidgets",
+  "shinycssloaders",
+  "shinyjs",
+  "ggridges"
+))
+```
+
+### Install iSCORE-PDecipher
+
+```{r install-package}
+# Install from GitHub (recommended)
+if (!require("remotes", quietly = TRUE))
+  install.packages("remotes")
+
+remotes::install_github("jessedunnack/iSCORE-PDecipher")
+```
+
+**Installation time**: 5-15 minutes depending on internet speed and system.
+
+## Quick Start
+
+### Load the Package
+
+```{r load-package}
+library(iSCORE.PDecipher)
+```
+
+### First Launch: Interactive Setup
+
+On your first launch, iSCORE-PDecipher will guide you through a one-time configuration:
+
+```{r first-launch}
+# Launch the interactive app
+launch_app()
+
+# First-time setup prompts:
+# 1. Welcome message
+# 2. Prompt for parent data directory location
+# 3. Dataset selection menu
+# 4. App launches with selected dataset
+```
+
+**What happens during first launch:**
+
+1. **Configuration Check**: The package checks if you've launched before
+2. **Parent Directory Setup**: You'll be asked where your data is stored
+3. **Configuration Saved**: Settings are saved for future sessions (platform-appropriate location)
+4. **Dataset Selection**: Choose from pre-configured datasets or provide custom path
+
+### Dataset Selection
+
+After initial setup, you'll see a dataset selection menu:
+
+```
+=== Select Dataset ===
+Available datasets:
+[1] iSCORE-PD + CRISPRi Combined Dataset
+    /path/to/iSCORE-PD_plus_CRISPRi/
+[2] iSCORE-PD Only Dataset
+    /path/to/iSCORE-PD/
+[3] CRISPRi Only Dataset
+    /path/to/CRISPRi/
+[C] Choose custom directory
+[Q] Quit
+
+Enter your choice:
+```
+
+**Type the number** of your desired dataset and press Enter.
+
+## Understanding the Application Interface
+
+### Main Dashboard Layout
+
+Once launched, the iSCORE-PDecipher app has these main tabs:
+
+1. **Overview**: Landing page with UMAP visualization and dataset statistics
+2. **DE Results**: Interactive differential expression results with volcano plots
+3. **Enrichment**: Browse and filter enrichment terms
+4. **Heatmaps**: Generate interactive and static heatmaps
+5. **Signature Nomination**: Discover convergent pathways between mutations and perturbations
+6. **Signature Trends**: Data-driven trend analysis
+7. **Export**: Export data and figures
+
+### Global Filter Panel (Left Sidebar)
+
+The collapsible left sidebar contains global filters that apply across all modules:
+
+- **Gene/Mutation**: Select specific genes or mutations to analyze
+- **Cluster**: Filter by cell cluster (cluster_0 through cluster_N)
+- **Enrichment Type**: Choose GO_BP, GO_CC, GO_MF, KEGG, Reactome, WikiPathways, STRING, or GSEA
+- **Direction**: Filter by gene regulation direction (ALL, UP, DOWN, BOTH)
+- **Analysis Method**: Select MAST (mutations), MixScale (perturbations), or both
+- **P-value Threshold**: Set significance threshold (default: 0.05)
+
+**Tip**: These filters update all visualizations in real-time!
+
+## Basic Analysis Workflow
+
+### Step 1: Explore the Overview
+
+The **Overview** tab provides:
+
+- **UMAP Plot**: Interactive visualization of cell clusters (click clusters to filter)
+- **Dataset Statistics**:
+  - Total genes analyzed
+  - Number of cell clusters
+  - Number of enrichment terms
+- **Cluster Markers**: Top marker genes for each cluster
+
+**Try this:**
+- Click on a cluster in the UMAP plot
+- Observe how the statistics update
+- Check the marker genes table for that cluster
+
+### Step 2: Examine Differential Expression Results
+
+Navigate to the **DE Results** tab:
+
+**Features:**
+- **Dual Volcano Plots**: MAST (left) and MixScale (right) side-by-side
+- **Interactive Points**: Hover to see gene names and statistics
+- **Gene Highlighting**: Select genes to highlight across both plots
+- **DE Table**: Comprehensive results table below plots
+
+**Workflow:**
+```
+1. Use global filters to select:
+   - Gene/Mutation: "LRRK2"
+   - Cluster: "cluster_0"
+
+2. Examine volcano plots:
+   - Red points: Upregulated (log2FC > threshold, p < threshold)
+   - Blue points: Downregulated (log2FC < -threshold, p < threshold)
+   - Gray points: Not significant
+
+3. Hover over points to see:
+   - Gene name
+   - Log2 fold change
+   - Adjusted p-value
+
+4. Click gene names in table to highlight in plots
+
+5. Download results using "Download DE Results" button
+```
+
+### Step 3: Browse Enrichment Terms
+
+Navigate to the **Enrichment** tab:
+
+**Features:**
+- **Enrichment Table**: All significant terms (p.adjust < threshold)
+- **Gene List Display**: Click term to see associated genes
+- **Comparison View**: Compare terms across conditions
+
+**Workflow:**
+```
+1. Filter enrichment terms:
+   - Gene: "LRRK2"
+   - Cluster: "cluster_0"
+   - Enrichment Type: "GO_BP"
+   - Direction: "UP"
+
+2. Sort table by p.adjust (lowest first)
+
+3. Click on a pathway (e.g., "mitochondrial transport")
+
+4. View genes in that pathway:
+   - Gene symbols
+   - Expression changes
+   - Links to NCBI/Ensembl
+
+5. Copy gene list to clipboard or download
+```
+
+### Step 4: Generate Heatmaps
+
+Navigate to the **Heatmaps** tab:
+
+**Heatmap Types:**
+- **Interactive** (heatmaply): Hover, zoom, pan
+- **Static** (ComplexHeatmap): Publication-quality PDF export
+
+**Workflow:**
+```
+1. Select data for heatmap:
+   - Data Type: "P-values" (or Fold Enrichment, Z-scores, NES)
+   - Genes/Mutations: Select multiple (e.g., LRRK2, SNCA, GBA)
+   - Clusters: Select multiple (e.g., cluster_0, cluster_1, cluster_2)
+   - Terms: Select pathways of interest or use "Top N" option
+
+2. Configure visualization:
+   - Cluster Rows: Yes
+   - Cluster Columns: Yes
+   - Distance: "euclidean"
+   - Linkage: "complete"
+
+3. Customize colors:
+   - Low value: Blue
+   - Mid value: White
+   - High value: Red
+   - Scaling: "Row" (recommended for p-values)
+
+4. Generate heatmap
+
+5. Export:
+   - Interactive: Download HTML
+   - Static: Download PDF (300+ DPI)
+   - Data: Download matrix as CSV
+```
+
+**Interpreting the Heatmap:**
+- **Rows**: Enrichment terms (pathways)
+- **Columns**: Genes/Mutations across clusters
+- **Colors**:
+  - Red: High significance (low p-value or high enrichment)
+  - Blue: Low significance
+  - White: Neutral/medium
+- **Dendrograms**: Show hierarchical relationships
+
+### Step 5: Discover Signatures
+
+Navigate to the **Signature Nomination** tab:
+
+**What are signatures?**
+Signatures are **convergent pathways** - biological processes affected by BOTH a genetic mutation (MAST) AND a gene knockdown perturbation (CRISPRi). These represent robust, cross-method validated findings.
+
+**Workflow:**
+```
+1. Select gene pair:
+   - MAST Gene (Mutation): "LRRK2_G2019S"
+   - MixScale Gene (Perturbation): "LRRK2"
+   - Click "Discover Signatures"
+
+2. Review signature results table:
+   - Pathway: Name of enriched term
+   - Overlap genes: Genes affected by both
+   - Fisher p-value: Statistical significance of overlap
+   - Effect correlation: Correlation of effect sizes
+   - Signature score: Composite score (higher = stronger signature)
+
+3. Explore PD Biology Focus tab:
+   - See biological categories (mitochondrial, autophagy, etc.)
+   - View PD-relevant pathways
+   - Read interpretation text
+
+4. Check Pan-Cluster Signatures:
+   - Pathways consistent across multiple clusters
+   - Adjust "Minimum Clusters" slider
+
+5. Export signatures for further analysis
+```
+
+**Interpreting Signatures:**
+- **High signature score (>0.7)**: Strong convergent pathway
+- **Low Fisher p-value (<0.01)**: Significant gene overlap
+- **High correlation (>0.5)**: Similar effect directions
+
+## Working with Your Own Data
+
+### Scenario 1: You Have Pre-Computed Enrichment Results
+
+If you already have enrichment results from another pipeline:
+
+```{r custom-data-precomputed}
+# Place your data in the expected directory structure:
+# my_dataset/
+# ├── full_DE_results.rds
+# └── all_enrichment_padj005_complete_with_direction.rds
+
+# Launch with your dataset
+launch_app(data_dir = "/path/to/my_dataset/")
+```
+
+**Required file formats:**
+
+**full_DE_results.rds** structure:
+```r
+list(
+  iSCORE_PD_MAST = list(
+    mutation1 = list(
+      cluster_0 = list(results = data.frame(gene, log2FC, p_val_adj, ...)),
+      cluster_1 = list(results = data.frame(...))
+    )
+  ),
+  CRISPRi_Mixscale = list(
+    gene1 = list(
+      cluster_0 = list(results = data.frame(...))
+    )
+  )
+)
+```
+
+**all_enrichment_padj005_complete_with_direction.rds** structure:
+```r
+data.frame(
+  gene = character,           # Gene or mutation name
+  cluster = character,        # Cluster ID
+  enrichment_type = character, # GO_BP, KEGG, etc.
+  Description = character,    # Pathway description
+  GeneRatio = character,      # e.g., "15/200"
+  BgRatio = character,        # e.g., "100/20000"
+  pvalue = numeric,
+  p.adjust = numeric,
+  qvalue = numeric,
+  geneID = character,         # Gene IDs in pathway
+  Count = integer,            # Number of genes
+  direction = character,      # "UP", "DOWN", or "ALL"
+  method = character          # "MAST" or "MixScale"
+)
+```
+
+### Scenario 2: You Have Raw MAST/MixScale Results
+
+If you have raw differential expression results:
+
+```{r custom-data-raw}
+# Run the complete analysis pipeline
+results <- run_complete_pipeline(
+  mast_directory = "./my_MAST_results/",
+  mixscale_directory = "./my_MixScale_results/",
+  output_directory = "./my_iscore_output/",
+  launch_app = TRUE  # Automatically launch when done
+)
+
+# The pipeline will:
+# 1. Import MAST and MixScale results
+# 2. Run enrichment analysis (GO, KEGG, Reactome, etc.)
+# 3. Consolidate results
+# 4. Validate dataset
+# 5. Launch the Shiny app
+```
+
+### Scenario 3: You Have Perturb-seq Data Only
+
+If you have Perturb-seq data without mutations (NEW in v0.5.0+):
+
+```{r perturbseq-only}
+# Import pooled MixScale data with FDR correction
+mixscale_data <- import_pooled_mixscale_data(
+  mixscale_dir = "./perturbseq_results/",
+  pval_column = "p_weight_BH"  # Use Benjamini-Hochberg FDR correction
+)
+
+# Import corresponding enrichment
+enrichment <- import_enrichment_with_correction(
+  dataset = "my_perturbseq",
+  pval_correction = "BH"
+)
+
+# Launch app
+launch_app(data_dir = "./prepared_perturbseq_data/")
+```
+
+**P-value correction options:**
+- `"p_weight"`: Uncorrected p-values
+- `"p_weight_BH"`: Benjamini-Hochberg FDR (recommended)
+- `"p_weight_bonferroni"`: Bonferroni correction (very conservative)
+
+## Exporting Results
+
+### Export from Shiny App
+
+Navigate to the **Export** tab:
+
+**Data Export Options:**
+1. **Filtered Data**: Current filter settings
+   - DE Results (CSV, TSV, RDS)
+   - Enrichment Terms (CSV, Excel)
+   - Signature Results (RDS, CSV)
+   - Gene Lists (TXT)
+
+2. **Figures**: Publication-quality exports
+   - Volcano Plots (PDF, PNG, SVG)
+   - Heatmaps (PDF, HTML)
+   - UMAP Plots (PDF, PNG)
+   - Resolution: 300-600 DPI
+
+3. **Complete Dataset**: Full analysis (RDS)
+
+### Programmatic Export
+
+Export without using the Shiny interface:
+
+```{r programmatic-export}
+# Load data
+enrichment <- readRDS("all_enrichment_padj005_complete_with_direction.rds")
+
+# Filter for specific analysis
+library(dplyr)
+lrrk2_results <- enrichment %>%
+  filter(gene == "LRRK2", cluster == "cluster_0", p.adjust < 0.05)
+
+# Export to CSV
+write.csv(lrrk2_results, "LRRK2_cluster0_enrichment.csv", row.names = FALSE)
+
+# Export to Excel with multiple sheets
+library(openxlsx)
+wb <- createWorkbook()
+
+addWorksheet(wb, "GO_BP")
+writeData(wb, "GO_BP", lrrk2_results %>% filter(enrichment_type == "GO_BP"))
+
+addWorksheet(wb, "KEGG")
+writeData(wb, "KEGG", lrrk2_results %>% filter(enrichment_type == "KEGG"))
+
+saveWorkbook(wb, "LRRK2_enrichment.xlsx", overwrite = TRUE)
+```
+
+## Troubleshooting
+
+### Issue 1: "Dataset directory not valid"
+
+**Symptoms**: Error message when launching app
+
+**Solution**:
+```{r troubleshoot-dataset}
+# Check what's missing
+validation <- validate_dataset_directory("/path/to/your/data/")
+
+# View validation messages
+print(validation$messages)
+
+# Generate missing files if needed (the app offers to do this automatically)
+```
+
+### Issue 2: Out of Memory Errors
+
+**Symptoms**: R crashes or "cannot allocate vector" errors
+
+**Solutions**:
+
+```{r troubleshoot-memory}
+# 1. Increase memory limits
+options(java.parameters = "-Xmx16g")  # 16GB
+
+# 2. Use data sampling for exploration
+sampled_data <- sample_de_results(
+  de_results = full_results,
+  sample_size = 50000  # Sample to 50k cells
+)
+
+# 3. Close other R sessions and applications
+
+# 4. Process data in batches
+```
+
+### Issue 3: Slow App Performance
+
+**Symptoms**: Slow plot rendering, lag in UI updates
+
+**Solutions**:
+
+```{r troubleshoot-performance}
+# 1. The app uses caching - first load is slow, subsequent loads are fast
+# Just wait for initial data load
+
+# 2. Reduce data displayed:
+#    - Filter to specific genes/clusters
+#    - Use "Top N" terms instead of all terms in heatmaps
+
+# 3. Use static plots instead of interactive for large heatmaps
+```
+
+### Issue 4: Cross-Platform Path Issues
+
+**Symptoms**: "File not found" errors when moving between Windows/Mac/Linux
+
+**Solutions**:
+
+```{r troubleshoot-paths}
+# Always use file.path() for cross-platform compatibility
+data_dir <- file.path("path", "to", "data")  # Works on all platforms
+
+# Reset configuration if needed
+unlink(get_config_path())
+launch_app()  # Will re-run setup wizard
+
+# Check current configuration
+get_parent_data_dir()
+```
+
+### Issue 5: "Module not found" Errors
+
+**Symptoms**: Missing function or module errors
+
+**Solutions**:
+
+```{r troubleshoot-install}
+# 1. Re-install package
+remotes::install_github("jessedunnack/iSCORE-PDecipher", force = TRUE)
+
+# 2. Check package version
+packageVersion("iSCORE.PDecipher")
+
+# 3. Restart R session
+.rs.restartR()  # RStudio
+# or quit() and restart R
+```
+
+## Next Steps
+
+Now that you're familiar with the basics:
+
+1. **Explore Other Vignettes**:
+   - `vignette("perturbseq-workflow")`: Detailed Perturb-seq analysis
+   - `vignette("signature-discovery")`: Advanced signature interpretation
+   - `vignette("advanced-customization")`: Customization and batch processing
+
+2. **Read the Documentation**:
+   - Function reference: `?launch_app`, `?discover_top_signatures`, etc.
+   - Package documentation: `help(package = "iSCORE.PDecipher")`
+
+3. **Join the Community**:
+   - Report bugs or request features: [GitHub Issues](https://github.com/jessedunnack/iSCORE-PDecipher/issues)
+   - Contact: jessedunnack@berkeley.edu
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
+
+## Citation
+
+If you use iSCORE-PDecipher in your research, please cite:
+
+```
+Dunnack J. (2025). iSCORE-PDecipher: Integrated Analysis of
+Parkinson's Disease Mutations and Perturbations.
+GitHub: https://github.com/jessedunnack/iSCORE-PDecipher
+```
+
+---
+
+**Package**: iSCORE.PDecipher
+**Version**: 0.4.0+
+**Author**: Jesse Dunnack
+**License**: GPL-3

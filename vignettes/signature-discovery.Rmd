@@ -1,0 +1,1102 @@
+---
+title: "Signature Discovery Tutorial: Finding Convergent Pathways"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Signature Discovery Tutorial: Finding Convergent Pathways}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Introduction
+
+**Signature Discovery** is one of the most powerful features of iSCORE-PDecipher, allowing you to identify **convergent pathways** - biological processes affected by BOTH a genetic mutation (MAST) AND a gene knockdown perturbation (CRISPRi).
+
+**What are Signatures?**
+
+A **signature** is a pathway or biological process that shows:
+1. Enrichment in genes affected by a genetic mutation (e.g., LRRK2_G2019S)
+2. Enrichment in genes affected by a perturbation (e.g., LRRK2 CRISPRi knockdown)
+3. Statistical evidence of gene overlap between the two conditions
+4. Correlated effect sizes (similar direction and magnitude of changes)
+
+**Why are Signatures Important?**
+
+- **Cross-validation**: Findings validated by two independent methods (MAST + MixScale)
+- **Robustness**: Less likely to be false positives or technical artifacts
+- **Biological insight**: Reveal core pathways affected by gene dysfunction
+- **Therapeutic relevance**: Convergent pathways are strong targets for intervention
+
+**This Vignette Covers:**
+1. Understanding signature scoring algorithms
+2. Discovering signatures programmatically
+3. Using the Signature Nomination Shiny module
+4. Interpreting PD-relevant signatures
+5. Pan-cluster vs cluster-specific signatures
+6. Advanced signature analysis workflows
+
+## Background: The Signature Discovery Algorithm
+
+### Step 1: Enrichment Term Collection
+
+For a given gene pair (e.g., LRRK2 mutation + LRRK2 perturbation):
+
+```
+MAST Results:                    MixScale Results:
+Cluster 0, LRRK2_G2019S         Cluster 0, LRRK2 CRISPRi
+↓                               ↓
+Enrichment Analysis             Enrichment Analysis
+↓                               ↓
+Enriched Terms (MAST)          Enriched Terms (MixScale)
+- mitochondrial transport       - mitochondrial transport
+- autophagy                     - vesicle transport
+- lysosomal degradation         - lysosomal degradation
+- protein phosphorylation       - autophagy
+...                            ...
+```
+
+### Step 2: Gene Overlap Analysis
+
+For each pathway found in both methods:
+
+```r
+# Example: "mitochondrial transport"
+MAST_genes <- c("TOMM20", "TIMM23", "TOMM40", "MFN2", "OPA1", ...)  # 25 genes
+MixScale_genes <- c("TOMM20", "TIMM23", "TOMM40", "MFN1", ...)      # 20 genes
+Overlap_genes <- c("TOMM20", "TIMM23", "TOMM40", ...)               # 15 genes
+
+# Fisher's Exact Test
+# H0: Gene overlap is random
+# H1: Gene overlap is significant
+
+contingency_table <- matrix(c(
+  overlap_count,        mast_only_count,
+  mixscale_only_count,  neither_count
+), nrow = 2)
+
+fisher_result <- fisher.test(contingency_table)
+# p-value: < 0.001 → Significant overlap!
+```
+
+### Step 3: Effect Size Correlation
+
+Compare log2 fold changes for overlapping genes:
+
+```r
+# For genes in both MAST and MixScale
+mast_log2fc     <- c(1.2, -0.8, 1.5, -1.1, ...)
+mixscale_log2fc <- c(1.0, -0.9, 1.3, -1.0, ...)
+
+correlation <- cor.test(mast_log2fc, mixscale_log2fc)
+# r = 0.85, p < 0.001 → Strong positive correlation!
+```
+
+### Step 4: Composite Signature Score
+
+Combine multiple metrics into a signature score:
+
+```r
+signature_score <- weighted_average(
+  gene_overlap_score,      # Fisher's p-value
+  effect_correlation,      # Pearson's r
+  direction_consistency,   # % genes with same direction
+  enrichment_strength      # Combined enrichment p-values
+)
+
+# Score ranges from 0 (weak) to 1 (strong)
+# Threshold: 0.7 for high-confidence signatures
+```
+
+## Part 1: Programmatic Signature Discovery
+
+### 1.1 Load Required Data
+
+```{r load-data}
+library(iSCORE.PDecipher)
+library(dplyr)
+
+# Load consolidated enrichment data
+enrichment_data <- readRDS("all_enrichment_padj005_complete_with_direction.rds")
+
+# Check structure
+cat("Total enrichment terms:", nrow(enrichment_data), "\n")
+cat("Columns:", paste(names(enrichment_data), collapse = ", "), "\n")
+cat("Methods:", unique(enrichment_data$method), "\n")
+cat("Enrichment types:", unique(enrichment_data$enrichment_type), "\n")
+```
+
+### 1.2 Discover Top Signatures
+
+```{r discover-signatures}
+# Run signature discovery for all gene pairs
+signatures <- discover_top_signatures(
+  enrichment_data = enrichment_data,
+  top_n = 50,                    # Return top 50 signatures
+  min_cluster_presence = 3,      # Must appear in at least 3 clusters
+  fisher_pval_threshold = 0.01,  # Fisher's test p < 0.01
+  fdr_correction = TRUE,         # Apply FDR correction
+  min_overlap_genes = 3          # At least 3 overlapping genes
+)
+
+# Results structure
+cat("Signatures discovered:", nrow(signatures), "\n")
+cat("Columns:", paste(names(signatures), collapse = ", "), "\n")
+
+# Top 10 signatures
+head(signatures, 10)
+```
+
+### 1.3 Explore Signature Results
+
+```{r explore-signatures}
+# Sort by signature score
+signatures_sorted <- signatures[order(signatures$signature_score, decreasing = TRUE), ]
+
+# Examine top signature
+top_sig <- signatures_sorted[1, ]
+cat("Top Signature:\n")
+cat("MAST Gene:", top_sig$mast_gene, "\n")
+cat("MixScale Gene:", top_sig$mixscale_gene, "\n")
+cat("Cluster:", top_sig$cluster, "\n")
+cat("Pathway:", top_sig$pathway_description, "\n")
+cat("Signature Score:", top_sig$signature_score, "\n")
+cat("Fisher p-value:", top_sig$fisher_pvalue, "\n")
+cat("Effect Correlation:", top_sig$effect_correlation, "\n")
+cat("Overlap Genes:", top_sig$n_overlap_genes, "\n")
+
+# Gene list in signature
+cat("\nGenes in signature:\n")
+overlap_genes <- strsplit(top_sig$overlap_gene_ids, "/")[[1]]
+print(overlap_genes)
+```
+
+### 1.4 Filter and Analyze Signatures
+
+```{r filter-signatures}
+# Filter for high-confidence signatures
+high_confidence <- signatures %>%
+  filter(
+    signature_score > 0.7,
+    fisher_pvalue < 0.001,
+    n_overlap_genes >= 5
+  )
+
+cat("High-confidence signatures:", nrow(high_confidence), "\n")
+
+# Group by pathway to find frequently converging processes
+pathway_frequency <- high_confidence %>%
+  group_by(pathway_description) %>%
+  summarise(
+    Count = n(),
+    Mean_Score = mean(signature_score),
+    Gene_Pairs = paste(unique(paste(mast_gene, mixscale_gene, sep = "+")), collapse = ", ")
+  ) %>%
+  arrange(desc(Count))
+
+cat("\nTop 10 Most Frequent Converging Pathways:\n")
+print(head(pathway_frequency, 10))
+
+# Find LRRK2-specific signatures
+lrrk2_signatures <- signatures %>%
+  filter(mast_gene == "LRRK2_G2019S" | mixscale_gene == "LRRK2") %>%
+  arrange(desc(signature_score))
+
+cat("\nLRRK2-specific signatures:", nrow(lrrk2_signatures), "\n")
+head(lrrk2_signatures[, c("mast_gene", "mixscale_gene", "pathway_description", "signature_score")], 10)
+```
+
+## Part 2: Using the Signature Nomination Shiny Module
+
+### 2.1 Launch App
+
+```{r launch-app}
+# Launch iSCORE-PDecipher
+launch_app()
+
+# Navigate to "Signature Nomination" tab in the app
+```
+
+### 2.2 Tab 1: Signature Discovery
+
+**Step-by-Step Workflow:**
+
+```
+1. Select Gene Pair:
+   - MAST Gene (Mutation): "LRRK2_G2019S"
+   - MixScale Gene (Perturbation): "LRRK2"
+
+2. Click "Discover Signatures" button
+
+3. Review Results Table:
+   Columns:
+   - Pathway: Name of converging pathway
+   - Overlap Genes: Number and list of genes
+   - Fisher p-value: Statistical significance
+   - Effect Correlation: Pearson's r for log2FC
+   - Signature Score: Composite metric (0-1)
+
+4. Sort by Signature Score (highest first)
+
+5. Click on pathway row to see:
+   - Scatter plot: MAST log2FC vs MixScale log2FC
+   - Venn diagram: Gene overlap visualization
+   - Gene table: Details for each overlapping gene
+```
+
+**Interactive Features:**
+
+- **Scatter Plot**:
+  - X-axis: MAST log2 fold change
+  - Y-axis: MixScale log2 fold change
+  - Each point = one gene in pathway
+  - Color: Direction consistency (same/opposite)
+  - Hover: See gene name and values
+
+- **Venn Diagram**:
+  - Left circle: MAST-enriched genes
+  - Right circle: MixScale-enriched genes
+  - Overlap: Convergent genes (signature)
+  - Numbers: Gene counts in each region
+
+- **Advanced Options** (sidebar):
+  - Fisher p-value threshold: Adjust stringency
+  - Minimum overlap genes: Filter weak signatures
+  - FDR correction method: BH, Bonferroni, or none
+  - Cluster filter: Analyze specific clusters
+
+### 2.3 Tab 2: PD Biology Focus
+
+This tab provides **biological interpretation** of signatures with Parkinson's disease relevance.
+
+**Features:**
+
+1. **Biological Categories**:
+   - Mitochondrial function
+   - Autophagy/Lysosomal degradation
+   - Dopamine signaling
+   - Protein aggregation
+   - Neuroinflammation
+   - Synaptic function
+   - ER stress/UPR
+   - Oxidative stress
+
+2. **PD Relevance Scoring**:
+   - Automatic scoring based on PD literature keywords
+   - Higher scores = more relevant to PD pathology
+
+3. **Pathway Interpretation**:
+   - AI-generated biological context
+   - Explanation of pathway relevance to PD
+   - Literature references
+
+**Workflow:**
+
+```
+1. Select biological categories of interest:
+   ☑ Mitochondrial function
+   ☑ Autophagy/Lysosomal
+   ☐ Dopamine signaling
+   ...
+
+2. Click "Filter by PD Biology"
+
+3. Review filtered signatures:
+   - Only signatures in selected categories shown
+   - Sorted by PD relevance score
+
+4. Click on pathway for interpretation:
+   - Biological context paragraph
+   - PD relevance explanation
+   - Related signatures
+
+5. Category Heatmap:
+   - Rows: Gene pairs
+   - Columns: Biological categories
+   - Colors: Number of signatures in each category
+   - Identify gene pairs with broad pathway disruption
+```
+
+**Example Interpretation:**
+
+```
+Pathway: "mitochondrial transport"
+PD Relevance Score: 0.92
+
+Interpretation:
+Mitochondrial transport is critically impaired in Parkinson's disease. The PINK1-Parkin
+pathway, which regulates mitophagy (selective removal of damaged mitochondria), is directly
+affected by mutations in PARK2 (Parkin) and PINK1. This signature shows convergent disruption
+of mitochondrial protein import (TOMM20, TIMM23) and fusion/fission dynamics (MFN2, OPA1),
+suggesting a core vulnerability in dopaminergic neurons.
+
+Literature: Narendra et al., 2008; Pickrell & Youle, 2015
+```
+
+### 2.4 Tab 3: Pan-Cluster Signatures
+
+**Purpose**: Identify signatures that appear consistently across multiple cell clusters.
+
+**Rationale**: Signatures present in many clusters represent **robust, cell-type-independent effects** - the strongest evidence for convergence.
+
+**Workflow:**
+
+```
+1. Adjust "Minimum Clusters" slider:
+   - Set to 5 (must appear in 5+ clusters)
+
+2. Review Pan-Cluster Table:
+   - Pathway: Converging process
+   - Clusters Present: Which clusters show signature
+   - Mean Signature Score: Average across clusters
+   - Gene Pairs: Which gene pairs show this signature
+
+3. Click pathway to see:
+   - Cluster Presence Heatmap:
+     * Rows: Gene pairs
+     * Columns: Clusters (cluster_0 to cluster_14)
+     * Colors: Signature score in each cluster
+     * White: Signature absent
+     * Red: Strong signature
+
+4. Identify "Universal Signatures":
+   - Present in ALL clusters (or most)
+   - High scores across clusters
+   - Core pathways affected by gene dysfunction
+```
+
+**Example Pan-Cluster Signatures:**
+
+```r
+# Programmatically find pan-cluster signatures
+pan_cluster_sigs <- signatures %>%
+  group_by(pathway_description, mast_gene, mixscale_gene) %>%
+  summarise(
+    N_Clusters = n_distinct(cluster),
+    Mean_Score = mean(signature_score),
+    Clusters = paste(unique(cluster), collapse = ", ")
+  ) %>%
+  filter(N_Clusters >= 5) %>%
+  arrange(desc(Mean_Score))
+
+cat("Top 5 Pan-Cluster Signatures:\n")
+print(head(pan_cluster_sigs, 5))
+
+# Expected results (hypothetical):
+#   pathway_description              mast_gene     mixscale_gene  N_Clusters  Mean_Score
+#   mitochondrial transport          LRRK2_G2019S  LRRK2          8           0.85
+#   autophagosome assembly           PARK2         PARK2          7           0.82
+#   protein ubiquitination           LRRK2_G2019S  LRRK2          6           0.79
+#   lysosomal protein catabolic...   GBA           GBA            6           0.77
+#   vesicle-mediated transport       SNCA_A53T     SNCA           5           0.74
+```
+
+### 2.5 Tab 4: Cluster-Specific Signatures
+
+**Purpose**: Identify signatures unique to individual cell clusters.
+
+**Rationale**: Cluster-specific signatures reveal **cell-type-specific vulnerabilities** relevant to PD heterogeneity.
+
+**Workflow:**
+
+```
+1. Select cluster: "cluster_0" (e.g., dopaminergic neurons)
+
+2. Review Cluster-Specific Table:
+   - Signatures unique to this cluster
+   - Or much stronger in this cluster vs others
+
+3. Compare across clusters:
+   - Select different clusters
+   - Note which pathways are cluster-specific
+   - Identify cell-type vulnerabilities
+
+4. Export cluster-specific signatures:
+   - Download table for manuscript
+   - Include in cell-type characterization
+```
+
+**Example**:
+- Cluster 0 (dopaminergic): Dopamine metabolism signatures
+- Cluster 5 (astrocytes): Glial support function signatures
+- Cluster 10 (microglia): Neuroinflammation signatures
+
+## Part 3: Advanced Signature Analysis
+
+### 3.1 Biological Context Extraction
+
+```{r extract-context}
+# For a specific signature, extract full biological context
+sig_context <- extract_signature_biological_context(
+  mast_gene = "LRRK2_G2019S",
+  mixscale_gene = "LRRK2",
+  cluster = "cluster_0",
+  enrichment_data = enrichment_data
+)
+
+# Results include:
+cat("Signature context:\n")
+cat("Shared pathways:", length(sig_context$shared_pathways), "\n")
+cat("MAST-only pathways:", length(sig_context$mast_only), "\n")
+cat("MixScale-only pathways:", length(sig_context$mixscale_only), "\n")
+cat("PD relevance score:", sig_context$pd_relevance_score, "\n")
+
+# View shared pathways
+cat("\nTop shared pathways:\n")
+print(head(sig_context$shared_pathways, 10))
+
+# Categorize by biological process
+categorized <- categorize_biological_processes(sig_context$shared_pathways)
+cat("\nBiological process distribution:\n")
+print(table(categorized$category))
+```
+
+### 3.2 Direction Consistency Analysis
+
+```{r direction-consistency}
+# Analyze whether genes change in same direction
+
+direction_analysis <- calculate_direction_consistency(
+  mast_gene = "LRRK2_G2019S",
+  mixscale_gene = "LRRK2",
+  cluster = "cluster_0",
+  enrichment_data = enrichment_data
+)
+
+cat("Direction consistency metrics:\n")
+cat("% Same direction:", direction_analysis$pct_same_direction, "\n")
+cat("% Opposite direction:", direction_analysis$pct_opposite_direction, "\n")
+cat("Direction concordance score:", direction_analysis$concordance_score, "\n")
+
+# Interpretation:
+# High concordance (>0.8): Strong convergence
+# Medium concordance (0.5-0.8): Partial convergence
+# Low concordance (<0.5): Weak or antagonistic effects
+```
+
+### 3.3 Signature Trends Analysis
+
+Discover signatures without manual curation:
+
+```{r signature-trends}
+# Data-driven signature discovery
+trends <- analyze_signature_trends(
+  enrichment_data = enrichment_data,
+  top_n = 100
+)
+
+# Three analysis types:
+
+# 1. Frequency Analysis: Most common signatures
+frequent_sigs <- trends$frequency_analysis
+cat("Top 10 Most Frequent Signatures:\n")
+print(head(frequent_sigs, 10))
+
+# 2. Impact Analysis: Strongest effect sizes
+impact_sigs <- trends$impact_analysis
+cat("\nTop 10 Highest Impact Signatures:\n")
+print(head(impact_sigs, 10))
+
+# 3. Term Pattern Analysis: Recurring enrichment patterns
+patterns <- trends$term_patterns
+cat("\nEnrichment term patterns discovered:\n")
+cat("Ubiquitous terms:", length(patterns$ubiquitous), "\n")
+cat("Cluster-specific terms:", length(patterns$cluster_specific), "\n")
+cat("Gene-specific terms:", length(patterns$gene_specific), "\n")
+```
+
+### 3.4 Multi-Gene Signature Discovery
+
+Find signatures involving multiple gene pairs:
+
+```{r multi-gene-signatures}
+# Define PD gene sets
+pd_mutations <- c("LRRK2_G2019S", "SNCA_A53T", "GBA", "PARK7")
+pd_perturbations <- c("LRRK2", "SNCA", "GBA", "PARK7")
+
+# Discover signatures for all combinations
+all_pd_signatures <- lapply(pd_mutations, function(mut) {
+  lapply(pd_perturbations, function(pert) {
+    discover_top_signatures(
+      enrichment_data = enrichment_data,
+      mast_gene_filter = mut,
+      mixscale_gene_filter = pert,
+      top_n = 20
+    )
+  })
+})
+
+# Flatten results
+all_sigs_combined <- do.call(rbind, lapply(all_pd_signatures, function(x) do.call(rbind, x)))
+
+# Find pathways converging across multiple gene pairs
+pathway_convergence <- all_sigs_combined %>%
+  group_by(pathway_description) %>%
+  summarise(
+    N_Gene_Pairs = n_distinct(paste(mast_gene, mixscale_gene)),
+    Mean_Score = mean(signature_score),
+    Gene_Pairs = paste(unique(paste(mast_gene, mixscale_gene, sep = "+")), collapse = "; ")
+  ) %>%
+  filter(N_Gene_Pairs >= 3) %>%
+  arrange(desc(N_Gene_Pairs))
+
+cat("Pathways converging across multiple PD genes:\n")
+print(pathway_convergence)
+
+# These are "core PD pathways" - affected by many PD genes
+```
+
+## Part 4: Visualization and Export
+
+### 4.1 Create Signature Heatmaps
+
+```{r signature-heatmap}
+# Interactive signature heatmap
+library(heatmaply)
+
+# Prepare data matrix
+# Rows: Pathways, Columns: Gene pairs, Values: Signature scores
+signature_matrix <- signatures %>%
+  mutate(GenePair = paste(mast_gene, mixscale_gene, sep = "_")) %>%
+  select(pathway_description, GenePair, signature_score) %>%
+  pivot_wider(names_from = GenePair, values_from = signature_score, values_fill = 0) %>%
+  column_to_rownames("pathway_description") %>%
+  as.matrix()
+
+# Create interactive heatmap
+heatmaply(
+  signature_matrix,
+  scale = "none",
+  colors = colorRampPalette(c("white", "yellow", "red"))(100),
+  main = "Signature Convergence Across Gene Pairs",
+  xlab = "Gene Pair (Mutation + Perturbation)",
+  ylab = "Converging Pathway",
+  fontsize_row = 8,
+  fontsize_col = 8
+)
+
+# Export as HTML
+htmlwidgets::saveWidget(
+  heatmaply(signature_matrix),
+  "signature_heatmap_interactive.html"
+)
+```
+
+### 4.2 Create Signature Network
+
+```{r signature-network}
+# Network visualization showing gene-pathway relationships
+library(igraph)
+library(ggraph)
+
+# Prepare edge list
+edges <- signatures %>%
+  filter(signature_score > 0.7) %>%
+  select(
+    from = mast_gene,
+    to = pathway_description,
+    weight = signature_score
+  )
+
+# Create graph
+sig_network <- graph_from_data_frame(edges, directed = FALSE)
+
+# Plot
+ggraph(sig_network, layout = "fr") +
+  geom_edge_link(aes(alpha = weight), color = "gray") +
+  geom_node_point(aes(color = degree(sig_network)), size = 3) +
+  geom_node_text(aes(label = name), size = 3, repel = TRUE) +
+  scale_color_gradient(low = "lightblue", high = "darkred") +
+  labs(title = "Signature Network: Genes and Converging Pathways") +
+  theme_void()
+
+# Save
+ggsave("signature_network.pdf", width = 12, height = 10)
+```
+
+### 4.3 Exporting Results
+
+```{r export-signatures}
+# Export high-confidence signatures to Excel
+
+library(openxlsx)
+
+wb <- createWorkbook()
+
+# Sheet 1: All signatures
+addWorksheet(wb, "All_Signatures")
+writeData(wb, "All_Signatures", signatures)
+
+# Sheet 2: High-confidence only
+high_conf <- signatures %>% filter(signature_score > 0.7)
+addWorksheet(wb, "High_Confidence")
+writeData(wb, "High_Confidence", high_conf)
+
+# Sheet 3: Pan-cluster signatures
+addWorksheet(wb, "Pan_Cluster")
+writeData(wb, "Pan_Cluster", pan_cluster_sigs)
+
+# Sheet 4: Pathway frequency
+addWorksheet(wb, "Pathway_Frequency")
+writeData(wb, "Pathway_Frequency", pathway_frequency)
+
+# Sheet 5: PD-relevant signatures
+pd_relevant <- signatures %>%
+  filter(grepl("mitochondri|autophagy|lysosom|dopamin|synap", pathway_description, ignore.case = TRUE))
+addWorksheet(wb, "PD_Relevant")
+writeData(wb, "PD_Relevant", pd_relevant)
+
+# Save workbook
+saveWorkbook(wb, "signature_discovery_results.xlsx", overwrite = TRUE)
+
+cat("Results exported to: signature_discovery_results.xlsx\n")
+```
+
+## Part 5: Biological Interpretation
+
+### 5.1 Interpreting Signature Scores
+
+**Score Range Interpretation:**
+
+| Score Range | Interpretation | Confidence | Recommendation |
+|-------------|----------------|------------|----------------|
+| 0.9 - 1.0 | Extremely strong convergence | Very High | Priority for validation |
+| 0.7 - 0.9 | Strong convergence | High | Include in manuscript |
+| 0.5 - 0.7 | Moderate convergence | Medium | Exploratory analysis |
+| 0.3 - 0.5 | Weak convergence | Low | Further investigation needed |
+| 0.0 - 0.3 | Minimal convergence | Very Low | Likely false positive |
+
+**Score Components:**
+
+1. **Gene Overlap** (30% weight):
+   - Fisher's exact test p-value
+   - Number of overlapping genes
+   - Lower p-value = higher score
+
+2. **Effect Correlation** (30% weight):
+   - Pearson's r for log2FC values
+   - Higher correlation = higher score
+   - Positive correlation expected for true convergence
+
+3. **Direction Consistency** (20% weight):
+   - % of genes changing in same direction
+   - Same direction = convergent disruption
+   - Opposite direction = antagonistic effects
+
+4. **Enrichment Strength** (20% weight):
+   - Combined p-values from both methods
+   - Stronger enrichment = higher score
+
+### 5.2 PD-Relevant Pathway Categories
+
+**Category 1: Mitochondrial Function**
+
+Pathways:
+- Mitochondrial transport
+- Oxidative phosphorylation
+- Mitochondrial dynamics (fusion/fission)
+- Calcium homeostasis
+
+PD Relevance:
+- Mitochondrial dysfunction is a hallmark of PD
+- PINK1-Parkin pathway directly regulates mitophagy
+- Complex I deficiency common in PD patients
+
+Example Signature:
+```
+Pathway: "mitochondrial protein import"
+Gene Pair: LRRK2_G2019S + LRRK2
+Signature Score: 0.87
+Overlap Genes: TOMM20, TIMM23, TOMM40, SAMM50, MFN2
+Interpretation: LRRK2 disrupts mitochondrial protein import,
+  leading to accumulation of misfolded proteins in mitochondria
+```
+
+**Category 2: Autophagy/Lysosomal Degradation**
+
+Pathways:
+- Autophagosome assembly
+- Lysosomal protein catabolism
+- Endosome-lysosome fusion
+- LC3 lipidation
+
+PD Relevance:
+- GBA mutations (glucocerebrosidase) directly affect lysosomal function
+- Impaired autophagy leads to α-synuclein accumulation
+- Lewy bodies contain autophagy markers
+
+Example Signature:
+```
+Pathway: "autophagosome-lysosome fusion"
+Gene Pair: GBA + GBA
+Signature Score: 0.91
+Overlap Genes: ATG5, ATG7, LC3B, LAMP1, LAMP2
+Interpretation: GBA loss-of-function impairs autophagy completion,
+  preventing clearance of protein aggregates
+```
+
+**Category 3: Vesicle Transport**
+
+Pathways:
+- Vesicle-mediated transport
+- Golgi-ER trafficking
+- Exocytosis
+- Synaptic vesicle recycling
+
+PD Relevance:
+- α-synuclein plays a role in vesicle trafficking
+- VPS35 mutations affect retromer complex
+- Dopamine release depends on vesicle fusion
+
+**Category 4: Protein Homeostasis**
+
+Pathways:
+- Protein ubiquitination
+- Proteasome-mediated degradation
+- Unfolded protein response
+- Chaperone-mediated autophagy
+
+PD Relevance:
+- PARK2 encodes E3 ubiquitin ligase
+- Proteasome impairment in PD
+- α-synuclein aggregation from misfolding
+
+**Category 5: Dopamine Metabolism**
+
+Pathways:
+- Dopamine biosynthesis
+- Catecholamine transport
+- Monoamine oxidase activity
+- Dopamine receptor signaling
+
+PD Relevance:
+- Loss of dopaminergic neurons defines PD
+- Dopamine oxidation products are toxic
+- L-DOPA therapy targets this pathway
+
+### 5.3 Cross-Method Validation
+
+**Why Convergence Matters:**
+
+```
+Single Method (MAST only):
+✗ Could be mutation-specific artifact
+✗ Could be experimental bias
+✗ Limited biological confidence
+
+Single Method (MixScale only):
+✗ Could be off-target effect
+✗ Could be perturbation artifact
+✗ Guide RNA efficiency issues
+
+Convergent (MAST + MixScale):
+✓ Validated by two independent methods
+✓ Robust to technical artifacts
+✓ High biological confidence
+✓ Strong therapeutic target
+```
+
+**Interpretation Guidelines:**
+
+1. **High-confidence signatures (score > 0.7)**:
+   - Include in manuscript main figures
+   - Priority for experimental validation
+   - Consider for therapeutic targeting
+
+2. **Medium-confidence signatures (score 0.5-0.7)**:
+   - Include in supplementary figures
+   - Validate with additional assays
+   - Exploratory analysis
+
+3. **Low-confidence signatures (score < 0.5)**:
+   - Hypothesis generation only
+   - Require extensive validation
+   - May be false positives
+
+## Part 6: Case Studies
+
+### Case Study 1: LRRK2_G2019S Signatures
+
+**Question**: What pathways converge between LRRK2 G2019S mutation and LRRK2 CRISPRi knockdown?
+
+```{r case-study-lrrk2}
+# Discover LRRK2 signatures
+lrrk2_sigs <- discover_top_signatures(
+  enrichment_data = enrichment_data,
+  mast_gene_filter = "LRRK2_G2019S",
+  mixscale_gene_filter = "LRRK2",
+  top_n = 50,
+  min_cluster_presence = 1
+)
+
+# Analyze by cluster
+lrrk2_by_cluster <- lrrk2_sigs %>%
+  group_by(cluster) %>%
+  summarise(
+    N_Signatures = n(),
+    Top_Pathway = pathway_description[which.max(signature_score)],
+    Top_Score = max(signature_score)
+  )
+
+print(lrrk2_by_cluster)
+
+# Key findings (hypothetical):
+# cluster_0: Mitochondrial transport (score: 0.89)
+# cluster_1: Vesicle-mediated transport (score: 0.85)
+# cluster_2: Autophagosome assembly (score: 0.82)
+```
+
+**Interpretation**:
+- LRRK2 disrupts multiple pathways across cell types
+- Mitochondrial dysfunction is strongest signature
+- Consistent with LRRK2's role in mitochondrial dynamics
+- Validates therapeutic strategies targeting mitochondria
+
+### Case Study 2: Pan-PD Gene Signatures
+
+**Question**: Which pathways are affected by multiple PD genes?
+
+```{r case-study-pan-pd}
+# Core PD genes
+pd_genes <- c("LRRK2", "SNCA", "GBA", "PARK2", "PINK1", "PARK7")
+
+# Find signatures for each gene (mutation + perturbation)
+pan_pd_sigs <- lapply(pd_genes, function(gene) {
+  discover_top_signatures(
+    enrichment_data = enrichment_data,
+    mast_gene_filter = paste0(gene, "_"),  # Match any mutation variant
+    mixscale_gene_filter = gene,
+    top_n = 30
+  )
+})
+
+pan_pd_combined <- do.call(rbind, pan_pd_sigs)
+
+# Find pathways appearing in multiple genes
+core_pathways <- pan_pd_combined %>%
+  group_by(pathway_description) %>%
+  summarise(
+    N_Genes = n_distinct(mast_gene),
+    Mean_Score = mean(signature_score),
+    Genes = paste(unique(mast_gene), collapse = ", ")
+  ) %>%
+  filter(N_Genes >= 3) %>%
+  arrange(desc(N_Genes))
+
+print(core_pathways)
+
+# Expected core pathways:
+# 1. Mitochondrial transport (6 genes)
+# 2. Autophagy (5 genes)
+# 3. Protein ubiquitination (5 genes)
+# 4. Lysosomal degradation (4 genes)
+# 5. Vesicle transport (4 genes)
+```
+
+**Interpretation**:
+- Core pathways represent shared PD mechanisms
+- Therapeutic targets should address these convergent processes
+- Multiple gene mutations converge on same cellular dysfunction
+
+## Best Practices
+
+### 1. Always Apply FDR Correction
+
+```{r best-practice-fdr}
+# GOOD: Use FDR-corrected signatures
+signatures <- discover_top_signatures(
+  enrichment_data,
+  fdr_correction = TRUE,
+  fisher_pval_threshold = 0.01
+)
+
+# RISKY: Uncorrected (exploratory only)
+signatures_uncorrected <- discover_top_signatures(
+  enrichment_data,
+  fdr_correction = FALSE,
+  fisher_pval_threshold = 0.05
+)
+```
+
+### 2. Set Appropriate Thresholds
+
+```{r best-practice-thresholds}
+# Conservative (high confidence)
+signatures_conservative <- discover_top_signatures(
+  enrichment_data,
+  fisher_pval_threshold = 0.001,    # Very stringent
+  min_overlap_genes = 5,            # At least 5 genes
+  min_cluster_presence = 5          # Must appear in 5+ clusters
+)
+
+# Moderate (recommended)
+signatures_moderate <- discover_top_signatures(
+  enrichment_data,
+  fisher_pval_threshold = 0.01,
+  min_overlap_genes = 3,
+  min_cluster_presence = 3
+)
+
+# Liberal (exploratory)
+signatures_liberal <- discover_top_signatures(
+  enrichment_data,
+  fisher_pval_threshold = 0.05,
+  min_overlap_genes = 2,
+  min_cluster_presence = 1
+)
+```
+
+### 3. Validate Key Findings
+
+```{r best-practice-validation}
+# For top signatures, validate with:
+
+# 1. Literature search
+validate_with_literature <- function(pathway) {
+  # Search PubMed for: "pathway" AND "Parkinson's disease"
+  # Check if previously reported
+}
+
+# 2. Cross-cluster consistency
+check_cross_cluster <- function(sig) {
+  # Is signature present in multiple clusters?
+  # Higher reproducibility = higher confidence
+}
+
+# 3. External datasets
+validate_external <- function(sig) {
+  # Check in other PD datasets
+  # GSE series, Human Brain Atlas, etc.
+}
+
+# 4. Experimental validation
+# - qPCR for key genes
+# - Western blot for proteins
+# - Functional assays
+```
+
+### 4. Document Analysis Parameters
+
+```{r best-practice-documentation}
+# Save complete analysis metadata
+signature_metadata <- list(
+  analysis_date = Sys.Date(),
+  package_version = packageVersion("iSCORE.PDecipher"),
+  enrichment_data_file = "all_enrichment_padj005_complete_with_direction.rds",
+  parameters = list(
+    top_n = 50,
+    fisher_pval_threshold = 0.01,
+    min_overlap_genes = 3,
+    min_cluster_presence = 3,
+    fdr_correction = TRUE,
+    fdr_method = "BH"
+  ),
+  results_summary = list(
+    total_signatures = nrow(signatures),
+    high_confidence = sum(signatures$signature_score > 0.7),
+    gene_pairs_analyzed = n_distinct(signatures$mast_gene, signatures$mixscale_gene)
+  )
+)
+
+saveRDS(signature_metadata, "signature_analysis_metadata.rds")
+```
+
+## Troubleshooting
+
+### Issue: "No signatures found"
+
+**Causes:**
+1. Thresholds too stringent
+2. Poor gene overlap
+3. Opposite effect directions (antagonistic)
+
+**Solutions:**
+```{r troubleshoot-no-sigs}
+# 1. Relax thresholds
+signatures <- discover_top_signatures(
+  enrichment_data,
+  fisher_pval_threshold = 0.05,  # Less stringent
+  min_overlap_genes = 2           # Lower minimum
+)
+
+# 2. Check individual enrichments
+# Are both methods finding enriched terms?
+
+# 3. Examine effect directions
+# Use direction_consistency analysis
+```
+
+### Issue: "Too many low-confidence signatures"
+
+**Causes:**
+1. Not using FDR correction
+2. Large multiple testing burden
+
+**Solutions:**
+```{r troubleshoot-too-many}
+# 1. Apply FDR correction
+signatures <- discover_top_signatures(
+  enrichment_data,
+  fdr_correction = TRUE,
+  fdr_method = "BH"
+)
+
+# 2. Increase stringency
+signatures <- signatures %>%
+  filter(signature_score > 0.7, fisher_pvalue < 0.001)
+
+# 3. Focus on pan-cluster signatures
+signatures <- signatures %>%
+  group_by(pathway_description) %>%
+  filter(n() >= 3) %>%
+  ungroup()
+```
+
+## Conclusions
+
+**Key Takeaways:**
+
+1. ✅ Signature discovery identifies convergent pathways validated by two methods
+2. ✅ High-confidence signatures (score > 0.7) are robust therapeutic targets
+3. ✅ Pan-cluster signatures represent core disease mechanisms
+4. ✅ PD-relevant pathways cluster into key categories (mitochondrial, autophagy, etc.)
+5. ✅ Cross-method validation reduces false positives dramatically
+6. ✅ Biological interpretation requires domain knowledge + statistical rigor
+
+**Signature Discovery Strengths:**
+- Robust to technical artifacts
+- Cross-validated by independent methods
+- Biologically interpretable
+- Directly applicable to therapeutic development
+
+**Next Steps:**
+- Validate top signatures experimentally
+- Explore cluster-specific mechanisms
+- Integrate with other PD datasets
+- Consider therapeutic interventions
+
+## Additional Resources
+
+- **Getting Started Vignette**: Basic iSCORE-PDecipher usage
+- **Perturb-seq Workflow**: Detailed Mixscale integration
+- **Advanced Customization**: Batch processing and automation
+- **GitHub Issues**: Report bugs or request features
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
+
+---
+
+**Package**: iSCORE.PDecipher
+**Feature**: Signature Discovery
+**Algorithm**: Fisher's Exact Test + Effect Correlation + Composite Scoring
+**Applications**: PD research, therapeutic target identification, pathway analysis

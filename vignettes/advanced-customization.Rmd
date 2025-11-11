@@ -1,0 +1,1389 @@
+---
+title: "Advanced Customization and Batch Processing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Customization and Batch Processing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Introduction
+
+This vignette covers **advanced usage** of iSCORE-PDecipher for power users, including:
+
+- **Batch processing** multiple datasets
+- **Programmatic workflows** without Shiny GUI
+- **Custom analysis pipelines**
+- **Performance optimization** for large datasets
+- **Integration** with external tools (Seurat, scMAGeCK, custom pipelines)
+- **Custom enrichment** databases
+- **Automated report generation**
+- **HPC/cluster deployment**
+
+**Target Audience**: Computational biologists, data scientists, and researchers running large-scale analyses.
+
+## Part 1: Batch Processing Multiple Datasets
+
+### 1.1 Batch Import and Processing
+
+Process multiple experiments systematically:
+
+```{r batch-import}
+library(iSCORE.PDecipher)
+library(parallel)  # For parallel processing
+
+# Define experiments
+experiments <- c("FPD", "CRISPRi", "CRISPRa")
+
+# Base directory
+base_dir <- "../final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/"
+
+# Batch process all experiments
+batch_results <- lapply(experiments, function(exp) {
+
+  cat("\nProcessing experiment:", exp, "\n")
+
+  # Define experiment-specific paths
+  exp_dir <- file.path(
+    base_dir,
+    paste0("CRISPRi_PerturbSeq_Reports_all_", exp, "_no_multiplets_noExptSplit")
+  )
+
+  # Find all cluster directories
+  cluster_dirs <- list.dirs(exp_dir, recursive = FALSE)
+
+  # Process each cluster
+  cluster_results <- lapply(cluster_dirs, function(cluster_dir) {
+
+    cluster_id <- basename(cluster_dir)
+    cat("  Processing", cluster_id, "\n")
+
+    # Import pooled MixScale data
+    data <- tryCatch({
+      import_pooled_mixscale_data(
+        mixscale_dir = cluster_dir,
+        pval_column = "p_weight_BH"
+      )
+    }, error = function(e) {
+      cat("    Error:", e$message, "\n")
+      return(NULL)
+    })
+
+    if (is.null(data)) return(NULL)
+
+    # Run enrichment analysis
+    enrichment <- tryCatch({
+      run_enrichment_analysis(
+        de_results = data,
+        output_dir = file.path("./batch_output", exp, cluster_id),
+        pval_threshold = 0.05,
+        lfc_threshold = 0.25
+      )
+    }, error = function(e) {
+      cat("    Enrichment error:", e$message, "\n")
+      return(NULL)
+    })
+
+    return(list(
+      cluster = cluster_id,
+      data = data,
+      enrichment = enrichment
+    ))
+  })
+
+  # Remove NULL results (failed clusters)
+  cluster_results <- Filter(Negate(is.null), cluster_results)
+
+  return(list(
+    experiment = exp,
+    clusters = cluster_results
+  ))
+})
+
+names(batch_results) <- experiments
+
+# Save batch results
+saveRDS(batch_results, "batch_processing_results.rds")
+
+cat("\nBatch processing complete!\n")
+cat("Results saved to: batch_processing_results.rds\n")
+```
+
+### 1.2 Parallel Batch Processing
+
+Speed up processing with parallel execution:
+
+```{r batch-parallel}
+library(parallel)
+
+# Detect available cores
+n_cores <- detectCores() - 1  # Leave one core free
+cat("Using", n_cores, "cores for parallel processing\n")
+
+# Create cluster
+cl <- makeCluster(n_cores)
+
+# Export necessary objects and functions
+clusterEvalQ(cl, {
+  library(iSCORE.PDecipher)
+})
+
+# Define processing function
+process_single_experiment <- function(exp_info) {
+  exp_name <- exp_info$name
+  exp_dir <- exp_info$path
+
+  # Import data
+  data <- import_pooled_mixscale_data(
+    mixscale_dir = exp_dir,
+    pval_column = "p_weight_BH"
+  )
+
+  # Run enrichment
+  enrichment <- run_enrichment_analysis(
+    de_results = data,
+    output_dir = file.path("./parallel_output", exp_name)
+  )
+
+  return(list(
+    experiment = exp_name,
+    n_perturbations = length(data),
+    enrichment_terms = nrow(enrichment)
+  ))
+}
+
+# Define all experiments to process
+all_experiments <- list(
+  list(name = "FPD_cluster0", path = "path/to/FPD/cluster0"),
+  list(name = "FPD_cluster1", path = "path/to/FPD/cluster1"),
+  list(name = "CRISPRi_cluster0", path = "path/to/CRISPRi/cluster0"),
+  # ... add all combinations
+)
+
+# Parallel execution
+parallel_results <- parLapply(cl, all_experiments, process_single_experiment)
+
+# Stop cluster
+stopCluster(cl)
+
+# Combine results
+results_df <- do.call(rbind, lapply(parallel_results, as.data.frame))
+print(results_df)
+
+# Save
+saveRDS(parallel_results, "parallel_batch_results.rds")
+write.csv(results_df, "batch_processing_summary.csv", row.names = FALSE)
+```
+
+### 1.3 Batch Report Generation
+
+Generate summary reports for all experiments:
+
+```{r batch-reports}
+# Load batch results
+batch_results <- readRDS("batch_processing_results.rds")
+
+# Generate summary statistics
+batch_summary <- lapply(names(batch_results), function(exp) {
+  exp_data <- batch_results[[exp]]
+
+  # Extract statistics
+  cluster_stats <- lapply(exp_data$clusters, function(cluster) {
+    data.frame(
+      Experiment = exp,
+      Cluster = cluster$cluster,
+      N_Perturbations = length(cluster$data),
+      N_DEGs_Total = sum(sapply(cluster$data, function(x) {
+        sum(x$p_weight_BH < 0.05 & abs(x$log2FC) > 0.25)
+      })),
+      N_Enrichment_Terms = if (!is.null(cluster$enrichment)) {
+        nrow(cluster$enrichment)
+      } else {
+        0
+      }
+    )
+  })
+
+  do.call(rbind, cluster_stats)
+})
+
+batch_summary_df <- do.call(rbind, batch_summary)
+
+# Print summary
+print(batch_summary_df)
+
+# Create visualizations
+library(ggplot2)
+
+# Plot 1: DEG counts across experiments
+ggplot(batch_summary_df, aes(x = Cluster, y = N_DEGs_Total, fill = Experiment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Significant DEGs Across Experiments",
+       x = "Cluster",
+       y = "Number of Significant DEGs") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("batch_degs_summary.pdf", width = 12, height = 6)
+
+# Plot 2: Enrichment terms
+ggplot(batch_summary_df, aes(x = Experiment, y = N_Enrichment_Terms, fill = Cluster)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Enrichment Terms Generated Across Experiments",
+       x = "Experiment",
+       y = "Number of Enrichment Terms") +
+  theme_minimal()
+
+ggsave("batch_enrichment_summary.pdf", width = 10, height = 6)
+
+# Export summary table
+library(openxlsx)
+wb <- createWorkbook()
+addWorksheet(wb, "Batch Summary")
+writeData(wb, "Batch Summary", batch_summary_df)
+saveWorkbook(wb, "batch_analysis_summary.xlsx", overwrite = TRUE)
+```
+
+## Part 2: Programmatic Workflows (No GUI)
+
+### 2.1 Complete Analysis Pipeline
+
+Run entire analysis without launching Shiny app:
+
+```{r programmatic-pipeline}
+# Define analysis pipeline function
+run_complete_iscore_pipeline <- function(
+  mast_dir,
+  mixscale_dir,
+  output_dir,
+  enrichment_methods = c("GO_BP", "GO_MF", "GO_CC", "KEGG", "Reactome"),
+  pval_threshold = 0.05,
+  lfc_threshold = 0.25
+) {
+
+  # Create output directory
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  # Step 1: Import MAST data
+  cat("\n=== Step 1: Importing MAST data ===\n")
+  mast_data <- import_mast_data(mast_dir)
+  cat("MAST mutations:", length(mast_data), "\n")
+
+  # Step 2: Import MixScale data
+  cat("\n=== Step 2: Importing MixScale data ===\n")
+  mixscale_data <- import_mixscale_data(mixscale_dir)
+  cat("MixScale perturbations:", length(mixscale_data), "\n")
+
+  # Step 3: Combine DE results
+  cat("\n=== Step 3: Combining DE results ===\n")
+  combined_de <- list(
+    iSCORE_PD_MAST = mast_data,
+    CRISPRi_Mixscale = mixscale_data
+  )
+  saveRDS(combined_de, file.path(output_dir, "full_DE_results.rds"))
+
+  # Step 4: Run enrichment analysis
+  cat("\n=== Step 4: Running enrichment analysis ===\n")
+  enrichment_results <- run_enrichment_analysis(
+    de_results = combined_de,
+    output_dir = file.path(output_dir, "enrichment_results"),
+    methods = enrichment_methods,
+    pval_threshold = pval_threshold,
+    lfc_threshold = lfc_threshold
+  )
+
+  # Step 5: Consolidate enrichment
+  cat("\n=== Step 5: Consolidating enrichment results ===\n")
+  consolidated <- consolidate_enrichment_results(
+    enrichment_dir = file.path(output_dir, "enrichment_results"),
+    output_file = file.path(output_dir, "all_enrichment_padj005_complete_with_direction.rds")
+  )
+
+  # Step 6: Discover signatures
+  cat("\n=== Step 6: Discovering signatures ===\n")
+  enrichment_data <- readRDS(file.path(output_dir, "all_enrichment_padj005_complete_with_direction.rds"))
+
+  signatures <- discover_top_signatures(
+    enrichment_data = enrichment_data,
+    top_n = 100,
+    min_cluster_presence = 3,
+    fdr_correction = TRUE
+  )
+
+  saveRDS(signatures, file.path(output_dir, "discovered_signatures.rds"))
+
+  # Step 7: Generate summary statistics
+  cat("\n=== Step 7: Generating summary statistics ===\n")
+  summary_stats <- list(
+    n_mast_mutations = length(mast_data),
+    n_mixscale_perturbations = length(mixscale_data),
+    n_enrichment_terms = nrow(enrichment_data),
+    n_signatures = nrow(signatures),
+    high_conf_signatures = sum(signatures$signature_score > 0.7),
+    analysis_date = Sys.Date(),
+    parameters = list(
+      pval_threshold = pval_threshold,
+      lfc_threshold = lfc_threshold,
+      enrichment_methods = enrichment_methods
+    )
+  )
+
+  saveRDS(summary_stats, file.path(output_dir, "analysis_summary.rds"))
+
+  cat("\n=== Analysis Complete! ===\n")
+  cat("Results saved to:", output_dir, "\n")
+
+  return(list(
+    de_results = combined_de,
+    enrichment = enrichment_data,
+    signatures = signatures,
+    summary = summary_stats
+  ))
+}
+
+# Run pipeline
+results <- run_complete_iscore_pipeline(
+  mast_dir = "./MAST_results/",
+  mixscale_dir = "./MixScale_results/",
+  output_dir = "./programmatic_analysis_output/"
+)
+
+# Access results
+cat("\nAnalysis Summary:\n")
+print(results$summary)
+```
+
+### 2.2 Custom Filtering and Subsetting
+
+Extract specific subsets of data:
+
+```{r custom-filtering}
+# Load enrichment data
+enrichment <- readRDS("all_enrichment_padj005_complete_with_direction.rds")
+
+# Filter 1: PD-relevant pathways only
+pd_keywords <- c(
+  "mitochondri", "autophagy", "lysosom", "dopamin", "synap",
+  "neuron", "parkin", "ubiquitin", "proteasome", "apoptosis"
+)
+
+pd_enrichment <- enrichment %>%
+  filter(grepl(paste(pd_keywords, collapse = "|"), Description, ignore.case = TRUE))
+
+cat("PD-relevant terms:", nrow(pd_enrichment), "/", nrow(enrichment), "\n")
+
+# Filter 2: Specific genes of interest
+poi <- c("LRRK2", "SNCA", "GBA", "PARK2", "PINK1")
+
+poi_enrichment <- enrichment %>%
+  filter(gene %in% poi | grepl(paste(poi, collapse = "|"), gene))
+
+cat("POI enrichment terms:", nrow(poi_enrichment), "\n")
+
+# Filter 3: High-significance terms only
+high_sig <- enrichment %>%
+  filter(p.adjust < 0.001, Count >= 5)
+
+cat("High-significance terms:", nrow(high_sig), "\n")
+
+# Filter 4: Upregulated pathways in dopaminergic clusters
+# (Assuming cluster_0 and cluster_1 are dopaminergic)
+dopaminergic_up <- enrichment %>%
+  filter(
+    cluster %in% c("cluster_0", "cluster_1"),
+    direction == "UP",
+    p.adjust < 0.05
+  )
+
+cat("Dopaminergic upregulated:", nrow(dopaminergic_up), "\n")
+
+# Combine filters
+custom_subset <- enrichment %>%
+  filter(
+    grepl(paste(pd_keywords, collapse = "|"), Description, ignore.case = TRUE),
+    gene %in% poi,
+    p.adjust < 0.01,
+    Count >= 3
+  )
+
+cat("Custom subset:", nrow(custom_subset), "\n")
+
+# Export subsets
+saveRDS(pd_enrichment, "enrichment_pd_relevant.rds")
+saveRDS(poi_enrichment, "enrichment_poi.rds")
+saveRDS(custom_subset, "enrichment_custom_subset.rds")
+```
+
+### 2.3 Programmatic Visualization
+
+Generate plots without Shiny:
+
+```{r programmatic-viz}
+library(ggplot2)
+library(plotly)
+library(ComplexHeatmap)
+
+# Load data
+enrichment <- readRDS("enrichment_pd_relevant.rds")
+
+# Visualization 1: Enrichment dot plot
+top_terms <- enrichment %>%
+  filter(gene == "LRRK2", cluster == "cluster_0", enrichment_type == "GO_BP") %>%
+  arrange(p.adjust) %>%
+  head(20)
+
+# Parse GeneRatio
+top_terms$GeneRatio_numeric <- sapply(strsplit(top_terms$GeneRatio, "/"),
+                                       function(x) as.numeric(x[1]) / as.numeric(x[2]))
+
+p1 <- ggplot(top_terms, aes(x = GeneRatio_numeric, y = reorder(Description, GeneRatio_numeric))) +
+  geom_point(aes(size = Count, color = p.adjust)) +
+  scale_color_gradient(low = "red", high = "blue") +
+  labs(title = "Top GO Biological Processes: LRRK2",
+       x = "Gene Ratio",
+       y = NULL,
+       color = "Adjusted\np-value",
+       size = "Gene\nCount") +
+  theme_minimal()
+
+ggsave("lrrk2_go_bp_dotplot.pdf", p1, width = 10, height = 8)
+
+# Visualization 2: Pathway comparison across genes
+pathway_comparison <- enrichment %>%
+  filter(
+    enrichment_type == "GO_BP",
+    cluster == "cluster_0",
+    p.adjust < 0.05
+  ) %>%
+  group_by(gene, Description) %>%
+  summarise(min_padj = min(p.adjust), .groups = "drop")
+
+# Select top pathways
+top_pathways <- pathway_comparison %>%
+  group_by(Description) %>%
+  filter(n() >= 3) %>%  # Present in at least 3 genes
+  ungroup() %>%
+  arrange(min_padj) %>%
+  head(50)
+
+# Create matrix for heatmap
+heatmap_mat <- top_pathways %>%
+  mutate(log_padj = -log10(min_padj)) %>%
+  pivot_wider(id_cols = Description, names_from = gene, values_from = log_padj, values_fill = 0) %>%
+  column_to_rownames("Description") %>%
+  as.matrix()
+
+# Generate heatmap
+pdf("pathway_comparison_heatmap.pdf", width = 10, height = 12)
+Heatmap(
+  heatmap_mat,
+  name = "-log10(p.adjust)",
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  show_row_names = TRUE,
+  show_column_names = TRUE,
+  row_names_gp = gpar(fontsize = 8),
+  column_names_gp = gpar(fontsize = 10),
+  col = colorRampPalette(c("white", "yellow", "red"))(100),
+  heatmap_legend_param = list(title = "-log10(FDR)")
+)
+dev.off()
+
+# Visualization 3: Interactive volcano plot
+de_data <- readRDS("full_DE_results.rds")
+lrrk2_de <- de_data$CRISPRi_Mixscale$LRRK2$cluster_0$results
+
+lrrk2_de$significant <- ifelse(
+  lrrk2_de$p_val_adj < 0.05 & abs(lrrk2_de$log2FC) > 0.25,
+  "Significant",
+  "Not Significant"
+)
+
+p3 <- plot_ly(
+  data = lrrk2_de,
+  x = ~log2FC,
+  y = ~-log10(p_val_adj),
+  color = ~significant,
+  colors = c("gray", "red"),
+  type = "scatter",
+  mode = "markers",
+  text = ~gene,
+  hoverinfo = "text"
+) %>%
+  layout(
+    title = "LRRK2 Perturbation: Volcano Plot",
+    xlab = "Log2 Fold Change",
+    ylab = "-log10(Adjusted p-value)"
+  )
+
+htmlwidgets::saveWidget(p3, "lrrk2_volcano_interactive.html")
+```
+
+## Part 3: Custom Analysis Pipelines
+
+### 3.1 Integration with Seurat
+
+Seamless integration with Seurat objects:
+
+```{r seurat-integration}
+library(Seurat)
+
+# Scenario: You have a Seurat object with Perturb-seq data
+
+# Step 1: Run differential expression in Seurat
+# Assuming perturbation identity is in metadata column "perturbation"
+
+seurat_obj <- readRDS("my_seurat_object.rds")
+
+# Find markers for each perturbation
+perturbations <- unique(seurat_obj$perturbation)
+
+seurat_de_results <- lapply(perturbations, function(pert) {
+  if (pert == "Non-Targeting") return(NULL)
+
+  FindMarkers(
+    seurat_obj,
+    ident.1 = pert,
+    ident.2 = "Non-Targeting",
+    test.use = "wilcox",
+    logfc.threshold = 0.25,
+    min.pct = 0.1
+  )
+})
+
+names(seurat_de_results) <- perturbations
+
+# Step 2: Convert to iSCORE-PDecipher format
+convert_seurat_to_iscore <- function(seurat_results, cluster_id = "cluster_0") {
+  formatted <- lapply(names(seurat_results), function(pert) {
+    if (is.null(seurat_results[[pert]])) return(NULL)
+
+    df <- seurat_results[[pert]]
+    df$gene_ID <- rownames(df)
+    df$log2FC <- df$avg_log2FC
+    df$p_val_adj <- df$p_val_adj
+
+    list(
+      cluster = cluster_id,
+      results = df[, c("gene_ID", "log2FC", "p_val_adj")]
+    )
+  })
+
+  names(formatted) <- names(seurat_results)
+  formatted[!sapply(formatted, is.null)]
+}
+
+iscore_format <- convert_seurat_to_iscore(seurat_de_results)
+
+# Step 3: Run enrichment with iSCORE-PDecipher
+enrichment_from_seurat <- run_enrichment_analysis(
+  de_results = list(Seurat_Analysis = iscore_format),
+  output_dir = "./seurat_enrichment_output/"
+)
+
+# Step 4: Visualize in iSCORE-PDecipher app
+# Prepare data directory
+prepare_seurat_for_app <- function(seurat_results, output_dir) {
+  dir.create(output_dir, recursive = TRUE)
+
+  # Save formatted DE results
+  saveRDS(
+    list(Seurat_Perturb seq = iscore_format),
+    file.path(output_dir, "full_DE_results.rds")
+  )
+
+  # Run and save enrichment
+  enrichment <- run_enrichment_analysis(
+    de_results = iscore_format,
+    output_dir = file.path(output_dir, "enrichment_results")
+  )
+
+  consolidated <- consolidate_enrichment_results(
+    enrichment_dir = file.path(output_dir, "enrichment_results"),
+    output_file = file.path(output_dir, "all_enrichment_padj005_complete_with_direction.rds")
+  )
+
+  cat("Seurat data prepared for iSCORE-PDecipher app\n")
+  cat("Launch with: launch_app('", output_dir, "')\n")
+}
+
+prepare_seurat_for_app(seurat_de_results, "./seurat_iscore_data/")
+
+# Launch app
+launch_app("./seurat_iscore_data/")
+```
+
+### 3.2 Integration with scMAGeCK
+
+Import scMAGeCK results directly:
+
+```{r scmageck-integration}
+# Read scMAGeCK RRA output
+scmageck_file <- "scmageck_rra_output.txt"
+
+scmageck_data <- read.delim(scmageck_file, header = TRUE)
+
+# Expected columns: sgRNA, Gene, LFC, control_mean, treatment_mean, p_value, FDR
+
+# Convert to iSCORE-PDecipher format
+convert_scmageck_to_iscore <- function(scmageck_results, cluster_id = "cluster_0") {
+
+  # Aggregate by gene (scMAGeCK provides sgRNA-level results)
+  gene_level <- scmageck_results %>%
+    group_by(Gene) %>%
+    summarise(
+      log2FC = mean(LFC),
+      p_val_adj = min(FDR),  # Use minimum FDR across sgRNAs
+      n_guides = n()
+    ) %>%
+    rename(gene_ID = Gene)
+
+  # Format for iSCORE-PDecipher
+  list(
+    cluster_0 = list(
+      results = as.data.frame(gene_level)
+    )
+  )
+}
+
+iscore_from_scmageck <- convert_scmageck_to_iscore(scmageck_data)
+
+# Run enrichment
+enrichment_scmageck <- run_enrichment_analysis(
+  de_results = list(scMAGeCK_Analysis = iscore_from_scmageck),
+  output_dir = "./scmageck_enrichment/"
+)
+
+# Visualize
+prepare_scmageck_for_app <- function(scmageck_results, output_dir) {
+  dir.create(output_dir, recursive = TRUE)
+
+  iscore_format <- convert_scmageck_to_iscore(scmageck_results)
+
+  saveRDS(
+    list(scMAGeCK_Perturbseq = iscore_format),
+    file.path(output_dir, "full_DE_results.rds")
+  )
+
+  enrichment <- run_enrichment_analysis(
+    de_results = iscore_format,
+    output_dir = file.path(output_dir, "enrichment_results")
+  )
+
+  consolidate_enrichment_results(
+    enrichment_dir = file.path(output_dir, "enrichment_results"),
+    output_file = file.path(output_dir, "all_enrichment_padj005_complete_with_direction.rds")
+  )
+}
+
+prepare_scmageck_for_app(scmageck_data, "./scmageck_iscore_data/")
+launch_app("./scmageck_iscore_data/")
+```
+
+### 3.3 Custom Enrichment Databases
+
+Use custom pathway databases:
+
+```{r custom-enrichment}
+library(clusterProfiler)
+
+# Define custom pathway database
+custom_pathways <- list(
+  "Custom_PD_Pathway_1" = c("LRRK2", "SNCA", "GBA", "PARK2"),
+  "Custom_PD_Pathway_2" = c("PINK1", "PARK7", "ATP13A2", "VPS35"),
+  "Mitochondrial_Custom" = c("TOMM20", "TIMM23", "MFN2", "OPA1"),
+  # ... more custom pathways
+)
+
+# Convert to term2gene format for enricher()
+custom_term2gene <- stack(custom_pathways)
+colnames(custom_term2gene) <- c("gene", "term")
+
+# Run enrichment with custom database
+run_custom_enrichment <- function(gene_list, custom_db) {
+  enricher(
+    gene = gene_list,
+    TERM2GENE = custom_db,
+    pvalueCutoff = 0.05,
+    qvalueCutoff = 0.05
+  )
+}
+
+# Example: LRRK2 DEGs
+lrrk2_degs <- c("TOMM20", "TIMM23", "PINK1", "PARK2", "GBA", "SNCA")
+
+custom_results <- run_custom_enrichment(lrrk2_degs, custom_term2gene)
+
+# View results
+cat("Custom enrichment results:\n")
+print(as.data.frame(custom_results))
+
+# Integrate with iSCORE-PDecipher pipeline
+add_custom_enrichment_to_pipeline <- function(de_results, custom_db) {
+
+  # Extract significant genes
+  sig_genes <- de_results[de_results$p_val_adj < 0.05 & abs(de_results$log2FC) > 0.25, ]$gene_ID
+
+  # Run custom enrichment
+  custom_enrich <- run_custom_enrichment(sig_genes, custom_db)
+
+  # Convert to iSCORE-PDecipher format
+  custom_formatted <- as.data.frame(custom_enrich)
+  custom_formatted$enrichment_type <- "Custom"
+  custom_formatted$method <- "Custom_Database"
+
+  return(custom_formatted)
+}
+```
+
+## Part 4: Performance Optimization
+
+### 4.1 Memory Management for Large Datasets
+
+Handle 230k+ cell datasets efficiently:
+
+```{r memory-optimization}
+# Strategy 1: Use data sampling for exploration
+sample_large_dataset <- function(de_file, sample_size = 50000) {
+
+  full_data <- readRDS(de_file)
+
+  # For each perturbation, sample genes
+  sampled <- lapply(full_data, function(pert_data) {
+    if (nrow(pert_data) > sample_size) {
+      # Prioritize significant genes
+      sig_genes <- pert_data[pert_data$p_val_adj < 0.05, ]
+      non_sig <- pert_data[pert_data$p_val_adj >= 0.05, ]
+
+      # Sample non-significant genes
+      n_sample <- sample_size - nrow(sig_genes)
+      if (n_sample > 0 && nrow(non_sig) > 0) {
+        sampled_non_sig <- non_sig[sample(nrow(non_sig), min(n_sample, nrow(non_sig))), ]
+        rbind(sig_genes, sampled_non_sig)
+      } else {
+        sig_genes
+      }
+    } else {
+      pert_data
+    }
+  })
+
+  return(sampled)
+}
+
+# Use sampled data for exploration
+sampled_data <- sample_large_dataset("large_de_results.rds", sample_size = 50000)
+
+# Strategy 2: Lazy loading with data.table
+library(data.table)
+
+lazy_load_enrichment <- function(enrichment_file) {
+  # Load only column names first
+  dt <- fread(enrichment_file, nrows = 0)
+
+  # Function to load specific subsets on demand
+  load_subset <- function(gene_filter = NULL, cluster_filter = NULL) {
+    query <- "SELECT * FROM enrichment WHERE 1=1"
+
+    if (!is.null(gene_filter)) {
+      query <- paste0(query, " AND gene = '", gene_filter, "'")
+    }
+
+    if (!is.null(cluster_filter)) {
+      query <- paste0(query, " AND cluster = '", cluster_filter, "'")
+    }
+
+    # Load only matching rows
+    fread(enrichment_file, select = names(dt))
+  }
+
+  return(load_subset)
+}
+
+# Strategy 3: Chunked processing
+process_in_chunks <- function(data, chunk_size = 1000, process_fn) {
+  n_chunks <- ceiling(length(data) / chunk_size)
+
+  results <- list()
+
+  for (i in 1:n_chunks) {
+    start_idx <- (i - 1) * chunk_size + 1
+    end_idx <- min(i * chunk_size, length(data))
+
+    chunk <- data[start_idx:end_idx]
+    results[[i]] <- process_fn(chunk)
+
+    # Garbage collection after each chunk
+    gc()
+  }
+
+  return(do.call(c, results))
+}
+
+# Strategy 4: Memory profiling
+library(pryr)
+
+# Check memory usage
+mem_used()
+
+# Profile memory for function
+mem_change({
+  # Your memory-intensive operation
+  result <- run_enrichment_analysis(data)
+})
+```
+
+### 4.2 Computational Optimization
+
+Speed up enrichment analysis:
+
+```{r compute-optimization}
+# Optimization 1: Parallel enrichment
+run_enrichment_parallel <- function(de_results, n_cores = 4) {
+
+  library(parallel)
+
+  cl <- makeCluster(n_cores)
+  clusterEvalQ(cl, {
+    library(clusterProfiler)
+    library(org.Hs.eg.db)
+  })
+
+  # Process perturbations in parallel
+  results <- parLapply(cl, names(de_results), function(pert) {
+    pert_data <- de_results[[pert]]
+    sig_genes <- pert_data[pert_data$p_val_adj < 0.05, ]$gene_ID
+
+    # Run enrichment
+    go_result <- enrichGO(
+      gene = sig_genes,
+      OrgDb = org.Hs.eg.db,
+      ont = "BP",
+      pAdjustMethod = "BH"
+    )
+
+    return(as.data.frame(go_result))
+  })
+
+  stopCluster(cl)
+
+  return(results)
+}
+
+# Optimization 2: Cache enrichment databases
+cache_enrichment_dbs <- function() {
+  # Pre-load and cache databases
+  library(org.Hs.eg.db)
+  library(reactome.db)
+  library(KEGG.db)
+
+  # These will be cached in memory
+  gene_mapping <- select(org.Hs.eg.db, keys = keys(org.Hs.eg.db), columns = "ENTREZID")
+
+  return(gene_mapping)
+}
+
+# Optimization 3: Use pre-computed background
+precompute_background <- function(seurat_obj) {
+  # Use expressed genes as background
+  expressed_genes <- rownames(seurat_obj)[rowSums(GetAssayData(seurat_obj, slot = "counts") > 0) >= 10]
+
+  saveRDS(expressed_genes, "background_genes.rds")
+
+  return(expressed_genes)
+}
+
+background_genes <- readRDS("background_genes.rds")
+
+# Use in enrichment
+enrichGO(
+  gene = deg_list,
+  universe = background_genes,  # Proper background
+  OrgDb = org.Hs.eg.db,
+  ont = "BP"
+)
+```
+
+### 4.3 HPC/Cluster Deployment
+
+Deploy on high-performance computing clusters:
+
+```{r hpc-deployment}
+# Create SLURM job script
+create_slurm_script <- function(job_name, output_dir, n_cores = 16, memory = "64G", time = "24:00:00") {
+
+  script <- sprintf('#!/bin/bash
+#SBATCH --job-name=%s
+#SBATCH --output=%s/%%j.out
+#SBATCH --error=%s/%%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=%d
+#SBATCH --mem=%s
+#SBATCH --time=%s
+
+# Load R module
+module load r/4.2.0
+
+# Run R script
+Rscript --vanilla iscore_hpc_analysis.R
+
+', job_name, output_dir, output_dir, n_cores, memory, time)
+
+  writeLines(script, "submit_iscore_job.sh")
+
+  cat("SLURM script created: submit_iscore_job.sh\n")
+  cat("Submit with: sbatch submit_iscore_job.sh\n")
+}
+
+# Create R script for HPC
+create_hpc_r_script <- function() {
+
+  script <- '
+# HPC Analysis Script for iSCORE-PDecipher
+library(iSCORE.PDecipher)
+library(parallel)
+
+# Set up parallel backend
+n_cores <- as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 16))
+cat("Using", n_cores, "cores\\n")
+
+# Run analysis
+results <- run_complete_iscore_pipeline(
+  mast_dir = "/scratch/user/MAST_results/",
+  mixscale_dir = "/scratch/user/MixScale_results/",
+  output_dir = "/scratch/user/iscore_output/",
+  n_cores = n_cores
+)
+
+cat("Analysis complete!\\n")
+'
+
+  writeLines(script, "iscore_hpc_analysis.R")
+
+  cat("HPC R script created: iscore_hpc_analysis.R\n")
+}
+
+# Generate scripts
+create_slurm_script("iscore_analysis", "./hpc_output", n_cores = 16, memory = "64G")
+create_hpc_r_script()
+
+# Monitor job
+# After submission, monitor with: squeue -u $USER
+# Check output: tail -f hpc_output/<jobid>.out
+```
+
+## Part 5: Automated Report Generation
+
+### 5.1 RMarkdown Report Template
+
+Generate automated analysis reports:
+
+```{r rmarkdown-reports}
+# Create report template
+create_analysis_report_template <- function(output_file = "analysis_report_template.Rmd") {
+
+  template <- '---
+title: "iSCORE-PDecipher Analysis Report"
+author: "Generated automatically"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(iSCORE.PDecipher)
+library(ggplot2)
+library(DT)
+```
+
+## Analysis Overview
+
+```{r overview}
+# Load results
+enrichment <- readRDS(params$enrichment_file)
+signatures <- readRDS(params$signatures_file)
+
+cat("Total enrichment terms:", nrow(enrichment), "\\n")
+cat("Total signatures:", nrow(signatures), "\\n")
+cat("High-confidence signatures:", sum(signatures$signature_score > 0.7), "\\n")
+```
+
+## Dataset Statistics
+
+```{r stats-table}
+stats_df <- data.frame(
+  Metric = c(
+    "Total Enrichment Terms",
+    "Total Signatures",
+    "High-Confidence Signatures",
+    "Genes Analyzed",
+    "Clusters Analyzed"
+  ),
+  Value = c(
+    nrow(enrichment),
+    nrow(signatures),
+    sum(signatures$signature_score > 0.7),
+    n_distinct(enrichment$gene),
+    n_distinct(enrichment$cluster)
+  )
+)
+
+datatable(stats_df, options = list(dom = "t"))
+```
+
+## Top Signatures
+
+```{r top-signatures}
+top_sigs <- head(signatures[order(signatures$signature_score, decreasing = TRUE), ], 20)
+
+datatable(
+  top_sigs[, c("mast_gene", "mixscale_gene", "pathway_description", "signature_score", "fisher_pvalue")],
+  options = list(pageLength = 10),
+  caption = "Top 20 Signatures by Score"
+)
+```
+
+## Enrichment Summary
+
+```{r enrichment-summary}
+enrich_summary <- enrichment %>%
+  group_by(enrichment_type, gene) %>%
+  summarise(N_Terms = n(), .groups = "drop") %>%
+  pivot_wider(names_from = enrichment_type, values_from = N_Terms, values_fill = 0)
+
+datatable(enrich_summary, options = list(pageLength = 15))
+```
+
+## Visualizations
+
+### Signature Score Distribution
+
+```{r sig-score-dist}
+ggplot(signatures, aes(x = signature_score)) +
+  geom_histogram(bins = 30, fill = "steelblue", alpha = 0.7) +
+  geom_vline(xintercept = 0.7, linetype = "dashed", color = "red") +
+  labs(title = "Distribution of Signature Scores",
+       x = "Signature Score",
+       y = "Count") +
+  theme_minimal()
+```
+
+### Pathway Frequency
+
+```{r pathway-freq}
+pathway_counts <- signatures %>%
+  group_by(pathway_description) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  head(20)
+
+ggplot(pathway_counts, aes(x = reorder(pathway_description, Count), y = Count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 20 Most Frequent Converging Pathways",
+       x = NULL,
+       y = "Frequency") +
+  theme_minimal()
+```
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
+'
+
+  writeLines(template, output_file)
+  cat("Report template created:", output_file, "\n")
+}
+
+# Generate reports for multiple datasets
+generate_batch_reports <- function(results_dir, output_dir) {
+
+  dir.create(output_dir, recursive = TRUE)
+
+  # Find all result sets
+  result_files <- list.files(results_dir, pattern = "enrichment.*\\.rds$", full.names = TRUE)
+
+  for (res_file in result_files) {
+    dataset_name <- basename(dirname(res_file))
+
+    cat("Generating report for:", dataset_name, "\n")
+
+    # Render report
+    rmarkdown::render(
+      "analysis_report_template.Rmd",
+      params = list(
+        enrichment_file = res_file,
+        signatures_file = file.path(dirname(res_file), "discovered_signatures.rds")
+      ),
+      output_file = file.path(output_dir, paste0(dataset_name, "_report.html"))
+    )
+  }
+
+  cat("All reports generated in:", output_dir, "\n")
+}
+
+# Create template
+create_analysis_report_template()
+
+# Generate reports
+generate_batch_reports("./batch_results/", "./batch_reports/")
+```
+
+## Part 6: Best Practices for Advanced Users
+
+### 6.1 Version Control and Reproducibility
+
+Ensure reproducible analyses:
+
+```{r reproducibility}
+# Create analysis manifest
+create_analysis_manifest <- function(output_file = "analysis_manifest.yaml") {
+
+  manifest <- list(
+    analysis_info = list(
+      date = as.character(Sys.Date()),
+      analyst = Sys.getenv("USER"),
+      project = "iSCORE-PDecipher Analysis"
+    ),
+
+    software_versions = list(
+      r_version = as.character(getRversion()),
+      iscore_pdecipher = as.character(packageVersion("iSCORE.PDecipher")),
+      seurat = as.character(packageVersion("Seurat")),
+      clusterprofiler = as.character(packageVersion("clusterProfiler"))
+    ),
+
+    parameters = list(
+      pval_threshold = 0.05,
+      lfc_threshold = 0.25,
+      enrichment_methods = c("GO_BP", "GO_MF", "GO_CC", "KEGG", "Reactome"),
+      fdr_method = "BH"
+    ),
+
+    input_files = list(
+      mast_dir = "/path/to/mast/results/",
+      mixscale_dir = "/path/to/mixscale/results/",
+      sample_metadata = "metadata.csv"
+    ),
+
+    output_files = list(
+      enrichment = "all_enrichment_padj005_complete_with_direction.rds",
+      signatures = "discovered_signatures.rds",
+      plots_dir = "./plots/",
+      reports_dir = "./reports/"
+    )
+  )
+
+  yaml::write_yaml(manifest, output_file)
+
+  cat("Analysis manifest saved to:", output_file, "\n")
+}
+
+# Log all operations
+create_analysis_log <- function() {
+  log_file <- paste0("analysis_log_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+
+  sink(log_file, split = TRUE)  # Send output to both console and file
+
+  cat("=== Analysis Log ===\n")
+  cat("Start time:", as.character(Sys.time()), "\n\n")
+
+  # Your analysis code here
+
+  cat("\nEnd time:", as.character(Sys.time()), "\n")
+
+  sink()  # Stop logging
+
+  cat("Log saved to:", log_file, "\n")
+}
+
+# Create manifest
+create_analysis_manifest()
+```
+
+### 6.2 Error Handling and Validation
+
+Robust error handling:
+
+```{r error-handling}
+# Wrapper with comprehensive error handling
+safe_enrichment_analysis <- function(de_results, output_dir) {
+
+  tryCatch({
+    # Validate inputs
+    if (is.null(de_results) || length(de_results) == 0) {
+      stop("DE results are empty")
+    }
+
+    if (!dir.exists(dirname(output_dir))) {
+      stop("Output directory parent does not exist")
+    }
+
+    # Check for required packages
+    required_pkgs <- c("clusterProfiler", "org.Hs.eg.db", "ReactomePA")
+    missing_pkgs <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+
+    if (length(missing_pkgs) > 0) {
+      stop("Missing required packages: ", paste(missing_pkgs, collapse = ", "))
+    }
+
+    # Run analysis
+    cat("Starting enrichment analysis...\n")
+
+    results <- run_enrichment_analysis(
+      de_results = de_results,
+      output_dir = output_dir
+    )
+
+    # Validate outputs
+    if (is.null(results) || nrow(results) == 0) {
+      warning("Enrichment analysis returned no results")
+      return(NULL)
+    }
+
+    cat("Enrichment analysis completed successfully!\n")
+    cat("Results:", nrow(results), "terms\n")
+
+    return(results)
+
+  }, error = function(e) {
+    cat("ERROR in enrichment analysis:\n")
+    cat("Message:", e$message, "\n")
+    cat("Call:", deparse(e$call), "\n")
+
+    # Log error details
+    error_log <- list(
+      timestamp = Sys.time(),
+      error_message = e$message,
+      call = deparse(e$call),
+      session_info = sessionInfo()
+    )
+
+    saveRDS(error_log, paste0("error_log_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds"))
+
+    return(NULL)
+
+  }, warning = function(w) {
+    cat("WARNING in enrichment analysis:\n")
+    cat("Message:", w$message, "\n")
+
+    # Continue execution but log warning
+    warning_log <- list(
+      timestamp = Sys.time(),
+      warning_message = w$message
+    )
+
+    saveRDS(warning_log, paste0("warning_log_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds"))
+
+    invokeRestart("muffleWarning")
+  })
+}
+
+# Use safe wrapper
+results <- safe_enrichment_analysis(my_de_results, "./enrichment_output/")
+```
+
+### 6.3 Performance Benchmarking
+
+Benchmark different approaches:
+
+```{r benchmarking}
+library(microbenchmark)
+
+# Benchmark different import methods
+benchmark_import <- microbenchmark(
+
+  standard = {
+    import_pooled_mixscale_data(test_dir, pval_column = "p_weight_BH")
+  },
+
+  optimized = {
+    import_mixscale_data_optimized(test_dir, pval_column = "p_weight_BH")
+  },
+
+  times = 10
+)
+
+print(benchmark_import)
+
+# Benchmark enrichment methods
+benchmark_enrichment <- microbenchmark(
+
+  sequential = {
+    run_enrichment_analysis(test_data, n_cores = 1)
+  },
+
+  parallel_4 = {
+    run_enrichment_analysis(test_data, n_cores = 4)
+  },
+
+  parallel_8 = {
+    run_enrichment_analysis(test_data, n_cores = 8)
+  },
+
+  times = 5
+)
+
+print(benchmark_enrichment)
+
+# Visualize results
+autoplot(benchmark_import) +
+  labs(title = "Import Method Performance Comparison") +
+  theme_minimal()
+
+ggsave("import_benchmark.pdf", width = 8, height = 6)
+```
+
+## Conclusions
+
+This vignette demonstrated:
+
+1. ✅ Batch processing multiple datasets efficiently
+2. ✅ Programmatic workflows without GUI
+3. ✅ Integration with Seurat, scMAGeCK, and custom pipelines
+4. ✅ Performance optimization for large datasets
+5. ✅ HPC deployment strategies
+6. ✅ Automated report generation
+7. ✅ Best practices for reproducibility
+
+**Key Takeaways for Advanced Users:**
+
+- **Automation**: Use programmatic workflows for reproducibility
+- **Parallelization**: Leverage multiple cores for speed
+- **Memory Management**: Sample and chunk for large datasets
+- **Integration**: iSCORE-PDecipher works with standard scRNA-seq tools
+- **Custom Analyses**: Extend with custom enrichment databases and pipelines
+- **HPC Deployment**: Scale to cluster computing for large projects
+- **Documentation**: Always log parameters and versions
+
+## Additional Resources
+
+- **GitHub Repository**: Advanced examples and scripts
+- **Documentation**: Function reference and API docs
+- **Community**: Report issues or contribute improvements
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
+
+---
+
+**Package**: iSCORE.PDecipher
+**Focus**: Advanced customization, batch processing, HPC deployment
+**Target**: Computational biologists and data scientists

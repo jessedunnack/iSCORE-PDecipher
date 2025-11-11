@@ -1,0 +1,946 @@
+---
+title: "Perturb-seq Workflow: From Mixscale to Visualization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Perturb-seq Workflow: From Mixscale to Visualization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Introduction
+
+This vignette provides a complete workflow for analyzing **CRISPRi Perturb-seq experiments** using iSCORE-PDecipher, with focus on the **pooled MixScale** approach and **FDR-corrected p-values**.
+
+**What You'll Learn:**
+- Import pooled MixScale results with FDR corrections
+- Run enrichment analysis on Perturb-seq data
+- Compare p-value correction methods (uncorrected vs BH vs Bonferroni)
+- Visualize perturbation-specific effects
+- Identify guide RNA efficiency
+- Discover convergent pathways across perturbations
+
+**Use Case**: You've run a CRISPRi screen targeting Parkinson's disease genes and want to understand which biological pathways are affected by each perturbation.
+
+## Background: Pooled vs Experiment-Split Analysis
+
+### Experiment-Split Approach (Original)
+
+The original iSCORE-PDecipher was designed for **experiment-split** MixScale analysis:
+
+- Separate analysis for each experiment (e.g., FPD-23, FPD-24, FPD-25)
+- Column names like: `log2FC_C12_FPD-24`, `p_cell_typeC12_FPD-24:weight`
+- Multiple columns per perturbation
+- Useful when experiments have different conditions
+
+### Pooled Approach (NEW)
+
+**Pooled MixScale** analysis combines all experiments:
+
+- Single analysis pooling all cells across experiments
+- Simple column names: `log2FC`, `p_weight`, `p_weight_BH`, `p_weight_bonferroni`
+- One value per gene per perturbation
+- **Three p-value columns**:
+  - `p_weight`: Original uncorrected p-values
+  - `p_weight_BH`: Benjamini-Hochberg FDR correction (RECOMMENDED)
+  - `p_weight_bonferroni`: Bonferroni correction (very conservative)
+- More statistical power from larger sample size
+- Control group: "Non-Targeting"
+
+**When to use pooled:**
+- Multiple batches/experiments with same conditions
+- Want maximum statistical power
+- Interested in overall perturbation effects
+
+**When to use experiment-split:**
+- Experiments have different treatment conditions
+- Want to compare perturbation effects across conditions
+- Investigating batch effects
+
+## Example Dataset
+
+This vignette uses the **all_CRISPRi dataset** with:
+
+- **Perturbations**: 338 gene knockdowns (CRISPRi)
+- **Clusters**: 6 cell clusters (cluster_0 through cluster_5)
+- **Cells**: ~100,000 cells pooled across experiments
+- **Control**: Non-Targeting guides
+- **Target Genes**: ATP13A2, DNAJC6, FBXO7, LRRK2, PARK2, PARK7, PINK1, SNCA, SYNJ1, VPS13C, and many others
+
+## Step 1: Import Pooled MixScale Data
+
+### 1.1 Understanding the Data Structure
+
+Pooled MixScale results are organized by cluster:
+
+```
+CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit/
+├── all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster0/
+│   └── all_CRISPRi_no_multiplets_noExptSplit_clust_0_mixscale_DEGs.rds
+├── all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster1/
+│   └── all_CRISPRi_no_multiplets_noExptSplit_clust_1_mixscale_DEGs.rds
+...
+└── all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster5/
+    └── all_CRISPRi_no_multiplets_noExptSplit_clust_5_mixscale_DEGs.rds
+```
+
+Each RDS file contains:
+```r
+# Structure: Named list of perturbations
+list(
+  "LRRK2" = data.frame(
+    gene_ID = c("ENSG00000123", ...),
+    log2FC = c(1.2, -0.8, ...),
+    p_weight = c(0.001, 0.05, ...),              # Uncorrected
+    p_weight_BH = c(0.01, 0.15, ...),            # BH FDR
+    p_weight_bonferroni = c(0.02, 0.30, ...),    # Bonferroni
+    beta_weight = c(0.5, -0.3, ...),
+    ...
+  ),
+  "SNCA" = data.frame(...),
+  ...
+)
+```
+
+### 1.2 Import with iSCORE-PDecipher
+
+```{r import-pooled}
+library(iSCORE.PDecipher)
+
+# Path to your pooled MixScale results
+mixscale_dir <- "../final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit/all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster0/"
+
+# Import with Benjamini-Hochberg FDR correction (recommended)
+pooled_data_BH <- import_pooled_mixscale_data(
+  mixscale_dir = mixscale_dir,
+  pval_column = "p_weight_BH"  # Use FDR-corrected p-values
+)
+
+# Or import with uncorrected p-values for comparison
+pooled_data_uncorrected <- import_pooled_mixscale_data(
+  mixscale_dir = mixscale_dir,
+  pval_column = "p_weight"
+)
+
+# Or import with Bonferroni correction (very conservative)
+pooled_data_bonferroni <- import_pooled_mixscale_data(
+  mixscale_dir = mixscale_dir,
+  pval_column = "p_weight_bonferroni"
+)
+```
+
+### 1.3 Verify Import
+
+```{r verify-import}
+# Check structure
+str(pooled_data_BH, max.level = 2)
+
+# How many perturbations?
+cat("Number of perturbations:", length(pooled_data_BH), "\n")
+
+# List perturbations
+cat("Perturbations:\n")
+print(names(pooled_data_BH))
+
+# Check data for one perturbation
+lrrk2_data <- pooled_data_BH$LRRK2
+cat("\nLRRK2 perturbation results:\n")
+cat("Genes tested:", nrow(lrrk2_data), "\n")
+cat("Columns:", paste(names(lrrk2_data), collapse = ", "), "\n")
+
+# Check for significant DEGs
+sig_degs <- lrrk2_data[lrrk2_data$p_weight_BH < 0.05 & abs(lrrk2_data$log2FC) > 0.25, ]
+cat("Significant DEGs (FDR < 0.05, |log2FC| > 0.25):", nrow(sig_degs), "\n")
+```
+
+## Step 2: Understanding P-Value Corrections
+
+### 2.1 Why Multiple P-Value Corrections?
+
+**Problem**: Multiple testing inflation
+- Testing ~20,000 genes per perturbation
+- 338 perturbations = ~6.7 million tests total
+- Without correction, expect ~335,000 false positives at p < 0.05!
+
+**Solutions**:
+
+1. **Uncorrected (`p_weight`)**:
+   - Raw p-values from weighted regression
+   - Most liberal (highest sensitivity, lowest specificity)
+   - Use for: Exploratory analysis, generating hypotheses
+
+2. **Benjamini-Hochberg (`p_weight_BH`)** - RECOMMENDED:
+   - Controls False Discovery Rate (FDR)
+   - Balances sensitivity and specificity
+   - GOLD STANDARD for scRNA-seq
+   - Use for: Final results, publications
+
+3. **Bonferroni (`p_weight_bonferroni`)**:
+   - Controls Family-Wise Error Rate (FWER)
+   - Most conservative (lowest sensitivity, highest specificity)
+   - Use for: High-confidence hits, validation priorities
+
+### 2.2 Compare Correction Methods
+
+```{r compare-corrections}
+# Load all three versions for same cluster
+cluster0_uncorrected <- import_pooled_mixscale_data(mixscale_dir, pval_column = "p_weight")
+cluster0_BH <- import_pooled_mixscale_data(mixscale_dir, pval_column = "p_weight_BH")
+cluster0_bonferroni <- import_pooled_mixscale_data(mixscale_dir, pval_column = "p_weight_bonferroni")
+
+# Compare significant DEG counts for LRRK2
+threshold <- 0.05
+lfc_threshold <- 0.25
+
+count_sig_degs <- function(data, pert_name, pval_col, pval_thresh, lfc_thresh) {
+  pert_data <- data[[pert_name]]
+  sig <- pert_data[pert_data[[pval_col]] < pval_thresh &
+                   abs(pert_data$log2FC) > lfc_thresh, ]
+  nrow(sig)
+}
+
+# Count for LRRK2
+cat("Significant DEGs for LRRK2 (p < 0.05, |log2FC| > 0.25):\n")
+cat("Uncorrected:", count_sig_degs(cluster0_uncorrected, "LRRK2", "p_weight", threshold, lfc_threshold), "\n")
+cat("BH FDR:", count_sig_degs(cluster0_BH, "LRRK2", "p_weight_BH", threshold, lfc_threshold), "\n")
+cat("Bonferroni:", count_sig_degs(cluster0_bonferroni, "LRRK2", "p_weight_bonferroni", threshold, lfc_threshold), "\n")
+
+# Expected pattern: Uncorrected > BH > Bonferroni
+```
+
+### 2.3 Visualize P-Value Distribution
+
+```{r pval-distribution}
+library(ggplot2)
+
+# Extract LRRK2 p-values
+lrrk2_data <- cluster0_BH$LRRK2
+
+# Create data frame for plotting
+pval_df <- data.frame(
+  Uncorrected = lrrk2_data$p_weight,
+  BH_FDR = lrrk2_data$p_weight_BH,
+  Bonferroni = lrrk2_data$p_weight_bonferroni
+)
+
+# Reshape for ggplot
+library(tidyr)
+pval_long <- pivot_longer(pval_df, cols = everything(),
+                          names_to = "Correction", values_to = "P_value")
+
+# Plot distributions
+ggplot(pval_long, aes(x = P_value, fill = Correction)) +
+  geom_histogram(bins = 50, alpha = 0.6, position = "identity") +
+  facet_wrap(~Correction, ncol = 1) +
+  scale_x_log10() +
+  geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
+  labs(title = "P-value Distributions: LRRK2 Perturbation",
+       x = "P-value (log10 scale)",
+       y = "Count") +
+  theme_minimal()
+```
+
+## Step 3: Run Enrichment Analysis
+
+### 3.1 Overview
+
+Enrichment analysis identifies biological pathways and processes affected by each perturbation.
+
+**Methods Available:**
+- **GO (Gene Ontology)**: Biological Process (BP), Cellular Component (CC), Molecular Function (MF)
+- **KEGG**: Metabolic and signaling pathways
+- **Reactome**: Curated biological pathways
+- **WikiPathways**: Community-curated pathways
+- **STRING**: Protein-protein interaction networks
+- **GSEA**: Gene Set Enrichment Analysis
+
+### 3.2 Run Enrichment for All Perturbations
+
+```{r run-enrichment}
+# Path to cluster-specific results
+cluster0_file <- "../final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit/all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster0/all_CRISPRi_no_multiplets_noExptSplit_clust_0_mixscale_DEGs.rds"
+
+# Run complete enrichment analysis
+enrichment_results <- run_enrichment_analysis(
+  de_file = cluster0_file,
+  output_dir = "./enrichment_output_cluster0/",
+  pval_threshold = 0.05,
+  lfc_threshold = 0.25,
+  padj_method = "BH",  # Use BH FDR correction
+  methods = c("GO_BP", "GO_MF", "GO_CC", "KEGG", "Reactome", "WikiPathways", "STRING", "GSEA")
+)
+
+# This will:
+# 1. Load MixScale results
+# 2. For each perturbation:
+#    - Filter significant DEGs (p.adjust < 0.05, |log2FC| > 0.25)
+#    - Separate UP and DOWN regulated genes
+#    - Run enrichment for each method
+#    - Save results in perturbation-specific directories
+# 3. Return summary statistics
+
+# Check summary
+print(enrichment_results)
+```
+
+### 3.3 Import and Consolidate Enrichment Results
+
+```{r import-enrichment}
+# After enrichment analysis completes, import results for visualization
+
+# Import enrichment with matching FDR correction
+enrichment_data <- import_enrichment_with_correction(
+  base_dir = "../final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/",
+  dataset = "CRISPRi",
+  pval_correction = "BH"  # Match correction used in DE analysis
+)
+
+# Consolidate for app
+consolidated <- consolidate_pooled_enrichment(
+  enrichment_dir = "./enrichment_output_cluster0/",
+  output_file = "./cluster0_enrichment_consolidated.rds"
+)
+
+# Load consolidated results
+enrichment_all <- readRDS("./cluster0_enrichment_consolidated.rds")
+
+# Structure
+cat("Enrichment terms:", nrow(enrichment_all), "\n")
+cat("Columns:", paste(names(enrichment_all), collapse = ", "), "\n")
+```
+
+## Step 4: Visualize in Shiny App
+
+### 4.1 Prepare Data for App
+
+```{r prepare-for-app}
+# Create directory structure for app
+output_dir <- "./iscore_perturbseq_cluster0/"
+dir.create(output_dir, recursive = TRUE)
+
+# Copy/create required files:
+# 1. full_DE_results.rds (converted from pooled format)
+# 2. all_enrichment_padj005_complete_with_direction.rds (consolidated enrichment)
+
+# Convert pooled MixScale to app format
+converted_de <- convert_pooled_to_full_de(
+  cluster_files = list(
+    cluster_0 = cluster0_file
+  ),
+  output_file = file.path(output_dir, "full_DE_results.rds"),
+  pval_column = "p_weight_BH"
+)
+
+# Copy consolidated enrichment
+file.copy("./cluster0_enrichment_consolidated.rds",
+          file.path(output_dir, "all_enrichment_padj005_complete_with_direction.rds"))
+```
+
+### 4.2 Launch Perturb-seq Focused App
+
+```{r launch-app}
+# Launch app with your Perturb-seq data
+launch_app(data_dir = output_dir)
+
+# The app will open in your browser
+# Navigate through the interface to explore your results
+```
+
+### 4.3 Using the Perturb-seq Only Module
+
+The app includes a specialized module for Perturb-seq data:
+
+**Features:**
+1. **P-value Correction Comparison**:
+   - Radio buttons to switch between uncorrected, BH, and Bonferroni
+   - Real-time updates to all visualizations
+
+2. **Perturbation Table**:
+   - List of all 338 perturbations
+   - Number of DEGs per perturbation
+   - Click to view details
+
+3. **DEG Volcano Plot**:
+   - Interactive volcano plot for selected perturbation
+   - Hover to see gene names and statistics
+
+4. **P-value Distribution**:
+   - Histogram comparing uncorrected vs corrected p-values
+   - Visualize FDR correction impact
+
+5. **Enrichment Summary**:
+   - Top enriched pathways for selected perturbation
+   - Organized by enrichment type (GO_BP, KEGG, etc.)
+
+**Workflow in App:**
+```
+1. Select perturbation (e.g., "LRRK2")
+2. View DEG volcano plot
+3. Check p-value distribution
+4. Explore enrichment terms
+5. Switch between p-value corrections to see impact
+6. Export results
+```
+
+## Step 5: Perturbation-Specific Analysis
+
+### 5.1 Identify High-Impact Perturbations
+
+```{r high-impact}
+library(dplyr)
+
+# Count significant DEGs for each perturbation
+deg_counts <- sapply(names(cluster0_BH), function(pert) {
+  pert_data <- cluster0_BH[[pert]]
+  sig <- pert_data[pert_data$p_weight_BH < 0.05 & abs(pert_data$log2FC) > 0.25, ]
+  nrow(sig)
+})
+
+# Sort by DEG count
+deg_counts_sorted <- sort(deg_counts, decreasing = TRUE)
+
+# Top 20 perturbations by DEG count
+cat("Top 20 Perturbations by Significant DEG Count:\n")
+print(head(deg_counts_sorted, 20))
+
+# Plot
+barplot(head(deg_counts_sorted, 20),
+        las = 2,  # Vertical labels
+        cex.names = 0.7,
+        main = "Top 20 Perturbations by DEG Count",
+        ylab = "Number of Significant DEGs",
+        col = "steelblue")
+```
+
+### 5.2 Analyze Specific Perturbation
+
+Deep dive into LRRK2 perturbation:
+
+```{r analyze-lrrk2}
+# Extract LRRK2 data
+lrrk2 <- cluster0_BH$LRRK2
+
+# Significant DEGs
+lrrk2_sig <- lrrk2[lrrk2$p_weight_BH < 0.05 & abs(lrrk2$log2FC) > 0.25, ]
+
+# Separate UP and DOWN
+lrrk2_up <- lrrk2_sig[lrrk2_sig$log2FC > 0, ]
+lrrk2_down <- lrrk2_sig[lrrk2_sig$log2FC < 0, ]
+
+cat("LRRK2 Perturbation Summary:\n")
+cat("Total significant DEGs:", nrow(lrrk2_sig), "\n")
+cat("Upregulated:", nrow(lrrk2_up), "\n")
+cat("Downregulated:", nrow(lrrk2_down), "\n\n")
+
+# Top upregulated genes
+cat("Top 10 Upregulated Genes:\n")
+lrrk2_up_sorted <- lrrk2_up[order(lrrk2_up$log2FC, decreasing = TRUE), ]
+print(lrrk2_up_sorted[1:10, c("gene_ID", "log2FC", "p_weight_BH")])
+
+# Top downregulated genes
+cat("\nTop 10 Downregulated Genes:\n")
+lrrk2_down_sorted <- lrrk2_down[order(lrrk2_down$log2FC), ]
+print(lrrk2_down_sorted[1:10, c("gene_ID", "log2FC", "p_weight_BH")])
+
+# Volcano plot
+library(ggplot2)
+lrrk2$significant <- ifelse(lrrk2$p_weight_BH < 0.05 & abs(lrrk2$log2FC) > 0.25,
+                             "Significant", "Not Significant")
+
+ggplot(lrrk2, aes(x = log2FC, y = -log10(p_weight_BH), color = significant)) +
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("Significant" = "red", "Not Significant" = "gray")) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  geom_vline(xintercept = c(-0.25, 0.25), linetype = "dashed") +
+  labs(title = "LRRK2 Perturbation: Volcano Plot",
+       x = "Log2 Fold Change",
+       y = "-log10(FDR-adjusted p-value)") +
+  theme_minimal()
+```
+
+### 5.3 Compare Related Perturbations
+
+Compare LRRK2, SNCA, and GBA perturbations:
+
+```{r compare-perturbations}
+# Extract data for multiple perturbations
+compare_perts <- c("LRRK2", "SNCA", "GBA")
+
+comparison_list <- lapply(compare_perts, function(pert) {
+  pert_data <- cluster0_BH[[pert]]
+  sig <- pert_data[pert_data$p_weight_BH < 0.05 & abs(pert_data$log2FC) > 0.25, ]
+  data.frame(
+    Perturbation = pert,
+    Total_DEGs = nrow(sig),
+    Upregulated = sum(sig$log2FC > 0),
+    Downregulated = sum(sig$log2FC < 0)
+  )
+})
+
+comparison_df <- do.call(rbind, comparison_list)
+print(comparison_df)
+
+# Find shared DEGs
+lrrk2_genes <- lrrk2_sig$gene_ID
+snca_genes <- cluster0_BH$SNCA[cluster0_BH$SNCA$p_weight_BH < 0.05 &
+                                abs(cluster0_BH$SNCA$log2FC) > 0.25, ]$gene_ID
+gba_genes <- cluster0_BH$GBA[cluster0_BH$GBA$p_weight_BH < 0.05 &
+                              abs(cluster0_BH$GBA$log2FC) > 0.25, ]$gene_ID
+
+# Venn diagram (conceptually)
+cat("\nShared DEGs:\n")
+cat("LRRK2 & SNCA:", length(intersect(lrrk2_genes, snca_genes)), "\n")
+cat("LRRK2 & GBA:", length(intersect(lrrk2_genes, gba_genes)), "\n")
+cat("SNCA & GBA:", length(intersect(snca_genes, gba_genes)), "\n")
+cat("All three:", length(Reduce(intersect, list(lrrk2_genes, snca_genes, gba_genes))), "\n")
+```
+
+## Step 6: Enrichment Analysis and Interpretation
+
+### 6.1 Explore Enrichment for Specific Perturbation
+
+```{r explore-enrichment}
+# Load consolidated enrichment
+enrichment_all <- readRDS("./cluster0_enrichment_consolidated.rds")
+
+# Filter for LRRK2
+lrrk2_enrichment <- enrichment_all %>%
+  filter(gene == "LRRK2", cluster == "cluster_0", p.adjust < 0.05) %>%
+  arrange(p.adjust)
+
+# Top pathways by enrichment type
+cat("Top 5 GO Biological Processes for LRRK2:\n")
+lrrk2_go_bp <- lrrk2_enrichment %>%
+  filter(enrichment_type == "GO_BP") %>%
+  select(Description, GeneRatio, p.adjust, direction) %>%
+  head(5)
+print(lrrk2_go_bp)
+
+cat("\nTop 5 KEGG Pathways for LRRK2:\n")
+lrrk2_kegg <- lrrk2_enrichment %>%
+  filter(enrichment_type == "KEGG") %>%
+  select(Description, GeneRatio, p.adjust, direction) %>%
+  head(5)
+print(lrrk2_kegg)
+
+# Count enriched terms by type and direction
+enrichment_summary <- lrrk2_enrichment %>%
+  group_by(enrichment_type, direction) %>%
+  summarise(Count = n(), .groups = "drop")
+print(enrichment_summary)
+```
+
+### 6.2 Visualize Enrichment
+
+```{r visualize-enrichment}
+# Dot plot of top GO_BP terms
+library(ggplot2)
+
+top_go_bp <- lrrk2_enrichment %>%
+  filter(enrichment_type == "GO_BP") %>%
+  arrange(p.adjust) %>%
+  head(20)
+
+# Parse GeneRatio to numeric
+top_go_bp$GeneRatio_numeric <- sapply(strsplit(top_go_bp$GeneRatio, "/"),
+                                       function(x) as.numeric(x[1]) / as.numeric(x[2]))
+
+ggplot(top_go_bp, aes(x = GeneRatio_numeric, y = reorder(Description, GeneRatio_numeric))) +
+  geom_point(aes(size = Count, color = p.adjust)) +
+  scale_color_gradient(low = "red", high = "blue") +
+  labs(title = "Top 20 GO Biological Processes: LRRK2 Perturbation",
+       x = "Gene Ratio",
+       y = "GO Term",
+       color = "Adjusted p-value",
+       size = "Gene Count") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+```
+
+### 6.3 Pathway Interpretation
+
+Key biological themes for LRRK2 perturbation:
+
+```{r interpret-pathways}
+# Categorize pathways by biological theme
+pd_relevant_terms <- c("mitochondria", "autophagy", "lysosome", "vesicle",
+                       "endosome", "transport", "dopamine", "neuron",
+                       "synaptic", "apoptosis", "protein", "ubiquitin")
+
+lrrk2_enrichment$PD_relevant <- sapply(tolower(lrrk2_enrichment$Description), function(desc) {
+  any(sapply(pd_relevant_terms, function(term) grepl(term, desc)))
+})
+
+cat("PD-relevant pathways for LRRK2:\n")
+pd_pathways <- lrrk2_enrichment %>%
+  filter(PD_relevant == TRUE, enrichment_type == "GO_BP") %>%
+  arrange(p.adjust) %>%
+  select(Description, GeneRatio, p.adjust, direction) %>%
+  head(15)
+print(pd_pathways)
+
+# Categorize by biological process
+categorize_pathway <- function(desc) {
+  desc_lower <- tolower(desc)
+  if (grepl("mitochondri", desc_lower)) return("Mitochondrial")
+  if (grepl("autophagy|lysosom", desc_lower)) return("Autophagy/Lysosomal")
+  if (grepl("vesicle|transport|endosom", desc_lower)) return("Vesicle Transport")
+  if (grepl("dopamine|neuron|synaptic", desc_lower)) return("Neuronal Function")
+  if (grepl("apoptosis|death", desc_lower)) return("Cell Death")
+  if (grepl("protein|ubiquitin", desc_lower)) return("Protein Homeostasis")
+  return("Other")
+}
+
+lrrk2_enrichment$Category <- sapply(lrrk2_enrichment$Description, categorize_pathway)
+
+cat("\nPathway categories for LRRK2:\n")
+category_counts <- table(lrrk2_enrichment$Category)
+print(sort(category_counts, decreasing = TRUE))
+```
+
+## Step 7: Guide RNA Quality Control
+
+### 7.1 Assessing Guide Efficiency
+
+```{r guide-qc}
+# Load cluster-specific MixScale results
+cluster0_data <- readRDS(cluster0_file)
+
+# For each perturbation, assess guide efficiency
+# Guide efficiency can be inferred from:
+# 1. Number of cells with guide
+# 2. Effect size (log2FC)
+# 3. Statistical significance
+
+guide_efficiency <- data.frame(
+  Perturbation = names(cluster0_data),
+  Mean_AbsLog2FC = sapply(cluster0_data, function(x) mean(abs(x$log2FC), na.rm = TRUE)),
+  N_Significant = sapply(cluster0_data, function(x) sum(x$p_weight_BH < 0.05 & abs(x$log2FC) > 0.25)),
+  Max_Log2FC = sapply(cluster0_data, function(x) max(abs(x$log2FC), na.rm = TRUE))
+)
+
+# Sort by number of significant DEGs (proxy for efficiency)
+guide_efficiency_sorted <- guide_efficiency[order(guide_efficiency$N_Significant, decreasing = TRUE), ]
+
+cat("Top 10 Most Efficient Guides (by DEG count):\n")
+print(head(guide_efficiency_sorted, 10))
+
+cat("\nBottom 10 Least Efficient Guides:\n")
+print(tail(guide_efficiency_sorted, 10))
+
+# Plot efficiency distribution
+hist(guide_efficiency$N_Significant,
+     breaks = 50,
+     main = "Distribution of Guide Efficiency",
+     xlab = "Number of Significant DEGs",
+     ylab = "Number of Perturbations",
+     col = "steelblue")
+
+# Identify low-efficiency guides (< 10 significant DEGs)
+low_efficiency <- guide_efficiency[guide_efficiency$N_Significant < 10, ]
+cat("\nLow efficiency guides (< 10 significant DEGs):", nrow(low_efficiency), "\n")
+if (nrow(low_efficiency) > 0) {
+  cat("Examples:\n")
+  print(head(low_efficiency))
+}
+```
+
+### 7.2 Effect Size vs Statistical Power
+
+```{r effect-vs-power}
+# Plot effect size vs number of significant DEGs
+library(ggplot2)
+
+ggplot(guide_efficiency, aes(x = Mean_AbsLog2FC, y = N_Significant)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_text(data = head(guide_efficiency_sorted, 10),
+            aes(label = Perturbation),
+            hjust = -0.1, vjust = -0.5, size = 3) +
+  labs(title = "Guide Efficiency: Effect Size vs Statistical Power",
+       x = "Mean Absolute Log2FC",
+       y = "Number of Significant DEGs") +
+  theme_minimal()
+
+# Correlation between effect size and statistical power
+cor_test <- cor.test(guide_efficiency$Mean_AbsLog2FC, guide_efficiency$N_Significant)
+cat("\nCorrelation between effect size and DEG count:\n")
+cat("r =", cor_test$estimate, ", p =", cor_test$p.value, "\n")
+```
+
+## Step 8: Cross-Cluster Analysis
+
+### 8.1 Load Multiple Clusters
+
+```{r load-multiple-clusters}
+# Load data for all 6 clusters
+clusters <- paste0("cluster_", 0:5)
+
+cluster_dirs <- paste0(
+  "../final_hdWGCNA_results/testing_hdWGCNA/mixscale_for_paper/CRISPRi_PerturbSeq_Reports_all_CRISPRi_no_multiplets_noExptSplit/all_CRISPRi_all_CRISPRi_no_multiplets_noExptSplit_Cluster",
+  0:5, "/"
+)
+
+all_clusters_data <- lapply(1:6, function(i) {
+  import_pooled_mixscale_data(
+    mixscale_dir = cluster_dirs[i],
+    pval_column = "p_weight_BH"
+  )
+})
+
+names(all_clusters_data) <- clusters
+```
+
+### 8.2 Identify Cluster-Specific vs Pan-Cluster Effects
+
+```{r cluster-comparison}
+# For LRRK2, compare effects across clusters
+
+lrrk2_across_clusters <- lapply(clusters, function(clust) {
+  clust_data <- all_clusters_data[[clust]]
+  lrrk2_data <- clust_data$LRRK2
+
+  sig_degs <- lrrk2_data[lrrk2_data$p_weight_BH < 0.05 & abs(lrrk2_data$log2FC) > 0.25, ]
+
+  data.frame(
+    Cluster = clust,
+    N_DEGs = nrow(sig_degs),
+    N_Up = sum(sig_degs$log2FC > 0),
+    N_Down = sum(sig_degs$log2FC < 0),
+    Mean_Log2FC = mean(sig_degs$log2FC)
+  )
+})
+
+lrrk2_cluster_summary <- do.call(rbind, lrrk2_across_clusters)
+print(lrrk2_cluster_summary)
+
+# Plot
+barplot(lrrk2_cluster_summary$N_DEGs,
+        names.arg = lrrk2_cluster_summary$Cluster,
+        main = "LRRK2 Perturbation: DEGs Across Clusters",
+        ylab = "Number of Significant DEGs",
+        xlab = "Cluster",
+        col = "steelblue")
+```
+
+### 8.3 Find Consistent Effects
+
+```{r consistent-effects}
+# Find genes consistently affected by LRRK2 across all clusters
+
+# Extract significant genes from each cluster
+lrrk2_genes_by_cluster <- lapply(all_clusters_data, function(clust_data) {
+  lrrk2_data <- clust_data$LRRK2
+  sig_degs <- lrrk2_data[lrrk2_data$p_weight_BH < 0.05 & abs(lrrk2_data$log2FC) > 0.25, ]
+  sig_degs$gene_ID
+})
+
+# Find genes present in all clusters
+consistent_genes <- Reduce(intersect, lrrk2_genes_by_cluster)
+cat("Genes consistently affected by LRRK2 across ALL 6 clusters:", length(consistent_genes), "\n")
+if (length(consistent_genes) > 0) {
+  cat("Examples:\n")
+  print(head(consistent_genes, 20))
+}
+
+# Find genes present in at least 4 clusters
+gene_presence <- table(unlist(lrrk2_genes_by_cluster))
+frequent_genes <- names(gene_presence[gene_presence >= 4])
+cat("\nGenes affected in at least 4/6 clusters:", length(frequent_genes), "\n")
+```
+
+## Step 9: Export and Sharing Results
+
+### 9.1 Export for Publication
+
+```{r export-publication}
+# Export LRRK2 results for manuscript
+
+# 1. Significant DEGs to Excel
+library(openxlsx)
+
+wb <- createWorkbook()
+
+# Sheet 1: All significant DEGs
+addWorksheet(wb, "Significant_DEGs")
+writeData(wb, "Significant_DEGs", lrrk2_sig)
+
+# Sheet 2: Upregulated genes
+addWorksheet(wb, "Upregulated")
+writeData(wb, "Upregulated", lrrk2_up_sorted)
+
+# Sheet 3: Downregulated genes
+addWorksheet(wb, "Downregulated")
+writeData(wb, "Downregulated", lrrk2_down_sorted)
+
+# Sheet 4: Enrichment results
+addWorksheet(wb, "Enrichment")
+writeData(wb, "Enrichment", lrrk2_enrichment)
+
+saveWorkbook(wb, "LRRK2_perturbation_results.xlsx", overwrite = TRUE)
+
+# 2. Export volcano plot
+pdf("LRRK2_volcano_plot.pdf", width = 8, height = 6)
+# (Include ggplot code from above)
+dev.off()
+
+# 3. Export enrichment dot plot
+pdf("LRRK2_enrichment_dotplot.pdf", width = 10, height = 8)
+# (Include ggplot code from above)
+dev.off()
+```
+
+### 9.2 Create Summary Report
+
+```{r summary-report}
+# Generate summary statistics for all perturbations
+
+all_pert_summary <- data.frame(
+  Perturbation = names(cluster0_BH),
+  N_DEGs = sapply(cluster0_BH, function(x) sum(x$p_weight_BH < 0.05 & abs(x$log2FC) > 0.25)),
+  N_Upregulated = sapply(cluster0_BH, function(x) sum(x$p_weight_BH < 0.05 & x$log2FC > 0.25)),
+  N_Downregulated = sapply(cluster0_BH, function(x) sum(x$p_weight_BH < 0.05 & x$log2FC < -0.25)),
+  Mean_Log2FC = sapply(cluster0_BH, function(x) mean(x$log2FC[x$p_weight_BH < 0.05], na.rm = TRUE))
+)
+
+# Sort by DEG count
+all_pert_summary <- all_pert_summary[order(all_pert_summary$N_DEGs, decreasing = TRUE), ]
+
+# Export to CSV
+write.csv(all_pert_summary, "all_perturbations_summary_cluster0.csv", row.names = FALSE)
+
+cat("Summary report saved to: all_perturbations_summary_cluster0.csv\n")
+cat("Top 10 perturbations:\n")
+print(head(all_pert_summary, 10))
+```
+
+## Best Practices and Tips
+
+### 1. Always Use FDR Correction
+
+For publication and final results, always use `p_weight_BH` (Benjamini-Hochberg):
+```{r best-practice-1}
+# GOOD
+data <- import_pooled_mixscale_data(dir, pval_column = "p_weight_BH")
+
+# USE WITH CAUTION (exploratory only)
+data <- import_pooled_mixscale_data(dir, pval_column = "p_weight")
+```
+
+### 2. Set Reasonable Thresholds
+
+```{r best-practice-2}
+# Standard thresholds for Perturb-seq
+pval_threshold <- 0.05    # FDR < 5%
+lfc_threshold <- 0.25     # |log2FC| > 0.25 (~19% change)
+
+# More stringent for high-confidence hits
+pval_threshold <- 0.01    # FDR < 1%
+lfc_threshold <- 0.5      # |log2FC| > 0.5 (~41% change)
+```
+
+### 3. Validate Key Findings
+
+```{r best-practice-3}
+# For important genes, validate with multiple approaches:
+# 1. Check across multiple clusters
+# 2. Verify with qPCR or Western blot
+# 3. Compare with literature
+# 4. Test with different FDR methods
+```
+
+### 4. Document Analysis Parameters
+
+```{r best-practice-4}
+# Save analysis metadata
+analysis_metadata <- list(
+  date = Sys.Date(),
+  package_version = packageVersion("iSCORE.PDecipher"),
+  dataset = "all_CRISPRi",
+  clusters = "cluster_0",
+  pval_correction = "BH",
+  pval_threshold = 0.05,
+  lfc_threshold = 0.25,
+  enrichment_methods = c("GO_BP", "GO_MF", "GO_CC", "KEGG", "Reactome")
+)
+
+saveRDS(analysis_metadata, "analysis_metadata.rds")
+```
+
+## Troubleshooting
+
+### Issue: "No significant DEGs found"
+
+**Possible causes:**
+1. Thresholds too stringent
+2. Poor guide efficiency
+3. Low statistical power (too few cells)
+
+**Solutions:**
+```{r troubleshoot-no-degs}
+# 1. Relax thresholds
+pval_threshold <- 0.1
+lfc_threshold <- 0.2
+
+# 2. Check guide efficiency
+# (See Section 7.1)
+
+# 3. Use uncorrected p-values for exploration
+data_uncorrected <- import_pooled_mixscale_data(dir, pval_column = "p_weight")
+```
+
+### Issue: "Too many DEGs"
+
+**Possible causes:**
+1. Using uncorrected p-values
+2. Very strong perturbation effect
+
+**Solutions:**
+```{r troubleshoot-too-many}
+# 1. Use FDR correction
+data_BH <- import_pooled_mixscale_data(dir, pval_column = "p_weight_BH")
+
+# 2. Increase LFC threshold
+lfc_threshold <- 0.5  # More stringent
+
+# 3. Use Bonferroni for highest confidence
+data_bonferroni <- import_pooled_mixscale_data(dir, pval_column = "p_weight_bonferroni")
+```
+
+## Conclusions
+
+This workflow demonstrates:
+
+1. ✅ Importing pooled MixScale data with FDR corrections
+2. ✅ Comparing p-value correction methods
+3. ✅ Running comprehensive enrichment analysis
+4. ✅ Visualizing results in Shiny app
+5. ✅ Perturbation-specific analysis
+6. ✅ Guide RNA quality control
+7. ✅ Cross-cluster comparisons
+8. ✅ Exporting publication-ready results
+
+**Key Takeaways:**
+- Always use FDR correction (BH recommended) for final results
+- Pooled analysis provides maximum statistical power
+- iSCORE-PDecipher makes Perturb-seq analysis accessible and visual
+- Cross-cluster analysis identifies robust effects
+- Guide QC is essential for data quality
+
+## Next Steps
+
+- Explore **Signature Discovery** vignette for cross-method analysis
+- Read **Advanced Customization** vignette for batch processing
+- Use the **Getting Started** vignette for app basics
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
