@@ -6,7 +6,18 @@
 # Dependencies: clusterProfiler, enrichplot, org.Hs.eg.db, DOSE, ReactomePA, 
 # pathview, ggplot2, dplyr, stringr, STRINGdb, msigdbr, fgsea
 
-# Custom function for consistent message formatting
+#' Print formatted header messages for console output
+#'
+#' Creates visually distinct headers at different levels for console messages
+#' during enrichment analysis workflows. Level 1 uses double-line borders,
+#' level 2 uses single-line borders, and higher levels use bullet points.
+#'
+#' @param title Character string to display in the header
+#' @param level Integer indicating header importance (1 = main, 2 = sub, 3+ = detail)
+#'
+#' @return NULL (prints to console via message())
+#'
+#' @keywords internal
 print_header <- function(title, level = 1) {
   if (level == 1) {
     message("\n", paste(rep("=", 80), collapse = ""))
